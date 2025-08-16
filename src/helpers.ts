@@ -3,8 +3,6 @@ import { BorrowableCToken, CToken } from "./classes/CToken";
 import { Contract } from "ethers";
 import { Decimal } from "decimal.js";
 import { address } from "./types";
-import path from "path";
-import fs from "fs";
 import { chains } from "./chains";
 
 export const WAD = BigInt(10n ** 18n);
@@ -15,14 +13,6 @@ export enum AdaptorTypes {
     REDSTONE_CORE = 2,
     REDSTONE_CLASSIC = 3,
     MOCK = 1337
-}
-
-export function toDecimal(amount: bigint, decimals = 18n): bigint {
-    return amount / BigInt(10n ** BigInt(decimals));
-}
-
-export function toInteger(amount: bigint, decimals = 18n): bigint {
-    return amount * BigInt(10n ** BigInt(decimals));
 }
 
 export function contractSetup<I>(signer: JsonRpcSigner | Wallet, contractAddress: address, abi: any): Contract & I {

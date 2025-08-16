@@ -13,3 +13,55 @@ Note: All values are returned in either BigInt or [Decimals](https://www.npmjs.c
 ```
 $ npm install --save curvance
 ```
+
+## ❯ Usage
+
+### Grab general information
+This is very RPC efficient as it uses 1-3 RPC call's to setup all the data you need.
+```js
+const { markets, reader, faucet } = await setupChain("monad-testnet", wallet);
+```
+
+You can then explore the data pretty easily like so:
+```js
+let count = 0;
+console.log(`Market summaries in USD:`);
+for(const market of markets) {
+    console.log(`[${count}] tvl: ${market.tvl.toFixed(18)} | totalDebt: ${market.totalDebt.toFixed(18)} | totalCollateral: ${market.totalCollateral.toFixed(18)}`);
+    for(const token of market.tokens) {
+        console.log(`\tToken: ${token.symbol} | Price: ${token.getPrice()} | Amount: ${token.getTvl(false)}`);
+    }
+    count++;
+}
+```
+
+### Grab individaul classes
+```js
+const test_1 = new ERC20(signer, `0x123`);
+await test_1.approve(someGuy, BigInt(50e18));
+```
+
+Some of these classes use preloaded cache to prevent RPC calls s for example
+```js
+const test_1 = new ERC20(signer, `0x123`);
+console.log(test_1.name); // Attempts to use cache for name, so this returns undefined
+const name = await test_1.fetchName();
+console.log(name); // My Test Token
+console.log(test_1.name); // My Test Token
+```
+
+Note: Protocol reader will populate things like `test_1.name` for underlying assets from the first preload RPC call and wont need to be fetched.
+
+
+### Helpers
+- `getContractAddresses` - Grab the contracts addresses for a given chain
+- `AdaptorTypes` - Adaptor identifier enums
+- `WAD` - WAD amount
+- `WAD_DECIMAL` - WAD amount as Decimal.js type
+- `contractSetup` - Used to initialize contract & attach typescript interface
+- `handleTransactionWithOracles` - Depending on what adaptor is being used to execute the function we choose to run a multi-call that will write-price on-chain with the given function -- but only if the adaptor is the type of adaptor that requires this (pull oracle)
+
+```js
+const contracts = getContractAddresses('monad-testnet');
+console.log(contracts.ProtocolReader);
+```

@@ -3,6 +3,7 @@ export * from './classes/Faucet';
 export * from './classes/OracleManager';
 export * from './classes/Market';
 export * from './classes/CToken';
+export * from './classes/ERC20';
 export * from './helpers';
 export * from './setup';
 export * from './types';
