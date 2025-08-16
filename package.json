@@ -25,7 +25,6 @@
   "scripts": {
     "fetch": "ts-node fetch-deployment.ts",
     "build": "tsc",
-    "publish": "tsc && npm publish",
     "test": "node --test --require ts-node/register tests/*.test.ts",
     "test:ctoken": "ts-node tests/CToken.test.ts",
     "test:faucet": "ts-node tests/Faucet.test.ts",
