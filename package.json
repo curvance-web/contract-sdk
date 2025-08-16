@@ -1,21 +1,31 @@
 {
-  "name": "contract-sdk",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "curvance",
+  "version": "1.0.4",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "repository": { "type": "git", "url": "https://github.com/curvance-web/contract-sdk.git" },
+  "author": "Austinhs",
+  "description": "A SDK to explore the curvance protocol efficently & easily.",
+  "license": "MIT",
   "directories": {
     "test": "tests"
   },
+  "keywords": [
+    "curvance",
+    "defi",
+    "crypto"
+  ],
   "scripts": {
     "fetch": "ts-node fetch-deployment.ts",
+    "build": "tsc",
+    "publish": "tsc && npm publish",
     "test": "node --test --require ts-node/register tests/*.test.ts",
     "test:ctoken": "ts-node tests/CToken.test.ts",
     "test:faucet": "ts-node tests/Faucet.test.ts",
     "test:market": "ts-node tests/Market.test.ts",
     "test:oracle": "ts-node tests/OracleManager.test.ts"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "@types/node": "^24.3.0",
     "decimal.js": "^10.6.0",

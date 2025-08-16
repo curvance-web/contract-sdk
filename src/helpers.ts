@@ -3,6 +3,8 @@ import { BorrowableCToken, CToken } from "./classes/CToken";
 import { Contract } from "ethers";
 import { Decimal } from "decimal.js";
 import { address } from "./types";
+import path from "path";
+import fs from "fs";
 
 export const WAD = BigInt(10n ** 18n);
 export const WAD_DECIMAL = new Decimal(WAD);
@@ -30,6 +32,15 @@ export function contractSetup<I>(signer: JsonRpcSigner | Wallet, contractAddress
     return contract as Contract & I;
 }
 
+export function getContractAddresses(chain: ChainRpcPrefix) {
+    const file_path = path.join(__dirname, 'chains', `${chain}.json`);
+    if (!fs.existsSync(file_path)) {
+        throw new Error(`No configuration found for chain ${chain}`);
+    }
+
+    return JSON.parse(fs.readFileSync(file_path, 'utf-8'));
+}
+
 export function handleTransactionWithOracles<T>(exec_func: Function, token: CToken | BorrowableCToken, adaptor: AdaptorTypes): Promise<T> {
     if(adaptor == AdaptorTypes.REDSTONE_CORE) {
         // TODO:
@@ -40,9 +51,6 @@ export function handleTransactionWithOracles<T>(exec_func: Function, token: CTok
 }
 
 export const AVAILABLE_CHAINS = [
-    'eth-sepolia',
-    'arb-sepolia',
     'monad-testnet',
-    'berachain-bepolia'
 ];
 export type ChainRpcPrefix = typeof AVAILABLE_CHAINS[number];
