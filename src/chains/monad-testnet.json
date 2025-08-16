@@ -1,0 +1,143 @@
+{
+  "CentralRegistry": "0x9DE2C76e31D19Fd2398185C608eF75a89677a772",
+  "OracleManager": "0x610584Cef67adDE8550C5d1CD82F9e19B65deB36",
+  "ChainlinkAdaptor": "0xBCa2698661BDbdb1b7EE66061b56B1d2eaAE911A",
+  "RedstoneClassicAdaptor": "0x9a1f066856feBA0A70AD7b2ee8E02e3502731c2E",
+  "RedstoneCoreAdaptor": "0x38D1E644A9fBcaa3Bd97C2dc72eC4A3157e2AEeF",
+  "RedstoneAdaptorMulticallChecker": "0x5C3679f005b1625035177A5641d776afe1D4D9E9",
+  "Faucet": "0xf298f2E94184FaCcb1d3b7dC7e1914b4dd12929a",
+  "MockOracle": "0xc5A3c27223eF06bFefa086397a0A8D27F2e912F1",
+  "USDC": "0xFd247f6B5469cE284524Ed449Ec71A8E14EEAb56",
+  "WBTC": "0x21F3516D9a375fF0Cdc9800CA92C720F369713F9",
+  "SWETH": "0x335E1d04E7e3ADEe3BCfd0c6d63a6fdFFB315870",
+  "DAI": "0x0FF77FAD7330E06cF9Df892e664fC4F987AFd06c",
+  "LUSD": "0x81e1215E642239db4359Eb5ef447f1D46732F0f5",
+  "mkUSD": "0xdc2C0dCcB915e799456e13295d01CdA33Aae6c43",
+  "mETH": "0xd472B6d908F04Cde210918908065e9fF5E47a4cb",
+  "mUSD": "0xE5D114f18Ae23653603C9d36752f0AC59F109A03",
+  "Test WBTC / Test USDC": {
+    "address": "0xE0365e0E9a150899Df7531ee8d03f01562e227dC",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0x491a37ebcd3F7488d231869f6A6299b360DE36af",
+      "simpleZapper": "0x3E15f6F67Efe1c2dA0471ebb08Cb2A8c1C89A232"
+    },
+    "WBTC-DynamicIRM": "0x563C54031c18910D474142EA00dE93901D713382",
+    "tokens": {
+      "WBTC": "0x6bCc28566eE82b3b9f0b10E0941606b122F2035d",
+      "USDC": "0x8E7e730D78B29ed489A9e899654A15dA16B30A3A"
+    },
+    "USDC-DynamicIRM": "0x3CFf5b8045C3F60FcaB07233608f1CB7a436c44e"
+  },
+  "Test LUSD / Test SWETH": {
+    "address": "0x8f07ad37A20ae078Dde0c161A7708b84b480d349",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0x6c5F9f651C8e2936EAdf0F1B20A59d0476a22c2b",
+      "simpleZapper": "0xF66071Ee481B180506B50Ac517191c477dBB9605"
+    },
+    "LUSD-DynamicIRM": "0xE402DFa9043896baad07425a30e6A1781f494F43",
+    "tokens": {
+      "LUSD": "0x54e7A29A5dd008492c2E1D0467A76dC63264e05d",
+      "SWETH": "0x76cC4f7E2381Ac9C8a6E6Ceabd4A992F09480aCD"
+    }
+  },
+  "Test mUSD / Test mETH": {
+    "address": "0xC0E0c88471783E140bB4D90aF7381bC8Bcb26eF0",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0x7602C4a99EF3e1820180dbBABB50b851b03933Cf",
+      "simpleZapper": "0x22553fAe61dDF8ca420Cc6311454F6860B97f70d"
+    },
+    "tokens": {
+      "mUSD": "0x7f0A94092E1EBA62f10ceE11a380EBD262E6DC9F",
+      "mETH": "0x398004321992EaDB6b7AEe1250846c246BE52733"
+    },
+    "mETH-DynamicIRM": "0xD0C617E96B2feE75a07034402AaCb94e2760C029"
+  },
+  "Test DAI / Test mkUSD": {
+    "address": "0xf769dCA61a9DDCAB0Ffa4518cB413df95BA8E753",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0x4a23De9cA96e85aa2af2Ed91094ff8b487050209",
+      "simpleZapper": "0xD1243e0B121429A65D8a51908b2bB940d50808c4"
+    },
+    "DAI-DynamicIRM": "0x5D052d2F226F5D498ACc44b1ECBa543Dcd91C214",
+    "tokens": {
+      "DAI": "0x8b89644445DAe0B2d736f4252A50F9f2A384e016",
+      "mkUSD": "0xd8B2866D6A908A11419BE028AceAce53876c11e3"
+    },
+    "mkUSD-DynamicIRM": "0x644bc0b96d1DF107f3Ed01d52bd59C470BCD4691"
+  },
+  "MessagingHub": "0x0644413190C54457DA71B0945548C9CA89874c6e",
+  "CVE": "0xbec1301C4AD60062BF0FD0a08A82aF18fE832425",
+  "RewardManager": "0xe52A0253093F8c85C227B65817309017F99B7EdB",
+  "VeCVE": "0x1943CAE5FBD2c283dc5a1708f2e5197693783677",
+  "GaugeManager": "0xcFCb8c9ABB6b84f681b1c3dC4Fbd1725EcDB3E54",
+  "VotingHub": "0x3642A51956FB7e595cb966707CEB715723c76EcA",
+  "WMON-MockPermissionV3Aggregator": "0x55069729017F08a557BCbfc3B3827847374fa9d6",
+  "WMON-ChainlinkAdaptor": "0x7bBf404d85d81c23BE71df42F7Aa6B57344A702c",
+  "VaultAggregator-WMON-aprMON": "0x9178DD72D8A107a41df5999D020A09CE0De8F556",
+  "VaultAggregator-WMON-shMON": "0xB51932732Dc39134a76470762BfF6ea03a9d3ecE",
+  "Apriori (aprMON) / wMON": {
+    "address": "0x18995Ac73428AfdC235a53e9cb8300b60531bED8",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0xA7d27DEFd5b867a901a01607CC3fEe1b1981C9EB",
+      "simpleZapper": "0x04B79bda04D50842db0417bB7d8F61Bab469F28E",
+      "vaultZapper": "0x164dB9323CDB678ff0866d941a0fA9b0c4FFb6A5"
+    },
+    "aprMON-DynamicIRM": "0x17A6450d29a81426BA29A3528Aaf1a68Da0C7213",
+    "tokens": {
+      "aprMON": "0xc55BD51072B7a5e9FED92BBa16B4f941Ee98dac9",
+      "WMON": "0x22Ee2102E6CBD66Fbfa7975A38C4057256669E8f"
+    },
+    "WMON-DynamicIRM": "0xFcCc4436631033A2F6eFa96606AeBdCAaaC4F38E"
+  },
+  "Fastlane (shMON) / wMON": {
+    "address": "0x4852ed73752b067763D892f9739415B827032700",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0x5D3C300F53c930048Fda62dAe33CD06a8cb8fa9D",
+      "simpleZapper": "0x422b45afF524DcDcDD160e9A08335bD5bb443418",
+      "vaultZapper": "0x413229Fb1b4Ad0BAfF27279129bd5B2ff7aaD8e5"
+    },
+    "shMON-DynamicIRM": "0xbaAdD2B7DA075F914aB0e9aF73cACcFcC8Ac0945",
+    "tokens": {
+      "shMON": "0x97A8dCa463012fB8f0474275b6A01116f0B5e241",
+      "WMON": "0x92ADB5814694621b66E24733B1444905DeeFD696"
+    },
+    "WMON-DynamicIRM": "0x59ab057c7423FbFb8f32a47dd6B071Eb1559fa58"
+  },
+  "Magma (gMON) / wMON": {
+    "address": "0x1D28a85CE8ee376A554881d50Ff704c49bDAd77d",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0x0570E6E5b312f0898EA910FCba5b070e414EDF04",
+      "simpleZapper": "0xe043bae09929C30364bA8915D5829223f3D6CE35",
+      "vaultZapper": "0xa321C56d47eCFa4c0D2f590F2E72C2c6D114aDb7"
+    },
+    "gMON-DynamicIRM": "0xD01D27d65624F860be4D6A64e896b6FC793e4567",
+    "tokens": {
+      "gMON": "0x854980041Ede58c05EbFDb42Fc178e718141A563",
+      "WMON": "0x9f80711b0301eA64d5C34BC726FA44061138D977"
+    },
+    "WMON-DynamicIRM": "0x397ff8a58c5feA29BD8777a9bB7CDDE51EE0C424"
+  },
+  "Kintsu (sMON) / wMON": {
+    "address": "0x7380B7361F1C1cc7EFC95C33F344588d4FCC7199",
+    "isMarket": true,
+    "plugins": {
+      "simplePositionManager": "0xb59075963Ec98C8a6a565eBe1aFAd35072BfDAe1",
+      "simpleZapper": "0xeCbC17ce67Ab79e7c022b273741B8084a383511C",
+      "vaultZapper": "0x9B17FFB9B59A29F22A4761F8519569c2f262eAfe"
+    },
+    "sMON-DynamicIRM": "0xda29123B2370A8131635C37338F7638cA9c8e09A",
+    "tokens": {
+      "sMON": "0x174A21f9149E6aE76D7d67aA15825D4709966b6b",
+      "WMON": "0x8907c83FD08B76971868999C7e56ADAE1952cf7d"
+    },
+    "WMON-DynamicIRM": "0x644641e90698b269a6FC431FBDAE37377eBFC994"
+  },
+  "ProtocolReader": "0xf53eA10100e18D8DA642204D31ec356133c87baE"
+}

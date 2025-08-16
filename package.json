@@ -1,0 +1,27 @@
+{
+  "name": "contract-sdk",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "fetch": "ts-node fetch-deployment.ts",
+    "test": "node --test --require ts-node/register tests/*.test.ts",
+    "test:ctoken": "ts-node tests/CToken.test.ts",
+    "test:faucet": "ts-node tests/Faucet.test.ts",
+    "test:market": "ts-node tests/Market.test.ts",
+    "test:oracle": "ts-node tests/OracleManager.test.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/node": "^24.3.0",
+    "decimal.js": "^10.6.0",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
