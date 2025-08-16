@@ -1,6 +1,17 @@
 import fs from 'fs';
 import { config } from 'dotenv'; config();
-import Foundry from './tests/utils/foundry';
+
+const getAbi = (contract_name: string) => {
+    const repo = process.env.CONTRACT_REPO_PATH as string;
+    const path = `${repo}/artifacts`;
+    const abiPath = `${path}/${contract_name}.sol/${contract_name}.json`;
+    
+    if (!fs.existsSync(abiPath)) {
+        throw new Error(`ABI for contract ${contract_name} not found at ${abiPath}`);
+    }
+
+    return JSON.parse(fs.readFileSync(abiPath, 'utf-8')).abi;
+}
 
 const contracts_used = [
     "BaseCToken",
@@ -15,7 +26,7 @@ if(process.env.CONTRACT_REPO_PATH == undefined) {
 }
 
 for(const contractName of contracts_used) {
-    const abi = Foundry.getAbi(contractName);
+    const abi = getAbi(contractName);
     fs.writeFileSync(`./src/abis/${contractName}.json`, JSON.stringify(abi, null, 2));
 }
 console.log('Contract ABIs have been refreshed.');
