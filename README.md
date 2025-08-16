@@ -17,7 +17,7 @@ $ npm install --save curvance
 ## ❯ Usage
 
 ### Grab general information
-This is very RPC efficient as it uses 1-3 RPC call's to setup all the data you need.
+This is very RPC efficient as it uses 1-3 RPC call's to setup all the data you need. This is the main way to use the SDK as ALL the data is pre-setup for you. All you need to do is traverse the markets.
 ```js
 const { markets, reader, faucet } = await setupChain("monad-testnet", wallet);
 ```
@@ -41,7 +41,7 @@ const test_1 = new ERC20(signer, `0x123`);
 await test_1.approve(someGuy, BigInt(50e18));
 ```
 
-Some of these classes use preloaded cache to prevent RPC calls s for example
+Some of these classes use preloaded cache to prevent RPC calls for example
 ```js
 const test_1 = new ERC20(signer, `0x123`);
 console.log(test_1.name); // Attempts to use cache for name, so this returns undefined
