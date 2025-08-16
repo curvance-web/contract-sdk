@@ -7,7 +7,8 @@ import { address, curvance_signer } from '../src/types';
 import { Faucet } from '../src/classes/Faucet';
 import { ERC20 } from '../src/classes/ERC20';
 import { fastForwardTime, getTestSetup } from './utils/helper';
-import SetupChain from '../src/setup';
+import { setupChain } from '../src/setup';
+import { ChainRpcPrefix } from '../src/helpers';
 
 
 describe('Faucet Tests', () => {
@@ -27,7 +28,7 @@ describe('Faucet Tests', () => {
         signer = setup.signer;
         account = signer.address as address;
         
-        const curvance = await SetupChain(process.env.TEST_CHAIN as string, signer);
+        const curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
         faucet = curvance.faucet;
         for(const market of curvance.markets) {
             const tokens = market.tokens;

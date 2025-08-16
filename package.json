@@ -1,10 +1,16 @@
 {
   "name": "curvance",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "README.md"],
-  "repository": { "type": "git", "url": "https://github.com/curvance-web/contract-sdk.git" },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/curvance-web/contract-sdk.git"
+  },
   "author": "Austinhs",
   "description": "A SDK to explore the curvance protocol efficently & easily.",
   "license": "MIT",

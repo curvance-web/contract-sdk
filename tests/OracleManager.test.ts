@@ -7,7 +7,8 @@ import { JsonRpcProvider, Wallet } from 'ethers';
 import { address } from '../src/types';
 import { OracleManager } from '../src/classes/OracleManager';
 import { getTestSetup } from './utils/helper';
-import SetupChain from '../src/setup';
+import { setupChain } from '../src/setup';
+import { ChainRpcPrefix } from '../src/helpers';
 
 describe('Faucet Tests', () => {
     let provider: JsonRpcProvider;
@@ -23,7 +24,7 @@ describe('Faucet Tests', () => {
         signer = setup.signer;
         account = signer.address as address;
 
-        const curvance = await SetupChain(process.env.TEST_CHAIN as string, signer);
+        const curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
         const market = curvance.markets[1]!;
         oracle = market.oracle_manager;
 

@@ -7,8 +7,9 @@ import { JsonRpcProvider } from 'ethers';
 import { address, curvance_signer } from '../src/types';
 import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock, setNativeBalance, TEST_ACCOUNTS } from './utils/helper';
 import { BorrowableCToken, CToken } from '../src/classes/CToken';
-import SetupChain from '../src/setup';
+import { setupChain } from '../src/setup';
 import { ERC20 } from '../src/classes/ERC20';
+import { ChainRpcPrefix } from '../src/helpers';
 
 for(const { account_name, account_pk } of TEST_ACCOUNTS) {
     describe(`CToken Tests (${account_name})`, () => {
@@ -25,7 +26,7 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
             signer = setup.signer;
             account = signer.address as address;
 
-            const { markets, faucet } = await SetupChain(process.env.TEST_CHAIN as string, signer);
+            const { markets, faucet } = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
             if(markets.length > 0) {
                 const market = markets[1]!;
                 marketManager = market.address;
@@ -186,8 +187,9 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
             }
         });
 
-        test('moidfy collteral from deposit', async() => {
+        test('modify collateral from deposit', async() => {
             {
+                console.log('Modify collateral 1');
                 let tx = await cToken.deposit(300n, account);
                 await tx.wait();
                 await mineBlock(provider);
@@ -204,6 +206,7 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
 
             {
+                console.log('Modify collateral 2');
                 const beforeBalance = await cToken.balanceOf(account);
                 const beforeCollateral = await cToken.collateralPosted(account);
                 const tx = await cToken.removeCollateral(100n);
@@ -218,6 +221,7 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
             await fastForwardTime(provider, 10);
 
             {
+                console.log('Modify collateral 3');
                 const beforeBalance = await cToken.balanceOf(account);
                 const beforeCollateral = await cToken.collateralPosted(account);
                 const tx = await cToken.withdrawCollateral(100n, account, account);
@@ -232,6 +236,7 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
             await fastForwardTime(provider, 10);
 
             {
+                console.log('Modify collateral 4');
                 const asset = cToken.asset.address;
                 const underlying = new ERC20(signer, asset);
                 const beforeUnderlyingBalance = await underlying.balanceOf(account);

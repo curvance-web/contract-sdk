@@ -7,7 +7,8 @@ import { JsonRpcProvider } from 'ethers';
 import { address, curvance_signer } from '../src/types';
 import { Market } from '../src/classes/Market';
 import { getTestSetup } from './utils/helper';
-import SetupChain from '../src/setup';
+import { setupChain } from '../src/setup';
+import { ChainRpcPrefix } from '../src/helpers';
 
 
 describe('Market Tests', () => {
@@ -22,7 +23,7 @@ describe('Market Tests', () => {
         signer = setup.signer;
         account = signer.address as address;
 
-        const curvance = await SetupChain(process.env.TEST_CHAIN as string, signer);
+        const curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
         markets = curvance.markets;
         let count = 0;
         console.log(`Market summaries in USD:`);
