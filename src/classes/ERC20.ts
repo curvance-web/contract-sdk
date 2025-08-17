@@ -2,7 +2,7 @@ import { TransactionResponse } from "ethers";
 import { contractSetup } from "../helpers";
 import { Contract } from "ethers";
 import { StaticMarketAsset } from "./ProtocolReader";
-import { address, curvance_signer } from "../types";
+import { address, curvance_provider } from "../types";
 
 export interface IERC20 {
     balanceOf(account: address): Promise<bigint>;
@@ -16,20 +16,20 @@ export interface IERC20 {
 }
 
 export class ERC20 {
-    signer: curvance_signer;
+    provider: curvance_provider;
     address: address;
     contract: Contract & IERC20;
     cache: StaticMarketAsset | undefined = undefined;
 
     constructor(
-        signer: curvance_signer,
+        provider: curvance_provider,
         address: address,
         cache: StaticMarketAsset | undefined = undefined
     ) {
-        this.signer = signer;
+        this.provider = provider;
         this.address = address;
         this.cache = cache;
-        this.contract = contractSetup<IERC20>(signer, address, [
+        this.contract = contractSetup<IERC20>(provider, address, [
             "function balanceOf(address owner) view returns (uint256)",
             "function transfer(address to, uint256 amount) returns (bool)",
             "function approve(address spender, uint256 amount) returns (bool)",

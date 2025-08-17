@@ -1,10 +1,10 @@
-import { contractSetup, toDecimal, UINT256_MAX, WAD } from "../helpers";
-import { Contract } from "ethers";
+import { contractSetup, EMPTY_ADDRESS, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD } from "../helpers";
+import { Contract, ethers } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
 import { BorrowableCToken, CToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
-import { address, curvance_signer } from "../types";
+import { address, curvance_provider } from "../types";
 import { OracleManager } from "./OracleManager";
 
 export interface StatusOf {
@@ -40,7 +40,7 @@ export interface IMarket {
 }
 
 export class Market {
-    signer: curvance_signer;
+    provider: curvance_provider;
     address: address;
     contract: Contract & IMarket;
     tokens: (CToken | BorrowableCToken)[] = [];
@@ -49,7 +49,7 @@ export class Market {
     cache: { static: StaticMarketData, dynamic: DynamicMarketData, user: UserMarket, deploy: DeployData };
 
     constructor(
-        signer: curvance_signer,
+        provider: curvance_provider,
         static_data: StaticMarketData,
         dynamic_data: DynamicMarketData,
         user_data: UserMarket,
@@ -57,11 +57,11 @@ export class Market {
         oracle_manager: OracleManager,
         reader: ProtocolReader
     ) {
-        this.signer = signer;
+        this.provider = provider;
         this.address = static_data.address;
         this.oracle_manager = oracle_manager;
         this.reader = reader;
-        this.contract = contractSetup<IMarket>(signer, this.address, abi);
+        this.contract = contractSetup<IMarket>(provider, this.address, abi);
         this.cache = { static: static_data, dynamic: dynamic_data, user: user_data, deploy: deploy_data };
 
         for(let i = 0; i < static_data.tokens.length; i++) {
@@ -74,10 +74,10 @@ export class Market {
             };
 
             if(tokenData.isBorrowable) {
-                const ctoken = new BorrowableCToken(signer, tokenData.address, tokenData, this);
+                const ctoken = new BorrowableCToken(provider, tokenData.address, tokenData, this);
                 this.tokens.push(ctoken);
             } else {
-                const ctoken = new CToken(signer, tokenData.address, tokenData, this);
+                const ctoken = new CToken(provider, tokenData.address, tokenData, this);
                 this.tokens.push(ctoken);
             }
         }
@@ -198,7 +198,8 @@ export class Market {
     }
 
     async previewPositionHealth(debt_change: bigint) {
-        const liq = await this.contract.liquidationValuesOf(this.signer.address as address);
+        const provider = validateProviderAsSigner(this.provider);
+        const liq = await this.contract.liquidationValuesOf(provider.address as address);
 
         if(liq.debt + debt_change <= 0n) {
             return UINT256_MAX;
@@ -233,12 +234,13 @@ export class Market {
     }
 
     async multiHoldExpiresAt(markets: Market[], reader: ProtocolReader) {
+        const provider = validateProviderAsSigner(this.provider);
         if(markets.length == 0) {
             throw new Error("You can't fetch expirations for no markets.");
         }
 
         const marketAddresses = markets.map(market => market.address);
-        const cooldownTimestamps = await reader.marketMultiCooldown(marketAddresses, this.signer.address as address);
+        const cooldownTimestamps = await reader.marketMultiCooldown(marketAddresses, provider.address as address);
         
 
         let cooldowns: { [address: address]: Date | null } = {};
@@ -253,8 +255,9 @@ export class Market {
         return cooldowns;
     }
 
-    static async getAll(signer: curvance_signer, reader: ProtocolReader, oracle_manager: OracleManager, all_deploy_data: { [key: string]: any }) {
-        const all_data = await reader.getAllMarketData(signer.address as address);
+    static async getAll(provider: curvance_provider, reader: ProtocolReader, oracle_manager: OracleManager, all_deploy_data: { [key: string]: any }) {
+        const user = "address" in provider ? provider.address : EMPTY_ADDRESS;
+        const all_data = await reader.getAllMarketData(user as address);
         const deploy_keys = Object.keys(all_deploy_data);
 
         let markets: Market[] = [];
@@ -293,7 +296,7 @@ export class Market {
                 throw new Error(`Could not find user market data for index: ${i}`);
             }
 
-            const market = new Market(signer, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
+            const market = new Market(provider, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
             markets.push(market);
         }
 

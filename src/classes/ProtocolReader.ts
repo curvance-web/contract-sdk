@@ -1,7 +1,7 @@
 import { Contract } from "ethers";
 import { contractSetup } from "../helpers";
 import abi from '../abis/ProtocolReader.json'
-import { address, curvance_signer } from "../types";
+import { address, curvance_provider } from "../types";
 
 export interface StaticMarketAsset {
     address: address;
@@ -105,14 +105,14 @@ export interface IProtocolReader {
 }
 
 export class ProtocolReader {
-    signer: curvance_signer;
+    provider: curvance_provider;
     address: address;
     contract: Contract & IProtocolReader;
 
-    constructor(signer: curvance_signer, address: address) {
-        this.signer = signer;
+    constructor(provider: curvance_provider, address: address) {
+        this.provider = provider;
         this.address = address;
-        this.contract = contractSetup<IProtocolReader>(signer, address, abi);
+        this.contract = contractSetup<IProtocolReader>(provider, address, abi);
     }
 
     async getAllMarketData(account: address, use_api = true) {

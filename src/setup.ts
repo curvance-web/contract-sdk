@@ -1,4 +1,4 @@
-import { JsonRpcSigner, Wallet } from "ethers";
+import { JsonRpcProvider, JsonRpcSigner, Wallet } from "ethers";
 import { ChainRpcPrefix, getContractAddresses } from "./helpers";
 import { Market } from "./classes/Market";
 import { address } from './types';
@@ -6,8 +6,16 @@ import { ProtocolReader } from "./classes/ProtocolReader";
 import { Faucet } from "./classes/Faucet";
 import { OracleManager } from "./classes/OracleManager";
 
-export async function setupChain(chain: ChainRpcPrefix, signer: JsonRpcSigner | Wallet) {
+export const backup_providers: Record<ChainRpcPrefix, JsonRpcProvider> = {
+    "monad-testnet": new JsonRpcProvider("https://rpc.ankr.com/monad_testnet")
+};
+
+export async function setupChain(chain: ChainRpcPrefix, signer: JsonRpcSigner | Wallet | JsonRpcProvider | null) {
     const chain_addresses = getContractAddresses(chain);
+
+    if(signer == null) {
+        signer = backup_providers[chain]!;
+    }
 
     if(!("ProtocolReader" in chain_addresses)) {
         throw new Error(`Chain configuration for ${chain} is missing ProtocolReader address.`);

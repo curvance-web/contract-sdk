@@ -1,8 +1,7 @@
-import { JsonRpcSigner, Wallet } from "ethers";
 import { BorrowableCToken, CToken } from "./classes/CToken";
 import { Contract } from "ethers";
 import { Decimal } from "decimal.js";
-import { address } from "./types";
+import { address, curvance_provider, curvance_signer } from "./types";
 import { chains } from "./chains";
 
 export const BPS = BigInt(1e4);
@@ -20,6 +19,7 @@ export const SECONDS_PER_WEEK = 604_800n;
 export const SECONDS_PER_DAY = 86_400n
 
 export const UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
+export const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000" as address;
 
 export enum AdaptorTypes {
     CHAINLINK = 1,
@@ -32,8 +32,22 @@ export function toDecimal(value: bigint, decimals: bigint): Decimal {
     return new Decimal(value).div(new Decimal(10).pow(decimals));
 }
 
-export function contractSetup<I>(signer: JsonRpcSigner | Wallet, contractAddress: address, abi: any): Contract & I {
-    const contract = new Contract(contractAddress, abi, signer);
+export function toBigInt(value: number, decimals: bigint): bigint {
+    return BigInt(value) * (10n ** decimals);
+}
+
+export function validateProviderAsSigner(provider: curvance_provider) {
+    const isSigner = "address" in provider;
+
+    if(!isSigner) {
+        throw new Error("Provider is not a signer, therefor this action is not available. Please connect a wallet to execute this action.");
+    }
+
+    return provider as curvance_signer;
+}
+
+export function contractSetup<I>(provider: curvance_provider, contractAddress: address, abi: any): Contract & I {
+    const contract = new Contract(contractAddress, abi, provider);
     if(contract == undefined || contract == null) {
         throw new Error(`Failed to load contract at address ${contractAddress}.`);
     }

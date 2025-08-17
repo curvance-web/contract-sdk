@@ -7,7 +7,7 @@ import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
-import { address, bytes, curvance_signer, percentage } from "../types";
+import { address, bytes, curvance_provider, percentage } from "../types";
 
 export interface AccountSnapshot {
     asset: address;
@@ -77,7 +77,7 @@ export interface IDynamicIRM {
 
 // BaseCToken ABI
 export class CToken {
-    signer: curvance_signer;
+    provider: curvance_provider;
     address: address;
     contract: Contract & ICToken;
     abi: any;
@@ -85,14 +85,14 @@ export class CToken {
     market: Market;
 
     constructor(
-        signer: curvance_signer, 
+        provider: curvance_provider, 
         address: address,
         cache: StaticMarketToken & DynamicMarketToken & UserMarketToken, 
         market: Market
     ) {
-        this.signer = signer;
+        this.provider = provider;
         this.address = address;
-        this.contract = contractSetup<ICToken>(signer, address, base_ctoken_abi);
+        this.contract = contractSetup<ICToken>(provider, address, base_ctoken_abi);
         this.cache = cache;
         this.market = market;
     }
@@ -139,7 +139,7 @@ export class CToken {
     }
     
     getAsset(asErc20 = true) { 
-        return asErc20 ? new ERC20(this.signer, this.cache.asset.address, this.cache.asset) : this.cache.asset.address 
+        return asErc20 ? new ERC20(this.provider, this.cache.asset.address, this.cache.asset) : this.cache.asset.address 
     }
     
     getPrice(lower = false, asset = false) { 
@@ -347,13 +347,13 @@ export class BorrowableCToken extends CToken {
     override contract: Contract & IBorrowableCToken;
     
     constructor(
-        signer: curvance_signer, 
+        provider: curvance_provider, 
         address: address,
         cache: StaticMarketToken & DynamicMarketToken & UserMarketToken,
         market: Market
     ) {
-        super(signer, address, cache, market);
-        this.contract = contractSetup<IBorrowableCToken>(signer, address, borrowable_ctoken_abi);
+        super(provider, address, cache, market);
+        this.contract = contractSetup<IBorrowableCToken>(provider, address, borrowable_ctoken_abi);
     }
     
     get liquidity() { return this.cache.liquidity; }
@@ -401,7 +401,7 @@ export class BorrowableCToken extends CToken {
 
     async dynamicIRM() {
         const irm_addr = await this.contract.IRM();
-        return contractSetup<IDynamicIRM>(this.signer, irm_addr, irm_abi);
+        return contractSetup<IDynamicIRM>(this.provider, irm_addr, irm_abi);
     }
 
     async fetchBorrowRate() {

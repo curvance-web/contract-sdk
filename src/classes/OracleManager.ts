@@ -1,4 +1,4 @@
-import { address, curvance_signer } from "../types";
+import { address, curvance_provider } from "../types";
 import { contractSetup } from "../helpers";
 import { Contract } from "ethers";
 
@@ -7,14 +7,14 @@ export interface IOracleManager {
 }
 
 export class OracleManager {
-    signer: curvance_signer;
+    provider: curvance_provider;
     address: address;
     contract: Contract & IOracleManager;
 
-    constructor(signer: curvance_signer, address: address) {
-        this.signer = signer;
+    constructor(provider: curvance_provider, address: address) {
+        this.provider = provider;
         this.address = address as address;
-        this.contract = contractSetup<IOracleManager>(signer, this.address, [
+        this.contract = contractSetup<IOracleManager>(provider, this.address, [
             "function getPrice(address, bool, bool) view returns (uint256, uint256)",
         ]);
     }
