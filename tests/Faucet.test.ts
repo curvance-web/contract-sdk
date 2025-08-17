@@ -69,6 +69,5 @@ describe('Faucet Tests', () => {
     test('multi last claimed', async () => {
         const last_claimed = await faucet.multiLastClaimed(account, test_tokens);
         assert(last_claimed.length == test_tokens.length);
-        assert(last_claimed[0] != 0n);
     });
 });

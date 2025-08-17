@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL } from "../helpers";
+import { contractSetup, WAD_DECIMAL, SECONDS_PER_YEAR, BPS, toDecimal } from "../helpers";
 import { DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market } from "./Market";
@@ -7,9 +7,7 @@ import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
-import { address, bytes, curvance_signer } from "../types";
-
-const SECONDS_PER_YEAR = BigInt(31_536_000);
+import { address, bytes, curvance_signer, percentage } from "../types";
 
 export interface AccountSnapshot {
     asset: address;
@@ -58,8 +56,8 @@ export interface ICToken {
 }
 
 export interface IBorrowableCToken extends ICToken {
-    borrow(amount: bigint, receiver: address): Promise<void>;
-    repay(amount: bigint): Promise<void>;
+    borrow(amount: bigint, receiver: address): Promise<TransactionResponse>;
+    repay(amount: bigint): Promise<TransactionResponse>;
     interestFee(): Promise<bigint>;
     marketOutstandingDebt(): Promise<bigint>;
     debtBalance(account: address): Promise<bigint>;
@@ -103,12 +101,16 @@ export class CToken {
     get borrowPaused() { return this.cache.borrowPaused }
     get collateralizationPaused() { return this.cache.collateralizationPaused }
     get mintPaused() { return this.cache.mintPaused }
-    get collateralCap() { return this.cache.collateralCap }
-    get debtCap() { return this.cache.debtCap }
+    get collateralCap() { return toDecimal(this.cache.collateralCap, 18n) }
+    get debtCap() { return toDecimal(this.cache.debtCap, 18n) }
     get marketManager() { return this.market; }
     get decimals() { return this.cache.decimals; }
     get symbol() { return this.cache.symbol; }
     get name() { return this.cache.name; }
+    get collateral() { return toDecimal(this.cache.collateral, 18n) }
+    get debt() { return toDecimal(this.cache.debt, 18n) }
+    get remainingCollateral() { return this.cache.collateralCap - this.cache.collateral }
+    get remainingDebt() { return this.cache.debtCap - this.cache.debt }
     get collRatio() { return this.cache.collRatio }
     get collReqSoft() { return this.cache.collReqSoft }
     get collReqHard() { return this.cache.collReqHard }
@@ -120,10 +122,21 @@ export class CToken {
     get closeFactorCurve() { return this.cache.closeFactorCurve }
     get closeFactorMin() { return this.cache.closeFactorMin }
     get closeFactorMax() { return this.cache.closeFactorMax; }
-    get userBalanceCache() { return this.cache.shareAmount; }
-    get userAssetBalanceCache() { return this.cache.assetAmount; }
+    get userShareBalance() { return this.cache.userShareBalance; }
+    get userAssetBalance() { return this.cache.userAssetBalance; }
+    get userDebt() { return this.cache.userDebt; }
+    get userCollateral() { return this.cache.userCollateral; }
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
+
+
+    /**
+     * Grabs the collateralization ratio and converts it to a percentage.
+     * @returns percentage representation of the LTV (e.g. 0.75 for 75% LTV)
+     */
+    ltv() {
+        return Decimal(this.cache.collRatio).div(BPS) as percentage; 
+    }
     
     getAsset(asErc20 = true) { 
         return asErc20 ? new ERC20(this.signer, this.cache.asset.address, this.cache.asset) : this.cache.asset.address 
@@ -138,11 +151,16 @@ export class CToken {
         // Use 1e18 always against USD
         return Decimal(price).div(Decimal(1e18));
     }
+
+    getApy() {
+        // TODO: add underlying yield rate
+        return Decimal(this.cache.supplyRate).div(BPS);
+    }
     
     getTvl(inUSD: true): Decimal;
     getTvl(inUSD: false): bigint;
     getTvl(inUSD = true): Decimal | bigint {
-        const tvl = this.cache.tvl;
+        const tvl = this.cache.totalSupply;
         return inUSD ? this.convertTokensToUsd(tvl) : tvl;
     }
 
@@ -274,6 +292,15 @@ export class CToken {
     }
 
     async depositAsCollateral(assets: bigint, receiver: address) {
+        const collateralCapError = "There is not enough collateral left in this tokens collateral cap for this deposit.";
+        if(this.remainingCollateral == 0n) throw new Error(collateralCapError);
+        if(this.remainingCollateral > 0n) {
+            const shares = await this.convertToShares(assets);
+            if(shares > this.remainingCollateral) {
+                throw new Error(collateralCapError);
+            }
+        }
+        
         // TODO: Implement oracle handling
         return this.contract.depositAsCollateral(assets, receiver); 
     }
@@ -334,21 +361,30 @@ export class BorrowableCToken extends CToken {
     get predictedBorrowRate() { return this.cache.predictedBorrowRate; }
     get utilizationRate() { return this.cache.utilizationRate; }
     get supplyRate() { return this.cache.supplyRate; }
-    
-    override getPrice(lower = true, asset = false) { 
-        let price = asset ? this.cache.assetPrice : this.cache.sharePrice;
-        if(lower) {
-            price = asset ? this.cache.assetPriceLower : this.cache.sharePriceLower;
-        }
-
-        return Decimal(price).div(Decimal(1e18));
-    }
 
     getTotalDebt(inUSD: true): Decimal;
     getTotalDebt(inUSD: false): bigint;
     getTotalDebt(inUSD = true): Decimal | bigint {
         const totalDebt = this.cache.debt;
         return inUSD ? this.convertTokensToUsd(totalDebt) : totalDebt;
+    }
+
+    override async depositAsCollateral(assets: bigint, receiver: address) {
+        if(this.cache.userDebt > 0) {
+            throw new Error("Cannot deposit as collateral when there is outstanding debt");
+        }
+
+        // TODO: Implement oracle handling
+        return super.depositAsCollateral(assets, receiver);
+    }
+
+    override async postCollateral(shares: bigint) {
+        if(this.cache.userDebt > 0) {
+            throw new Error("Cannot post collateral when there is outstanding debt");
+        }
+
+        // TODO: Implement oracle handling
+        return super.postCollateral(shares); 
     }
 
     async fetchTotalDebt(inUSD: true): Promise<Decimal>;

@@ -5,14 +5,31 @@ import { Decimal } from "decimal.js";
 import { address } from "./types";
 import { chains } from "./chains";
 
-export const WAD = BigInt(10n ** 18n);
+export const BPS = BigInt(1e4);
+export const BPS_SQUARED = BigInt(1e8);
+export const WAD = BigInt(1e18);
+export const WAD_BPS = BigInt(1e22);
+export const RAY = BigInt(1e27);
+export const WAD_SQUARED = BigInt(1e36);
+export const WAD_CUBED_BPS_OFFSET = BigInt(1e50);
 export const WAD_DECIMAL = new Decimal(WAD);
+
+export const SECONDS_PER_YEAR = 31_536_000n;
+export const SECONDS_PER_MONTH = 2_592_000n;
+export const SECONDS_PER_WEEK = 604_800n;
+export const SECONDS_PER_DAY = 86_400n
+
+export const UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
 
 export enum AdaptorTypes {
     CHAINLINK = 1,
     REDSTONE_CORE = 2,
     REDSTONE_CLASSIC = 3,
     MOCK = 1337
+}
+
+export function toDecimal(value: bigint, decimals: bigint): Decimal {
+    return new Decimal(value).div(new Decimal(10).pow(decimals));
 }
 
 export function contractSetup<I>(signer: JsonRpcSigner | Wallet, contractAddress: address, abi: any): Contract & I {

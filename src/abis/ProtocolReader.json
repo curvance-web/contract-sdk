@@ -81,7 +81,7 @@
                 "internalType": "address"
               },
               {
-                "name": "tvl",
+                "name": "totalSupply",
                 "type": "uint256",
                 "internalType": "uint256"
               },
@@ -217,22 +217,22 @@
                     "internalType": "address"
                   },
                   {
-                    "name": "assetAmount",
+                    "name": "userAssetBalance",
                     "type": "uint256",
                     "internalType": "uint256"
                   },
                   {
-                    "name": "shareAmount",
+                    "name": "userShareBalance",
                     "type": "uint256",
                     "internalType": "uint256"
                   },
                   {
-                    "name": "collateral",
+                    "name": "userCollateral",
                     "type": "uint256",
                     "internalType": "uint256"
                   },
                   {
-                    "name": "debt",
+                    "name": "userDebt",
                     "type": "uint256",
                     "internalType": "uint256"
                   }
@@ -271,7 +271,7 @@
                 "internalType": "address"
               },
               {
-                "name": "tvl",
+                "name": "totalSupply",
                 "type": "uint256",
                 "internalType": "uint256"
               },
@@ -668,22 +668,22 @@
                     "internalType": "address"
                   },
                   {
-                    "name": "assetAmount",
+                    "name": "userAssetBalance",
                     "type": "uint256",
                     "internalType": "uint256"
                   },
                   {
-                    "name": "shareAmount",
+                    "name": "userShareBalance",
                     "type": "uint256",
                     "internalType": "uint256"
                   },
                   {
-                    "name": "collateral",
+                    "name": "userCollateral",
                     "type": "uint256",
                     "internalType": "uint256"
                   },
                   {
-                    "name": "debt",
+                    "name": "userDebt",
                     "type": "uint256",
                     "internalType": "uint256"
                   }
@@ -755,6 +755,50 @@
         "name": "",
         "type": "uint256[]",
         "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewAssetImpact",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "collateralCToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "debtBorrowableCToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "newCollateralAssets",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newDebtAssets",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "supply",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "borrow",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"

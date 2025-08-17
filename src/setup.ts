@@ -22,7 +22,7 @@ export async function setupChain(chain: ChainRpcPrefix, signer: JsonRpcSigner | 
     const oracle_manager = new OracleManager(signer, chain_addresses.OracleManager as address);
 
     return {
-        markets: await Market.getAll(signer, reader, oracle_manager),
+        markets: await Market.getAll(signer, reader, oracle_manager, chain_addresses),
         faucet,
         reader,
     };

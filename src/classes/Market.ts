@@ -1,4 +1,4 @@
-import { contractSetup } from "../helpers";
+import { contractSetup, toDecimal, UINT256_MAX, WAD } from "../helpers";
 import { Contract } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
 import { BorrowableCToken, CToken } from "./CToken";
@@ -11,6 +11,11 @@ export interface StatusOf {
     collateral: bigint;
     maxDebt: bigint;
     debt: bigint;
+}
+
+export interface DeployData {
+    name: string,
+    plugins: { [key: string]: address }
 }
 
 export interface LiquidationStatusOf {
@@ -31,35 +36,37 @@ export interface IMarket {
     hypotheticalLiquidityOf(account: address, cTokenModified: address, redemptionShares: bigint, borrowAssets: bigint): Promise<HypotheticalLiquidityOf>;
     statusOf(account: address): Promise<StatusOf>;
     liquidationStatusOf(account: address, collateralToken: address, debtToken: address): Promise<LiquidationStatusOf>;
+    liquidationValuesOf(account: address): Promise<{ soft: bigint, hard: bigint, debt: bigint }>;
 }
 
 export class Market {
     signer: curvance_signer;
     address: address;
     contract: Contract & IMarket;
-    abi: any;
-    adapters: bigint[];
-    cooldownLength: bigint;
     tokens: (CToken | BorrowableCToken)[] = [];
     oracle_manager: OracleManager;
-    cache: { static: StaticMarketData, dynamic: DynamicMarketData, user: UserMarket };
+    reader: ProtocolReader;
+    cache: { static: StaticMarketData, dynamic: DynamicMarketData, user: UserMarket, deploy: DeployData };
 
     constructor(
         signer: curvance_signer,
         static_data: StaticMarketData,
         dynamic_data: DynamicMarketData,
         user_data: UserMarket,
-        oracle_manager: OracleManager
+        deploy_data: DeployData,
+        oracle_manager: OracleManager,
+        reader: ProtocolReader
     ) {
         this.signer = signer;
         this.address = static_data.address;
-        this.adapters = static_data.adapters;
         this.oracle_manager = oracle_manager;
-        this.cooldownLength = static_data.cooldownLength;
+        this.reader = reader;
         this.contract = contractSetup<IMarket>(signer, this.address, abi);
-        this.cache = { static: static_data, dynamic: dynamic_data, user: user_data };
+        this.cache = { static: static_data, dynamic: dynamic_data, user: user_data, deploy: deploy_data };
 
         for(let i = 0; i < static_data.tokens.length; i++) {
+            // @NOTE: Merged fields from the 3 types, so you wanna make sure there is no collisions
+            // Otherwise we will have some dataloss
             const tokenData = {
                 ...static_data.tokens[i]!,
                 ...dynamic_data.tokens[i]!,
@@ -74,6 +81,54 @@ export class Market {
                 this.tokens.push(ctoken);
             }
         }
+    }
+
+    get positionHealth() { return this.cache.user.positionHealth; }
+    get userCollateral() { return toDecimal(this.cache.user.collateral, 18n); }
+    get userDebt() { return toDecimal(this.cache.user.debt, 18n); }
+    get userMaxDebt() { return toDecimal(this.cache.user.maxDebt, 18n); }
+    get cooldown() { return this.cache.user.cooldown == this.cooldownLength ? null : new Date(Number(this.cache.user.cooldown * 1000n)); }
+    get adapters() { return this.cache.static.adapters; }
+    get cooldownLength() { return this.cache.static.cooldownLength; }
+    get name() { return this.cache.deploy.name; }
+    get plugins() { return this.cache.deploy.plugins; }
+
+    /**
+     * Get the total user deposits in USD.
+     * @returns {Decimal} - The total user deposits in USD.
+     */
+    get userDeposits() {
+        let total_deposits = Decimal(0);
+        for(const token of this.tokens) {
+            total_deposits = total_deposits.add(token.convertTokensToUsd(token.userShareBalance));
+        }
+
+        return total_deposits;
+    }
+
+    get ltv() {
+        if (this.tokens.length === 0) {
+            return { min: new Decimal(0), max: new Decimal(0) };
+        }
+
+        let min = this.tokens[0]!.ltv();
+        let max = min;
+
+        for (const token of this.tokens) {
+            const ltv = new Decimal(token.ltv());
+            if (ltv.lessThan(min)) {
+                min = ltv;
+            }
+            if (ltv.greaterThan(max)) {
+                max = ltv;
+            }
+        }
+
+        if(min == max) {
+            return `${min.mul(100)}%`;
+        }
+
+        return `${min.mul(100)}% - ${max.mul(100)}%`;
     }
 
     get tvl() {
@@ -102,6 +157,28 @@ export class Market {
         return marketCollateral;
     }
 
+    highestApy() {
+        let maxApy = new Decimal(0);
+        for(const token of this.tokens) {
+            const tokenApy = token.getApy();
+            if(tokenApy.greaterThan(maxApy)) {
+                maxApy = tokenApy;
+            }
+        }
+        return maxApy;
+    }
+
+    hasBorrowing() {
+        let canBorrow = false;
+        for(const token of this.tokens) {
+            if(token.isBorrowable) {
+                canBorrow = true;
+                break;
+            }
+        }
+        return canBorrow;
+    }
+
     async statusOf(account: address) {
         const data = await this.contract.statusOf(account);
         return {
@@ -109,6 +186,25 @@ export class Market {
             maxDebt: BigInt(data.maxDebt),
             debt: BigInt(data.debt)
         }
+    }
+
+    async previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, deposit_amount: bigint) {
+        const preview = await this.reader.previewAssetImpact(user, collateral_ctoken, debt_ctoken, deposit_amount);
+        return {
+            supply: preview.supply,
+            borrow: preview.borrow,
+            earn: preview.supply - preview.borrow
+        }
+    }
+
+    async previewPositionHealth(debt_change: bigint) {
+        const liq = await this.contract.liquidationValuesOf(this.signer.address as address);
+
+        if(liq.debt + debt_change <= 0n) {
+            return UINT256_MAX;
+        }
+
+        return (liq.soft * WAD) / (liq.debt + debt_change);
     }
 
     async liquidationStatusOf(account: address, collateralToken: address, debtToken: address) {
@@ -157,14 +253,33 @@ export class Market {
         return cooldowns;
     }
 
-    static async getAll(signer: curvance_signer, reader: ProtocolReader, oracle_manager: OracleManager) {
+    static async getAll(signer: curvance_signer, reader: ProtocolReader, oracle_manager: OracleManager, all_deploy_data: { [key: string]: any }) {
         const all_data = await reader.getAllMarketData(signer.address as address);
+        const deploy_keys = Object.keys(all_deploy_data);
 
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
-            const staticData = all_data.staticMarket[i];
-            const dynamicData = all_data.dynamicMarket[i];
-            const userData = all_data.userData.markets[i];
+            const staticData  = all_data.staticMarket[i]!;
+            const dynamicData = all_data.dynamicMarket[i]!;
+            const userData    = all_data.userData.markets[i]!;
+
+            const market_address = staticData.address;
+            let deploy_data: DeployData | undefined;
+            for(const obj_key of deploy_keys) {
+                const data = all_deploy_data[obj_key]!;
+                
+                if(market_address == data?.address) {
+                    deploy_data = {
+                        name: obj_key,
+                        plugins: data.plugins
+                    };
+                    break;
+                }
+            }
+
+            if(deploy_data == undefined) {
+                throw new Error(`Could not find deploy data for market: ${market_address}`);
+            }
 
             if(staticData == undefined) {
                 throw new Error(`Could not find static market data for index: ${i}`);
@@ -178,7 +293,7 @@ export class Market {
                 throw new Error(`Could not find user market data for index: ${i}`);
             }
 
-            const market = new Market(signer, staticData, dynamicData, userData, oracle_manager);
+            const market = new Market(signer, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
             markets.push(market);
         }
 

@@ -30,7 +30,7 @@ describe('Market Tests', () => {
         for(const market of markets) {
             console.log(`[${count}] tvl: ${market.tvl.toFixed(18)} | totalDebt: ${market.totalDebt.toFixed(18)} | totalCollateral: ${market.totalCollateral.toFixed(18)}`);
             for(const token of market.tokens) {
-                console.log(`\tToken: ${token.symbol} | Price: ${token.getPrice()} | Amount: ${token.getTvl(false)}`);
+                console.log(`\tToken: ${token.symbol} | Price: ${token.getPrice()} | Amount: ${token.getTvl(false)} | LTV: ${token.ltv}`);
             }
             count++;
         }

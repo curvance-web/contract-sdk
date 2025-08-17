@@ -12,7 +12,7 @@ export interface IERC20 {
     symbol(): Promise<string>;
     decimals(): Promise<bigint>;
     totalSupply(): Promise<bigint>;
-    allowance(owner: address, spender: address): Promise<TransactionResponse>;
+    allowance(owner: address, spender: address): Promise<bigint>;
 }
 
 export class ERC20 {

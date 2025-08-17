@@ -51,7 +51,14 @@ export class Faucet {
     }
 
     async multiLastClaimed(user: address, tokens: address[]) {
-        return this.contract.multiLastClaimed(user, tokens);
+        const claims = await this.contract.multiLastClaimed(user, tokens);
+        
+        let claim_dates: Date[] = [];
+        for(const claim of claims) {
+            claim_dates.push(new Date(Number(claim) * 1000));
+        }
+
+        return claim_dates;
     }
 
     async multiClaim(user: address, tokens: address[], amounts: bigint[]) {

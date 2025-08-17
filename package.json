@@ -29,7 +29,8 @@
     "test:ctoken": "ts-node tests/CToken.test.ts",
     "test:faucet": "ts-node tests/Faucet.test.ts",
     "test:market": "ts-node tests/Market.test.ts",
-    "test:oracle": "ts-node tests/OracleManager.test.ts"
+    "test:oracle": "ts-node tests/OracleManager.test.ts",
+    "test:dapp": "ts-node tests/dapp.test.ts"
   },
   "dependencies": {
     "@types/node": "^24.3.0",

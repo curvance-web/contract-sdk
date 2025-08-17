@@ -47,7 +47,7 @@ export interface StaticMarketData {
 
 export interface DynamicMarketToken {
     address: address;
-    tvl: bigint;
+    totalSupply: bigint;
     collateral: bigint;
     debt: bigint;
     sharePrice: bigint;
@@ -68,10 +68,10 @@ export interface DynamicMarketData {
 
 export interface UserMarketToken {
     address: address;
-    assetAmount: bigint;
-    shareAmount: bigint;
-    collateral: bigint;
-    debt: bigint;
+    userAssetBalance: bigint;
+    userShareBalance: bigint;
+    userCollateral: bigint;
+    userDebt: bigint;
 }
 
 export interface UserMarket {
@@ -100,6 +100,7 @@ export interface IProtocolReader {
     getDynamicMarketData(): Promise<DynamicMarketData[]>;
     getStaticMarketData(): Promise<StaticMarketData[]>;
     marketMultiCooldown(markets: address[], account: address): Promise<bigint[]>;
+    previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, deposit_amount: bigint): Promise<[bigint, bigint]>;
     hypotheticalMaxLeverage(account: address, borrowableCToken: address, cToken: address, assets: bigint): { maxDebtBorrowable: bigint, isOffset: boolean }
 }
 
@@ -135,7 +136,7 @@ export class ProtocolReader {
             address: market._address,
             tokens: market.tokens.map((token: any) => ({
                 address: token._address,
-                tvl: BigInt(token.tvl),
+                totalSupply: BigInt(token.totalSupply),
                 collateral: BigInt(token.collateral),
                 debt: BigInt(token.debt),
                 sharePrice: BigInt(token.sharePrice),
@@ -172,10 +173,10 @@ export class ProtocolReader {
                 cooldown: BigInt(market.cooldown),
                 tokens: market.tokens.map((token: any) => ({
                     address: token._address,
-                    assetAmount: BigInt(token.assetAmount),
-                    shareAmount: BigInt(token.shareAmount),
-                    collateral: BigInt(token.collateral),
-                    debt: BigInt(token.debt)
+                    userAssetBalance: BigInt(token.userAssetBalance),
+                    userShareBalance: BigInt(token.userShareBalance),
+                    userCollateral: BigInt(token.userCollateral),
+                    userDebt: BigInt(token.userDebt)
                 }))
             }))
         };
@@ -183,8 +184,12 @@ export class ProtocolReader {
         return typedData;
     }
 
-    async getAllDynamicState(use_api = true) {
-        // TODO: Implement API call
+    async previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, deposit_amount: bigint) {
+        const data = await this.contract.previewAssetImpact(user, collateral_ctoken, debt_ctoken, deposit_amount);
+        return {
+            supply: BigInt(data[0]),
+            borrow: BigInt(data[1])
+        };
     }
 
     async hypotheticalMaxLeverage(account: address, borrowableCToken: address, cToken: address, assets: bigint) {
