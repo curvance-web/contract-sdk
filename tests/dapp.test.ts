@@ -26,6 +26,19 @@ describe('Market Tests', () => {
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
     })
 
+    
+    test('[Explore] Can Zap or Leverage', async() => {
+        const market = curvance.markets[0]!;
+        
+        for(const token of market.tokens) {
+            assert(typeof token.canZap === "boolean");
+            assert(typeof token.canLeverage === "boolean");
+        }
+    });
+    
+    // TODO: [Explore] Deposit as zap
+    // TODO: [Explore] Deposit with leverage
+
     test('[Faucet] Redeem all tokens', async() => {
         const market = curvance.markets[0]!;
         
@@ -100,9 +113,6 @@ describe('Market Tests', () => {
         await tx.wait();
         await mineBlock(provider);
     })
-    
-    // TODO: [Explore] Deposit as zap
-    // TODO: [Explore] Deposit with leverage
 
     test('[Explore] Borrow', async() => {
         const market = curvance.markets[1]!;

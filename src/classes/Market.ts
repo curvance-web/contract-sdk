@@ -91,7 +91,7 @@ export class Market {
     get adapters() { return this.cache.static.adapters; }
     get cooldownLength() { return this.cache.static.cooldownLength; }
     get name() { return this.cache.deploy.name; }
-    get plugins() { return this.cache.deploy.plugins; }
+    get plugins() { return this.cache.deploy.plugins ?? {}; }
 
     /**
      * Get the total user deposits in USD.

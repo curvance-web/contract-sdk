@@ -129,6 +129,8 @@ export class CToken {
     get userCollateral() { return this.cache.userCollateral; }
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
+    get canZap() { return "simpleZapper" in this.market.plugins || "vaultZapper" in this.market.plugins }
+    get canLeverage() { return "simplePositionManager" in this.market.plugins || "vaultPositionManager" in this.market.plugins }
 
 
     /**
