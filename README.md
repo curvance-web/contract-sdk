@@ -3,6 +3,8 @@
 </p>
 
 Dependencies:
+- [Redstone](https://www.npmjs.com/package/@redstone-finance/sdk): Used to attach price updates in a multicall for some actions.
+- [Decimals](https://www.npmjs.com/package/decimal.js): Any floating point path being done with BigInt is done with Decimals.
 - [ethers.js](https://www.npmjs.com/package/ethers): All signers passed into the protocol are using ether.js typed signers.
 - [alchemy](https://dashboard.alchemy.com/apps): We use alchemy chain prefixing to define changes for example. `eth-mainnet` or `arb-sepolia`, you do not need to use a provider with alchemy but you will need to provide a chain using the alchemy naming standard for a chain.
 
