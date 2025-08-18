@@ -68,6 +68,17 @@ describe('Market Tests', () => {
         }
     })
 
+    test('[Explore] Deposit with a token using redstone pull', async() => {
+        const market = curvance.markets[0]!;
+        const token = market.tokens[0]!;
+
+        // This should be $100
+        const amount = toBigInt(0.01, token.decimals);
+        const tx = await token.deposit(amount, account);
+        await tx.wait();
+        await mineBlock(provider);
+    });
+
     test('[Explore] Deposit raw', async() => {
         const market = curvance.markets[1]!;
         const token = market.tokens[0]!;
@@ -132,6 +143,14 @@ describe('Market Tests', () => {
     test('[Dashboard] Modify collateral', async () => {
         const market = curvance.markets[1]!;
         const token = market.tokens[1]! as CToken;
+        
+        
+        {
+            // Deposit tokens to modify collateral on
+            const tx = await token.deposit(100n, account);
+            await tx.wait();
+            await mineBlock(provider);
+        }
 
         {
             // Modify collateral up
@@ -158,7 +177,7 @@ describe('Market Tests', () => {
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
 
         const markets = curvance.markets;
-        const market = markets[1]!; // All tests are using this market
+        const market = markets[0]!; // All tests are using this market
         console.log(`Market: ${market.name} (${market.address}):
             TVL - ${market.tvl.toFixed(18)}
             LTV - ${market.ltv}

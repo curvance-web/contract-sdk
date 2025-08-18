@@ -1,8 +1,9 @@
-import { BorrowableCToken, CToken } from "./classes/CToken";
-import { Contract } from "ethers";
+import { Contract, parseUnits } from "ethers";
 import { Decimal } from "decimal.js";
 import { address, curvance_provider, curvance_signer } from "./types";
 import { chains } from "./chains";
+
+export type ChainRpcPrefix = keyof typeof chains;
 
 export const BPS = BigInt(1e4);
 export const BPS_SQUARED = BigInt(1e8);
@@ -21,19 +22,12 @@ export const SECONDS_PER_DAY = 86_400n
 export const UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
 export const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000" as address;
 
-export enum AdaptorTypes {
-    CHAINLINK = 1,
-    REDSTONE_CORE = 2,
-    REDSTONE_CLASSIC = 3,
-    MOCK = 1337
-}
-
 export function toDecimal(value: bigint, decimals: bigint): Decimal {
     return new Decimal(value).div(new Decimal(10).pow(decimals));
 }
 
 export function toBigInt(value: number, decimals: bigint): bigint {
-    return BigInt(value) * (10n ** decimals);
+    return parseUnits(value.toString(), decimals);
 }
 
 export function validateProviderAsSigner(provider: curvance_provider) {
@@ -51,7 +45,7 @@ export function contractSetup<I>(provider: curvance_provider, contractAddress: a
     if(contract == undefined || contract == null) {
         throw new Error(`Failed to load contract at address ${contractAddress}.`);
     }
-    return contract as Contract & I;
+    return contractWithGasBuffer(contract) as Contract & I;
 }
 
 export function getContractAddresses(chain: ChainRpcPrefix) {
@@ -64,13 +58,82 @@ export function getContractAddresses(chain: ChainRpcPrefix) {
     return config;
 }
 
-export function handleTransactionWithOracles<T>(exec_func: Function, token: CToken | BorrowableCToken, adaptor: AdaptorTypes): Promise<T> {
-    if(adaptor == AdaptorTypes.REDSTONE_CORE) {
-        // TODO:
-        // Handle Redstone Core specific logic
-    }
-
-    return exec_func() as Promise<T>;
+/**
+ * Calculates the gas limit with a buffer percentage added
+ * @param estimatedGas The original gas estimate from ethers
+ * @param bufferPercent The percentage buffer to add (e.g., 20 for 20%)
+ * @returns The gas limit with buffer applied
+ */
+function calculateGasWithBuffer(estimatedGas: bigint, bufferPercent: number): bigint {
+    return (estimatedGas * BigInt(100 + bufferPercent)) / BigInt(100);
 }
 
-export type ChainRpcPrefix = keyof typeof chains;
+/**
+ * Checks if a contract method supports gas estimation
+ * @param method The contract method to check
+ * @returns true if the method has an estimateGas function
+ */
+function canEstimateGas(method: any): boolean {
+    return typeof method?.estimateGas === 'function';
+}
+
+/**
+ * Attempts to estimate gas and add buffer to transaction arguments
+ * @param method The contract method to estimate gas for
+ * @param args The transaction arguments
+ * @param bufferPercent The gas buffer percentage
+ * @returns true if gas estimation was successful and added to args
+ */
+async function tryAddGasBuffer(method: any, args: any[], bufferPercent: number): Promise<boolean> {
+    if (!canEstimateGas(method)) {
+        return false;
+    }
+
+    try {
+        const estimatedGas = await method.estimateGas(...args);
+        const gasLimit = calculateGasWithBuffer(estimatedGas, bufferPercent);
+        
+        // Add the gas limit as transaction overrides
+        args.push({ gasLimit });
+        return true;
+    } catch (error) {
+        // If gas estimation fails, continue without buffer
+        return false;
+    }
+}
+
+/**
+ * Wraps a contract instance so all write actions automatically add a gas buffer.
+ * 
+ * How it works:
+ * 1. Creates a proxy around the contract
+ * 2. Intercepts all function calls
+ * 3. For contract methods that support it, estimates gas usage
+ * 4. Adds the specified buffer percentage to the gas limit
+ * 5. Calls the original method with the buffered gas limit
+ * 
+ * @param contract The ethers contract instance to wrap
+ * @param bufferPercent The percentage buffer to add (default 20%)
+ * @returns The same contract but with automatic gas buffering
+ */
+export function contractWithGasBuffer<T extends object>(contract: T, bufferPercent = 10): T {
+    return new Proxy(contract, {
+        get(target, methodName, receiver) {
+            const originalMethod = Reflect.get(target, methodName, receiver);
+            
+            // Only wrap functions, skip special properties like populateTransaction
+            if (typeof originalMethod !== 'function' || methodName === 'populateTransaction') {
+                return originalMethod;
+            }
+            
+            // Return a wrapped version of the method
+            return async (...args: any[]) => {
+                // Try to add gas buffer before calling the method
+                await tryAddGasBuffer(originalMethod, args, bufferPercent);
+                
+                // Call the original method with potentially modified args
+                return originalMethod.apply(target, args);
+            };
+        }
+    });
+}

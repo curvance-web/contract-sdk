@@ -18,7 +18,8 @@ const contracts_used = [
     "BorrowableCToken",
     "IDynamicIRM",
     "MarketManagerIsolated",
-    "ProtocolReader"
+    "ProtocolReader",
+    "RedstoneCoreAdaptor"
 ];
 
 if(process.env.CONTRACT_REPO_PATH == undefined) {

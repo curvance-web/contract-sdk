@@ -1,6 +1,6 @@
 import { Contract, TransactionResponse } from "ethers";
 import { contractSetup, WAD_DECIMAL, SECONDS_PER_YEAR, BPS, toDecimal } from "../helpers";
-import { DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
+import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market } from "./Market";
 import Decimal from "decimal.js";
@@ -8,6 +8,7 @@ import base_ctoken_abi from '../abis/BaseCToken.json';
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
 import { address, bytes, curvance_provider, percentage } from "../types";
+import { Redstone } from "./Redstone";
 
 export interface AccountSnapshot {
     asset: address;
@@ -36,7 +37,7 @@ export interface ICToken {
     convertToShares(assets: bigint): Promise<bigint>;
     exchangeRate(): Promise<bigint>;
     getSnapshot(account: address): Promise<AccountSnapshot>;
-    multicall(calls: MulticallAction[]): Promise<bytes[]>;
+    multicall(calls: MulticallAction[]): Promise<TransactionResponse>;
     deposit(assets: bigint, receiver: address): Promise<TransactionResponse>;
     depositAsCollateral(assets: bigint, receiver: address): Promise<TransactionResponse>;
     redeem(shares: bigint, receiver: address, owner: address): Promise<TransactionResponse>;
@@ -258,24 +259,32 @@ export class CToken {
         return this.contract.transfer(receiver, amount);
     }
 
-    async redeemCollateral(shares: bigint, receiver: address, owner: address) { 
-        // TODO: Implement oracle handling
-        return this.contract.redeemCollateral(shares, receiver, owner); 
+    async redeemCollateral(shares: bigint, receiver: address, owner: address) {
+        return this.oracleRoute(
+            "redeemCollateral",
+            [shares, receiver, owner]
+        );
     }
 
     async postCollateral(shares: bigint) { 
-        // TODO: Implement oracle handling
-        return this.contract.postCollateral(shares); 
+        return this.oracleRoute(
+            "postCollateral",
+            [shares]
+        );
     }
 
     async removeCollateral(shares: bigint) {
-        // TODO: Implement oracle handling
-        return this.contract.removeCollateral(shares);
+        return this.oracleRoute(
+            "removeCollateral",
+            [shares]
+        );
     }
 
-    async withdrawCollateral(assets: bigint, receiver: address, owner: address) { 
-        // TODO: Implement oracle handling
-        return this.contract.withdrawCollateral(assets, receiver, owner); 
+    async withdrawCollateral(assets: bigint, receiver: address, owner: address) {
+        return this.oracleRoute(
+            "withdrawCollateral",
+            [assets, receiver, owner]
+        );
     }
 
     async convertToAssets(shares: bigint) { 
@@ -286,9 +295,11 @@ export class CToken {
         return this.contract.convertToShares(assets);
     }
 
-    async deposit(assets: bigint, receiver: address) { 
-        // TODO: Implement oracle handling
-        return this.contract.deposit(assets, receiver); 
+    async deposit(assets: bigint, receiver: address) {
+        return this.oracleRoute(
+            "deposit",
+            [assets, receiver]
+        );
     }
 
     async depositAsCollateral(assets: bigint, receiver: address) {
@@ -301,13 +312,17 @@ export class CToken {
             }
         }
         
-        // TODO: Implement oracle handling
-        return this.contract.depositAsCollateral(assets, receiver); 
+        return this.oracleRoute(
+            "depositAsCollateral",
+            [assets, receiver]
+        );
     }
 
-    async redeem(shares: bigint, receiver: address, owner: address) { 
-        // TODO: Implement oracle handling
-        return this.contract.redeem(shares, receiver, owner); 
+    async redeem(shares: bigint, receiver: address, owner: address) {
+        return this.oracleRoute(
+            "redeem",
+            [shares, receiver, owner]
+        );
     }
 
     async collateralPosted(account: address) { 
@@ -339,6 +354,30 @@ export class CToken {
     convertTokensToUsd(tokenAmount: bigint) {
         const tokenAmountDecimal = Decimal(tokenAmount).div(WAD_DECIMAL);
         return this.getPrice().mul(tokenAmountDecimal);
+    }
+
+    buildMultiCall(functionName: string, exec_params: any[]) {
+        const encodedFunc = this.contract.interface.encodeFunctionData(functionName, exec_params);
+        return {
+            target: this.address,
+            isPriceUpdate: false,
+            data: encodedFunc
+        } as MulticallAction;
+    }
+
+    async oracleRoute<T extends keyof (ICToken & IBorrowableCToken)>(
+        functionName: T,
+        exec_params: Parameters<(ICToken & IBorrowableCToken)[T]>
+    ): Promise<TransactionResponse> {
+        const adapter_enums = this.adapters.map(num => Number(num));
+
+        if(adapter_enums.includes(AdaptorTypes.REDSTONE_CORE)) {
+            const price_update = await Redstone.buildMulticallStruct(this);
+            const token_action = await this.buildMultiCall(functionName as string, exec_params);
+            return this.multicall([price_update, token_action]);
+        }
+
+        return (this.contract[functionName] as Function)(...exec_params);
     }
 }
 
@@ -374,8 +413,10 @@ export class BorrowableCToken extends CToken {
             throw new Error("Cannot deposit as collateral when there is outstanding debt");
         }
 
-        // TODO: Implement oracle handling
-        return super.depositAsCollateral(assets, receiver);
+        return this.oracleRoute(
+            "depositAsCollateral",
+            [assets, receiver]
+        );
     }
 
     override async postCollateral(shares: bigint) {
@@ -383,8 +424,10 @@ export class BorrowableCToken extends CToken {
             throw new Error("Cannot post collateral when there is outstanding debt");
         }
 
-        // TODO: Implement oracle handling
-        return super.postCollateral(shares); 
+        return this.oracleRoute(
+            "postCollateral",
+            [shares]
+        );
     }
 
     async fetchTotalDebt(inUSD: true): Promise<Decimal>;
@@ -395,8 +438,10 @@ export class BorrowableCToken extends CToken {
     }
 
     async borrow(amount: bigint, receiver: address) {
-        // TODO: Implement oracle handling
-        return this.contract.borrow(amount, receiver);
+        return this.oracleRoute(
+            "borrow",
+            [amount, receiver]
+        );
     }
 
     async dynamicIRM() {
@@ -450,8 +495,10 @@ export class BorrowableCToken extends CToken {
     }
 
     async repay(amount: bigint) {
-        // TODO: Implement oracle handling
-        return this.contract.repay(amount);
+        return this.oracleRoute(
+            "repay",
+            [amount]
+        );
     }
 
     async interestFee() {

@@ -3,6 +3,13 @@ import { contractSetup } from "../helpers";
 import abi from '../abis/ProtocolReader.json'
 import { address, curvance_provider } from "../types";
 
+export enum AdaptorTypes {
+    CHAINLINK = 1,
+    REDSTONE_CORE = 2,
+    REDSTONE_CLASSIC = 3,
+    MOCK = 1337
+}
+
 export interface StaticMarketAsset {
     address: address;
     name: string;
@@ -17,7 +24,7 @@ export interface StaticMarketToken {
     name: string;
     symbol: string;
     decimals: bigint;
-    adapters: [bigint, bigint];
+    adapters: [AdaptorTypes, AdaptorTypes];
     isBorrowable: boolean;
     borrowPaused: boolean;
     collateralizationPaused: boolean;
