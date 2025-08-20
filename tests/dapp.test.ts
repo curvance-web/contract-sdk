@@ -239,8 +239,6 @@ describe('Market Tests', () => {
             deposits.change = deposits.change.add(market.getUserDepositsChange('day'));
             debt.total = debt.total.add(market.userDebt);
             debt.change = debt.change.add(market.getUserDebtChange('day'));
-
-            console.log(market.positionHealth);
         }
 
         console.log(`Net Total: ${net.total.toFixed(18)}`);

@@ -183,7 +183,7 @@ export class CToken {
     earnChange(amount: Decimal, rateType: ChangeRate) {
         const rate = this.getApy();
         const rate_seconds = getRateSeconds(rateType);
-        const rate_percent = rate.mul(rate_seconds).div(WAD);
+        const rate_percent = rate.mul(rate_seconds);
         return amount.mul(rate_percent);
     }
 
@@ -463,7 +463,7 @@ export class BorrowableCToken extends CToken {
     borrowChange(amount: Decimal, rateType: ChangeRate) {
         const rate = this.borrowRate;
         const rate_seconds = getRateSeconds(rateType);
-        const rate_percent = Decimal(rate * rate_seconds).div(BPS).div(WAD);
+        const rate_percent = Decimal(rate * rate_seconds).div(BPS);
         return amount.mul(rate_percent);
     }
 
