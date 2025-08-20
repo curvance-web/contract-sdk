@@ -9,5 +9,7 @@ export type uint8 = uint;
 export type uint256 = uint;
 export type uint128 = uint;
 export type percentage = Decimal;
+export type USD = Decimal;
+export type typeBPS = Decimal;
 export type curvance_provider = JsonRpcSigner | Wallet | JsonRpcProvider;
 export type curvance_signer = JsonRpcSigner | Wallet;

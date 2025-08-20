@@ -1,10 +1,10 @@
 import { ChangeRate, contractSetup, EMPTY_ADDRESS, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
-import { Contract, ethers } from "ethers";
+import { Contract } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
 import { BorrowableCToken, CToken, IBorrowableCToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
-import { address, curvance_provider } from "../types";
+import { address, curvance_provider, USD } from "../types";
 import { OracleManager } from "./OracleManager";
 
 export interface Plugins {
@@ -272,15 +272,26 @@ export class Market {
         }
     }
 
-    async previewPositionHealth(debt_change: bigint) {
+    async previewPositionHealthDeposit(ctoken: CToken, collateral_change: USD) {
         const provider = validateProviderAsSigner(this.provider);
         const liq = await this.contract.liquidationValuesOf(provider.address as address);
 
-        if(liq.debt + debt_change <= 0n) {
-            return UINT256_MAX;
-        }
+        const impact = collateral_change.div(ctoken.getCollReqSoft(true));
+        const soft = Decimal(liq.soft * WAD).add(impact);
+        const debt = Decimal(liq.debt);
+        const result = soft.div(debt).div(WAD);
 
-        return (liq.soft * WAD) / (liq.debt + debt_change);
+        return result.lessThanOrEqualTo(0) ? null : result;
+    }
+
+    async previewPositionHealthBorrow(debt_change: USD) {
+        const provider = validateProviderAsSigner(this.provider);
+        const liq = await this.contract.liquidationValuesOf(provider.address as address);
+        
+        const soft = Decimal(liq.soft * WAD);
+        const debt = Decimal(liq.debt).add(debt_change);
+
+        return debt.lessThanOrEqualTo(0) ? null : soft.div(debt).div(WAD);
     }
 
     async liquidationStatusOf(account: address, collateralToken: address, debtToken: address) {

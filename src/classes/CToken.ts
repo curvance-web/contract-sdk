@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL, SECONDS_PER_YEAR, BPS, WAD, ChangeRate, getRateSeconds } from "../helpers";
+import { contractSetup, WAD_DECIMAL, SECONDS_PER_YEAR, BPS, ChangeRate, getRateSeconds } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market } from "./Market";
@@ -7,7 +7,7 @@ import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
-import { address, bytes, curvance_provider, percentage } from "../types";
+import { address, bytes, curvance_provider, percentage, typeBPS, USD } from "../types";
 import { Redstone } from "./Redstone";
 
 export interface AccountSnapshot {
@@ -108,79 +108,145 @@ export class CToken {
     get name() { return this.cache.name; }
     get remainingCollateral() { return this.cache.collateralCap - this.cache.collateral }
     get remainingDebt() { return this.cache.debtCap - this.cache.debt }
-    get collRatio() { return this.cache.collRatio }
-    get collReqSoft() { return this.cache.collReqSoft }
-    get collReqHard() { return this.cache.collReqHard }
-    get liqIncBase() { return this.cache.liqIncBase }
-    get liqIncCurve() { return this.cache.liqIncCurve }
-    get liqIncMin() { return this.cache.liqIncMin }
-    get liqIncMax() { return this.cache.liqIncMax }
-    get closeFactorBase() { return this.cache.closeFactorBase }
-    get closeFactorCurve() { return this.cache.closeFactorCurve }
-    get closeFactorMin() { return this.cache.closeFactorMin }
-    get closeFactorMax() { return this.cache.closeFactorMax; }
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
     get canZap() { return "simpleZapper" in this.market.plugins || "vaultZapper" in this.market.plugins }
     get canLeverage() { return "simplePositionManager" in this.market.plugins || "vaultPositionManager" in this.market.plugins }
 
+    /** @returns Collateral Ratio in BPS or bigint */
+    getCollRatio(inBPS: true): typeBPS;
+    getCollRatio(inBPS: false): bigint;
+    getCollRatio(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.collRatio).div(BPS) : this.cache.collRatio;
+    }
+
+    /** @returns Soft Collateral Requirement in BPS or bigint */
+    getCollReqSoft(inBPS: true): typeBPS;
+    getCollReqSoft(inBPS: false): bigint;
+    getCollReqSoft(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.collReqSoft).div(BPS) : this.cache.collReqSoft;
+    }
+
+    /** @returns Hard Collateral Requirement in BPS or bigint */
+    getCollReqHard(inBPS: true): typeBPS;
+    getCollReqHard(inBPS: false): bigint;
+    getCollReqHard(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.collReqHard).div(BPS) : this.cache.collReqHard;
+    }
+
+    /** @returns Liquidation Incentive Base in BPS or bigint */
+    getLiqIncBase(inBPS: true): typeBPS;
+    getLiqIncBase(inBPS: false): bigint;
+    getLiqIncBase(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.liqIncBase).div(BPS) : this.cache.liqIncBase;
+    }
+
+    /** @returns Liquidation Incentive Curve in BPS or bigint */
+    getLiqIncCurve(inBPS: true): typeBPS;
+    getLiqIncCurve(inBPS: false): bigint;
+    getLiqIncCurve(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.liqIncCurve).div(BPS) : this.cache.liqIncCurve;
+    }
+
+    /** @returns Liquidation Incentive Min in BPS or bigint */
+    getLiqIncMin(inBPS: true): typeBPS;
+    getLiqIncMin(inBPS: false): bigint;
+    getLiqIncMin(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.liqIncMin).div(BPS) : this.cache.liqIncMin;
+    }
+
+    /** @returns Liquidation Incentive Max in BPS or bigint */
+    getLiqIncMax(inBPS: true): typeBPS;
+    getLiqIncMax(inBPS: false): bigint;
+    getLiqIncMax(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.liqIncMax).div(BPS) : this.cache.liqIncMax;
+    }
+
+    /** @returns Close Factor Base in BPS or bigint */
+    getCloseFactorBase(inBPS: true): typeBPS;
+    getCloseFactorBase(inBPS: false): bigint;
+    getCloseFactorBase(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.closeFactorBase).div(BPS) : this.cache.closeFactorBase;
+    }
+
+    /** @returns Close Factor Curve in BPS or bigint */
+    getCloseFactorCurve(inBPS: true): typeBPS;
+    getCloseFactorCurve(inBPS: false): bigint;
+    getCloseFactorCurve(inBPS: boolean) {
+        return inBPS ? Decimal(this.cache.closeFactorCurve).div(BPS) : this.cache.closeFactorCurve;
+    }
+
+    /** @returns Close Factor Min in BPS or bigint */
+    getCloseFactorMin(inBPS: true): typeBPS;
+    getCloseFactorMin(inBPS: false): bigint;
+    getCloseFactorMin(inBPS: boolean) { 
+        return inBPS ? Decimal(this.cache.closeFactorMin).div(BPS) : this.cache.closeFactorMin;
+    }
+
+    /** @returns Close Factor Max in BPS or bigint */
+    getCloseFactorMax(inBPS: true): typeBPS;
+    getCloseFactorMax(inBPS: false): bigint;
+    getCloseFactorMax(inBPS: boolean) { 
+        return inBPS ? Decimal(this.cache.closeFactorMax).div(BPS)  : this.cache.closeFactorMax;
+    }
+
     /** @returns User assets in USD or token */
-    getUserShareBalance(inUSD: true): Decimal;
+    getUserShareBalance(inUSD: true): USD;
     getUserShareBalance(inUSD: false): bigint;
-    getUserShareBalance(inUSD: boolean): Decimal | bigint { 
+    getUserShareBalance(inUSD: boolean): USD | bigint { 
         return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, true) : this.cache.userShareBalance;
     }
 
     /** @returns User assets in USD or token */
-    getUserAssetBalance(inUSD: true): Decimal;
+    getUserAssetBalance(inUSD: true): USD;
     getUserAssetBalance(inUSD: false): bigint;
-    getUserAssetBalance(inUSD: boolean): Decimal | bigint {
+    getUserAssetBalance(inUSD: boolean): USD | bigint {
         return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : this.cache.userAssetBalance;
     }
     
     /** @returns Token Collateral Cap in USD or token */
-    getCollateralCap(inUSD: true): Decimal;
+    getCollateralCap(inUSD: true): USD;
     getCollateralCap(inUSD: false): bigint;
-    getCollateralCap(inUSD: boolean): Decimal | bigint {
+    getCollateralCap(inUSD: boolean): USD | bigint {
         return inUSD ? this.convertTokensToUsd(this.cache.collateralCap) : this.cache.collateralCap;
     }
 
     /** @returns Token Debt Cap in USD or token */
-    getDebtCap(inUSD: true): Decimal;
+    getDebtCap(inUSD: true): USD;
     getDebtCap(inUSD: false): bigint;
-    getDebtCap(inUSD: boolean): Decimal | bigint { 
+    getDebtCap(inUSD: boolean): USD | bigint { 
         return inUSD ? this.convertTokensToUsd(this.cache.debtCap) : this.cache.debtCap;
     }
 
     /** @returns Token Collateral in USD or token*/
-    getCollateral(inUSD: true): Decimal;
+    getCollateral(inUSD: true): USD;
     getCollateral(inUSD: false): bigint;
-    getCollateral(inUSD: boolean): Decimal | bigint { 
+    getCollateral(inUSD: boolean): USD | bigint { 
         return inUSD ? this.convertTokensToUsd(this.cache.collateral) : this.cache.collateral;
     }
 
     /** @returns Token Debt in USD or token */
-    getDebt(inUSD: true): Decimal;
+    getDebt(inUSD: true): USD;
     getDebt(inUSD: false): bigint;
-    getDebt(inUSD: boolean): Decimal | bigint {
+    getDebt(inUSD: boolean): USD | bigint {
         return inUSD ? this.convertTokensToUsd(this.cache.debt) : this.cache.debt;
     }
 
     /** @returns User Collateral in USD or token */
-    getUserCollateral(inUSD: true): Decimal;
+    getUserCollateral(inUSD: true): USD;
     getUserCollateral(inUSD: false): bigint;
-    getUserCollateral(inUSD: boolean): Decimal | bigint {
+    getUserCollateral(inUSD: boolean): USD | bigint {
         return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : this.cache.userCollateral;
     }
 
     /** @returns User Debt in USD or token */
-    getUserDebt(inUSD: true): Decimal;
+    getUserDebt(inUSD: true): USD;
     getUserDebt(inUSD: false): bigint;
-    getUserDebt(inUSD: boolean): Decimal | bigint {
+    getUserDebt(inUSD: boolean): USD | bigint {
         return inUSD ? this.convertTokensToUsd(this.cache.userDebt) : this.cache.userDebt;
     }
 
-    earnChange(amount: Decimal, rateType: ChangeRate) {
+    earnChange(amount: USD, rateType: ChangeRate) {
         const rate = this.getApy();
         const rate_seconds = getRateSeconds(rateType);
         const rate_percent = rate.mul(rate_seconds);
@@ -214,30 +280,30 @@ export class CToken {
         return Decimal(this.cache.supplyRate).div(BPS);
     }
     
-    getTvl(inUSD: true): Decimal;
+    getTvl(inUSD: true): USD;
     getTvl(inUSD: false): bigint;
-    getTvl(inUSD = true): Decimal | bigint {
+    getTvl(inUSD = true): USD | bigint {
         const tvl = this.cache.totalSupply;
         return inUSD ? this.convertTokensToUsd(tvl) : tvl;
     }
 
-    async fetchTvl(inUSD: true): Promise<Decimal>;
+    async fetchTvl(inUSD: true): Promise<USD>;
     async fetchTvl(inUSD: false): Promise<bigint>;
-    async fetchTvl(inUSD = true): Promise<Decimal | bigint> {
+    async fetchTvl(inUSD = true): Promise<USD | bigint> {
         const tvl = await this.totalSupply();
         return inUSD ? this.fetchConvertTokensToUsd(tvl) : tvl;
     }
 
-    getTotalCollateral(inUSD: true): Decimal;
+    getTotalCollateral(inUSD: true): USD;
     getTotalCollateral(inUSD: false): bigint;
-    getTotalCollateral(inUSD = true): Decimal | bigint {
+    getTotalCollateral(inUSD = true): USD | bigint {
         const totalCollateral = this.cache.collateral;
         return inUSD ? this.convertTokensToUsd(totalCollateral) : totalCollateral;
     }
 
-    async fetchTotalCollateral(inUSD: true): Promise<Decimal>;
+    async fetchTotalCollateral(inUSD: true): Promise<USD>;
     async fetchTotalCollateral(inUSD: false): Promise<bigint>;
-    async fetchTotalCollateral(inUSD = true): Promise<Decimal | bigint> {
+    async fetchTotalCollateral(inUSD = true): Promise<USD | bigint> {
         const totalCollateral = await this.contract.marketCollateralPosted();
         return inUSD ? this.fetchConvertTokensToUsd(totalCollateral) : totalCollateral;
     }
@@ -460,7 +526,7 @@ export class BorrowableCToken extends CToken {
     get utilizationRate() { return this.cache.utilizationRate; }
     get supplyRate() { return this.cache.supplyRate; }
 
-    borrowChange(amount: Decimal, rateType: ChangeRate) {
+    borrowChange(amount: USD, rateType: ChangeRate) {
         const rate = this.borrowRate;
         const rate_seconds = getRateSeconds(rateType);
         const rate_percent = Decimal(rate * rate_seconds).div(BPS);
@@ -489,9 +555,9 @@ export class BorrowableCToken extends CToken {
         );
     }
 
-    async fetchTotalDebt(inUSD: true): Promise<Decimal>;
-    async fetchTotalDebt(inUSD: false): Promise<bigint>;
-    async fetchTotalDebt(inUSD = true): Promise<Decimal | bigint> {
+    async fetchDebt(inUSD: true): Promise<USD>;
+    async fetchDebt(inUSD: false): Promise<bigint>;
+    async fetchDebt(inUSD = true): Promise<USD | bigint> {
         const totalDebt = await this.contract.marketOutstandingDebt();
         return inUSD ? this.fetchConvertTokensToUsd(totalDebt) : totalDebt;
     }
