@@ -3,6 +3,7 @@ import { Decimal } from "decimal.js";
 import { address, curvance_provider, curvance_signer } from "./types";
 import { chains } from "./chains";
 
+export type ChangeRate = "year" | "month" | "week" | "day";
 export type ChainRpcPrefix = keyof typeof chains;
 
 export const BPS = BigInt(1e4);
@@ -21,6 +22,21 @@ export const SECONDS_PER_DAY = 86_400n
 
 export const UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
 export const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000" as address;
+
+export function getRateSeconds(rate: ChangeRate): bigint {
+    switch (rate) {
+        case "year":
+            return SECONDS_PER_YEAR;
+        case "month":
+            return SECONDS_PER_MONTH;
+        case "week":
+            return SECONDS_PER_WEEK;
+        case "day":
+            return SECONDS_PER_DAY;
+        default:
+            throw new Error(`Unknown rate: ${rate}`);
+    }
+}
 
 export function toDecimal(value: bigint, decimals: bigint): Decimal {
     return new Decimal(value).div(new Decimal(10).pow(decimals));

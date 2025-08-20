@@ -10,6 +10,7 @@ import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX } fro
 import { BorrowableCToken, CToken } from '../src/classes/CToken';
 import { ERC20 } from '../src/classes/ERC20';
 import { assert } from 'console';
+import Decimal from 'decimal.js';
 
 
 describe('Market Tests', () => {
@@ -25,7 +26,6 @@ describe('Market Tests', () => {
         account = signer.address as address;
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
     })
-
     
     test('[Explore] Can Zap or Leverage', async() => {
         const market = curvance.markets[0]!;
@@ -205,14 +205,50 @@ describe('Market Tests', () => {
                 Symbol: ${token.symbol} | Token: ${token.name} (${token.address}):
                 \tUnderlying: ${toDecimal(await (token.getAsset() as ERC20).balanceOf(account), token.decimals)}
                 \tBalance: ${toDecimal(await token.balanceOf(account), token.decimals)}
-                \tCollateral Cap: ${token.collateralCap}
-                \tDebt Cap: ${token.debtCap}
+                \tCollateral Cap: ${token.getCollateralCap(true)}
+                \tDebt Cap: ${token.getDebtCap(true)}
                 \tIs borrowable: ${token.isBorrowable}
                 \tPrice: ${token.getPrice()}
                 \tDecimal: ${token.decimals}
                 \tAPY: ${token.getApy()}
             `);
         }
+    });
+
+
+    test('[Dashboard] Portfolio values', async() => {
+        let net = {
+            total: Decimal(0),
+            change: Decimal(0)
+        };
+
+        let deposits = {
+            total: Decimal(0),
+            change: Decimal(0)
+        };
+
+        let debt = {
+            total: Decimal(0),
+            change: Decimal(0)
+        }
+
+        for(const market of curvance.markets) {
+            net.total = net.total.add(market.userNet);
+            net.change = net.change.add(market.getUserNetChange('day'));
+            deposits.total = deposits.total.add(market.userDeposits);
+            deposits.change = deposits.change.add(market.getUserDepositsChange('day'));
+            debt.total = debt.total.add(market.userDebt);
+            debt.change = debt.change.add(market.getUserDebtChange('day'));
+
+            console.log(market.positionHealth);
+        }
+
+        console.log(`Net Total: ${net.total.toFixed(18)}`);
+        console.log(`Net change: ${net.change.toFixed(18)}`);
+        console.log(`Deposit Total: ${deposits.total.toFixed(18)}`);
+        console.log(`Deposit change: ${deposits.change.toFixed(18)}`);
+        console.log(`Debt Total: ${debt.total.toFixed(18)}`);
+        console.log(`Debt change: ${debt.change.toFixed(18)}`);
     });
 
     test('[Explore] List markets without wallet connected', async () => {
@@ -228,7 +264,7 @@ describe('Market Tests', () => {
             const signed_market_token = signed_market.tokens[token_idx]!;
             const unsigned_market_token = unsigned_market.tokens[token_idx]!;
 
-            assert(unsigned_market_token.debtCap.equals(signed_market_token.debtCap), `Debt Cap should be the same`);
+            assert(unsigned_market_token.getDebtCap(true).equals(signed_market_token.getDebtCap(true)), `Debt Cap should be the same`);
             assert(unsigned_market_token.name == signed_market_token.name, `Token names should be the same`);
         }
     });

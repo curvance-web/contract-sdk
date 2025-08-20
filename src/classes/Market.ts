@@ -1,11 +1,18 @@
-import { contractSetup, EMPTY_ADDRESS, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD } from "../helpers";
+import { ChangeRate, contractSetup, EMPTY_ADDRESS, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
 import { Contract, ethers } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
-import { BorrowableCToken, CToken } from "./CToken";
+import { BorrowableCToken, CToken, IBorrowableCToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
 import { address, curvance_provider } from "../types";
 import { OracleManager } from "./OracleManager";
+
+export interface Plugins {
+    simplePositionManager?: address;
+    vaultPositionManager?: address;
+    simpleZapper?: address;
+    vaultZapper?: address;
+}
 
 export interface StatusOf {
     collateral: bigint;
@@ -83,15 +90,29 @@ export class Market {
         }
     }
 
-    get positionHealth() { return this.cache.user.positionHealth; }
-    get userCollateral() { return toDecimal(this.cache.user.collateral, 18n); }
-    get userDebt() { return toDecimal(this.cache.user.debt, 18n); }
-    get userMaxDebt() { return toDecimal(this.cache.user.maxDebt, 18n); }
-    get cooldown() { return this.cache.user.cooldown == this.cooldownLength ? null : new Date(Number(this.cache.user.cooldown * 1000n)); }
-    get adapters() { return this.cache.static.adapters; }
-    get cooldownLength() { return this.cache.static.cooldownLength; }
     get name() { return this.cache.deploy.name; }
-    get plugins() { return this.cache.deploy.plugins ?? {}; }
+    get plugins():Plugins { return this.cache.deploy.plugins ?? {}; }
+    
+    /** @returns {bigint} - The length of the cooldown period in seconds. */
+    get cooldownLength() { return this.cache.static.cooldownLength; }
+    /** @returns {bigint[]} - A list of oracle identifiers which can be mapped to AdaptorTypes enum */
+    get adapters() { return this.cache.static.adapters; }
+    /** @returns {Date | null} - Market cooldown, activated by Collateralization or Borrowing. Lasts as long as {this.cooldownLength} which is currently 20mins */
+    get cooldown() { return this.cache.user.cooldown == this.cooldownLength ? null : new Date(Number(this.cache.user.cooldown * 1000n)); }
+    /** @returns {Decimal} - The user's collateral in USD. */
+    get userCollateral() { return toDecimal(this.cache.user.collateral, 18n); }
+    /** @returns {Decimal} - The user's debt in USD. */
+    get userDebt() { return toDecimal(this.cache.user.debt, 18n); }
+    /** @returns {Decimal} - The user's maximum debt in USD. */
+    get userMaxDebt() { return toDecimal(this.cache.user.maxDebt, 18n); }
+
+    /**
+     * Get the user's position health.
+     * @returns {Decimal | null} - The user's position health percentage or null if infinity
+     */
+    get positionHealth() { 
+        return this.cache.user.positionHealth == UINT256_MAX ? null : Decimal(this.cache.user.positionHealth).div(WAD_DECIMAL);
+    }
 
     /**
      * Get the total user deposits in USD.
@@ -100,10 +121,18 @@ export class Market {
     get userDeposits() {
         let total_deposits = Decimal(0);
         for(const token of this.tokens) {
-            total_deposits = total_deposits.add(token.convertTokensToUsd(token.userShareBalance));
+            total_deposits = total_deposits.add(token.getUserAssetBalance(true));
         }
 
         return total_deposits;
+    }
+
+    /**
+     * Get the user's net position in USD.
+     * @returns {Decimal} - The user's net position in USD.
+     */
+    get userNet() {
+        return this.userDeposits.sub(this.userDebt);
     }
 
     get ltv() {
@@ -143,7 +172,7 @@ export class Market {
         let marketDebt = new Decimal(0);
         for(const token of this.tokens) {
             if(token.isBorrowable) {
-                marketDebt = marketDebt.add((token as BorrowableCToken).getTotalDebt(true));
+                marketDebt = marketDebt.add(token.getDebt(true));
             }
         }
         return marketDebt;
@@ -155,6 +184,52 @@ export class Market {
             marketCollateral = marketCollateral.add(token.getTotalCollateral(true));
         }
         return marketCollateral;
+    }
+
+    /**
+     * Get the total user deposits change based on the provided rate.
+     * @param rate - What rate to calculate the change for (ex: 'day')
+     * @returns The total user deposits change (ex: 50, which would be $50/day)
+     */
+    getUserDepositsChange(rate: ChangeRate) {
+        let total_change = Decimal(0);
+        for(const token of this.tokens) {
+            const amount = token.getUserAssetBalance(true);
+            total_change = total_change.add(token.earnChange(amount, rate)); 
+        }
+
+        return total_change;
+    }
+
+
+    /**
+     * Get the total user debt change based on the provided rate.
+     * @param rate - What rate to calculate the change for (ex: 'day')
+     * @returns The total user debt change (ex: 50, which would be $50/day)
+     */
+    getUserDebtChange(rate: ChangeRate) {
+        let total_change = Decimal(0);
+        for(const token of this.tokens) {
+            if(!token.isBorrowable) {
+                continue;
+            }
+
+            const amount = token.getUserDebt(true);
+            total_change = total_change.add((token as BorrowableCToken).borrowChange(amount, rate)); 
+        }
+
+        return total_change;
+    }
+
+    /**
+     * Get the total user net change based on the provided rate.
+     * @param rate - What rate to calculate the change for (ex: 'day')
+     * @returns The total user net change (ex: 50, which would be $50/day)
+     */
+    getUserNetChange(rate: ChangeRate) {
+        const earn = this.getUserDepositsChange(rate);
+        const debt = this.getUserDebtChange(rate);
+        return earn.sub(debt);
     }
 
     highestApy() {
