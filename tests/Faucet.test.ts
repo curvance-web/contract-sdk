@@ -17,9 +17,7 @@ describe('Faucet Tests', () => {
     let account: address;
     let faucet: Faucet;
     let test_tokens: address[] = [];
-    let test_amounts: bigint[] = [];
     let test_token: address;
-    let test_amount: bigint;
     let one_day_secs = 24 * 60 * 60;
 
     before(async () => {
@@ -34,36 +32,20 @@ describe('Faucet Tests', () => {
             const tokens = market.tokens;
             for(const token of tokens) {
                 test_tokens.push(token.asset.address);
-                test_amounts.push(100n);
             }
         }
 
         test_token = test_tokens[0]!;
-        test_amount = test_amounts[0]!;
         fastForwardTime(provider, one_day_secs);
-    });
-
-    test('is available', async () => {
-        const available = await faucet.isAvailable(test_token, test_amount);
-        assert.strictEqual(available, true, 'Faucet should be available');
-    });
-
-    test('multi is available', async () => {
-        const availability = await faucet.multiIsAvailable(test_tokens, test_amounts);
-        const keys = Object.keys(availability);
-
-        assert(Object.keys(availability).length > 2);
-        assert(availability[keys[0]! as address]);
-        assert(availability[keys[keys.length - 1]! as address] == false);
     });
 
     test('claim', async () => {
         const token = new ERC20(signer, test_token);
         const balanceBefore = await token.balanceOf(account);
-        await faucet.claim(account, test_token, 100n);
+        await faucet.claim(test_token);
         const balanceAfter = await token.balanceOf(account);
 
-        assert(balanceBefore + 100n == balanceAfter);
+        assert(balanceBefore < balanceAfter, "Balance did not increase after claiming token");
     });
 
     test('multi last claimed', async () => {

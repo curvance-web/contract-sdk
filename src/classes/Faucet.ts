@@ -1,5 +1,4 @@
 import { contractSetup } from "../helpers";
-import { ERC20 } from "./ERC20";
 import { Contract } from "ethers";
 import { TransactionResponse } from "ethers";
 import { address, curvance_provider } from "../types";
@@ -7,9 +6,8 @@ import { address, curvance_provider } from "../types";
 export interface IFaucet {
     userLastClaimed(user: address, token: address): Promise<bigint>;
     multiLastClaimed(user: address, tokens: address[]): Promise<bigint[]>;
-    multiClaim(user: address, tokens: address[], amounts: bigint[]): Promise<TransactionResponse>;
-    claim(user: address, token: address, amount: bigint): Promise<TransactionResponse>;
-    multiIsAvailable(tokenAddrs: address[], amounts: bigint[]): Promise<boolean[]>;
+    multiClaim(tokens: address[]): Promise<TransactionResponse>;
+    claim(token: address): Promise<TransactionResponse>;
 }
 
 export class Faucet {
@@ -23,27 +21,9 @@ export class Faucet {
         this.contract = contractSetup<IFaucet>(provider, this.address, [
             "function userLastClaimed(address user, address token) view returns (uint256)",
             "function multiLastClaimed(address user, address[] tokens) view returns (uint256[])",
-            "function multiClaim(address user, address[] tokens, uint256[] amounts) external",
-            "function claim(address user, address token, uint256 amount) external",
-            "function multiIsAvailable(address[] tokenAddrs, uint256[] amounts) view returns (bool[])"
+            "function multiClaim(address[] tokens) external",
+            "function claim(address token) external",
         ]);
-    }
-
-    async isAvailable(tokenAddr: address, amount: bigint) {
-        const token = new ERC20(this.provider, tokenAddr);
-        const faucetBalance = await token.balanceOf(this.address);
-        return amount <= faucetBalance;
-    }
-
-    async multiIsAvailable(tokenAddrs: address[], amounts: bigint[]) {
-        const data = await this.contract.multiIsAvailable(tokenAddrs, amounts);
-        
-        let availability: { [address: address]: boolean } = {};
-        for(let i = 0; i < tokenAddrs.length; i++) {
-            availability[tokenAddrs[i] as address] = data[i]!;
-        }
-
-        return availability;
     }
 
     async lastClaimed(user: address, token: address) {
@@ -61,11 +41,11 @@ export class Faucet {
         return claim_dates;
     }
 
-    async multiClaim(user: address, tokens: address[], amounts: bigint[]) {
-        return this.contract.multiClaim(user, tokens, amounts);
+    async multiClaim(tokens: address[]) {
+        return this.contract.multiClaim(tokens);
     }
 
-    async claim(user: address, token: address, amount: bigint) {
-        return this.contract.claim(user, token, amount);
+    async claim(token: address) {
+        return this.contract.claim(token);
     }
 }

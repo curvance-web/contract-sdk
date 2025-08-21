@@ -27,7 +27,7 @@
   },
   {
     "type": "function",
-    "name": "DEFAULT_HEART_BEAT",
+    "name": "DEFAULT_HEARTBEAT",
     "inputs": [],
     "outputs": [
       {
@@ -159,19 +159,24 @@
     ],
     "outputs": [
       {
-        "name": "isConfigured",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
         "name": "decimals",
         "type": "uint8",
         "internalType": "uint8"
       },
       {
         "name": "heartbeat",
-        "type": "uint24",
-        "internalType": "uint24"
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "redstoneTimestamp",
+        "type": "uint48",
+        "internalType": "uint48"
+      },
+      {
+        "name": "price",
+        "type": "uint184",
+        "internalType": "uint184"
       },
       {
         "name": "symbolHash",
@@ -304,8 +309,8 @@
         "components": [
           {
             "name": "price",
-            "type": "uint240",
-            "internalType": "uint240"
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
             "name": "inUSD",
@@ -485,11 +490,6 @@
         "internalType": "bool"
       },
       {
-        "name": "guardType",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "timestampStart",
         "type": "uint256",
         "internalType": "uint256"
@@ -542,8 +542,8 @@
       },
       {
         "name": "redstoneTimestamp",
-        "type": "uint128",
-        "internalType": "uint128"
+        "type": "uint48",
+        "internalType": "uint48"
       }
     ],
     "outputs": [],
@@ -566,19 +566,24 @@
         "internalType": "struct RedstoneCoreAdaptor.AssetConfig",
         "components": [
           {
-            "name": "isConfigured",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
             "name": "decimals",
             "type": "uint8",
             "internalType": "uint8"
           },
           {
             "name": "heartbeat",
-            "type": "uint24",
-            "internalType": "uint24"
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "redstoneTimestamp",
+            "type": "uint48",
+            "internalType": "uint48"
+          },
+          {
+            "name": "price",
+            "type": "uint184",
+            "internalType": "uint184"
           },
           {
             "name": "symbolHash",
@@ -675,7 +680,12 @@
   },
   {
     "type": "error",
-    "name": "BaseOracleAdaptor__NoPriceGuard",
+    "name": "BaseOracleAdaptor__InvalidTimestamp",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BaseOracleAdaptor__MinPriceAboveCurrentPrice",
     "inputs": []
   },
   {
