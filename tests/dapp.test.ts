@@ -59,7 +59,7 @@ describe('Market Tests', () => {
             }
         }
 
-        const tx = await curvance.faucet.multiClaim(claim_tokens);
+        const tx = await curvance.faucet.claim(claim_tokens);
         await tx.wait();
         await mineBlock(provider);
     });

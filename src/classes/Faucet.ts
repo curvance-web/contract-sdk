@@ -6,8 +6,8 @@ import { address, curvance_provider } from "../types";
 export interface IFaucet {
     userLastClaimed(user: address, token: address): Promise<bigint>;
     multiLastClaimed(user: address, tokens: address[]): Promise<bigint[]>;
-    multiClaim(tokens: address[]): Promise<TransactionResponse>;
-    claim(token: address): Promise<TransactionResponse>;
+    tokensAvailable(tokens: address[]): Promise<boolean[]>;
+    claim(token: address[]): Promise<TransactionResponse>;
 }
 
 export class Faucet {
@@ -21,8 +21,8 @@ export class Faucet {
         this.contract = contractSetup<IFaucet>(provider, this.address, [
             "function userLastClaimed(address user, address token) view returns (uint256)",
             "function multiLastClaimed(address user, address[] tokens) view returns (uint256[])",
-            "function multiClaim(address[] tokens) external",
-            "function claim(address token) external",
+            "function tokensAvailable(address[] tokens) view returns (bool[])",
+            "function claim(address[] token) external",
         ]);
     }
 
@@ -41,11 +41,19 @@ export class Faucet {
         return claim_dates;
     }
 
-    async multiClaim(tokens: address[]) {
-        return this.contract.multiClaim(tokens);
+    async tokensAvailable(tokens: address[]) {
+        const availability = await this.contract.tokensAvailable(tokens);
+        let map: { [key: address]: boolean } = {};
+        for(let i = 0; i < tokens.length; i++) {
+            const token = tokens[i]!;
+            const available = availability[i]!;
+            map[token] = available;
+        }
+
+        return map;
     }
 
-    async claim(token: address) {
+    async claim(token: address[]) {
         return this.contract.claim(token);
     }
 }

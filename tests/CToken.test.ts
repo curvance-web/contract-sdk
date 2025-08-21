@@ -39,7 +39,7 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
             if(account_name == 'FRESH') {
                 setNativeBalance(provider, account, BigInt(1e18)); // 1 ETH
                 const testAssets = [borrowableCToken.asset.address, cToken.asset.address];
-                const tx = await faucet.multiClaim(testAssets);
+                const tx = await faucet.claim(testAssets);
                 await tx.wait();
                 await mineBlock(provider);
 

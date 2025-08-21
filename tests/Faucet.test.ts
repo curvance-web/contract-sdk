@@ -39,10 +39,15 @@ describe('Faucet Tests', () => {
         fastForwardTime(provider, one_day_secs);
     });
 
+    test('available', async () => {
+        const available = await faucet.tokensAvailable([test_token]);
+        assert(available[test_token], "Token should be available");
+    });
+
     test('claim', async () => {
         const token = new ERC20(signer, test_token);
         const balanceBefore = await token.balanceOf(account);
-        await faucet.claim(test_token);
+        await faucet.claim([test_token]);
         const balanceAfter = await token.balanceOf(account);
 
         assert(balanceBefore < balanceAfter, "Balance did not increase after claiming token");
