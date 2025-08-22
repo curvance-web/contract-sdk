@@ -7,7 +7,7 @@ import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
-import { address, bytes, curvance_provider, percentage, typeBPS, USD } from "../types";
+import { address, bytes, curvance_provider, percentage, USD } from "../types";
 import { Redstone } from "./Redstone";
 
 export interface AccountSnapshot {
@@ -114,77 +114,77 @@ export class CToken {
     get canLeverage() { return "simplePositionManager" in this.market.plugins || "vaultPositionManager" in this.market.plugins }
 
     /** @returns Collateral Ratio in BPS or bigint */
-    getCollRatio(inBPS: true): typeBPS;
+    getCollRatio(inBPS: true): percentage;
     getCollRatio(inBPS: false): bigint;
     getCollRatio(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.collRatio).div(BPS) : this.cache.collRatio;
     }
 
     /** @returns Soft Collateral Requirement in BPS or bigint */
-    getCollReqSoft(inBPS: true): typeBPS;
+    getCollReqSoft(inBPS: true): percentage;
     getCollReqSoft(inBPS: false): bigint;
     getCollReqSoft(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.collReqSoft).div(BPS) : this.cache.collReqSoft;
     }
 
     /** @returns Hard Collateral Requirement in BPS or bigint */
-    getCollReqHard(inBPS: true): typeBPS;
+    getCollReqHard(inBPS: true): percentage;
     getCollReqHard(inBPS: false): bigint;
     getCollReqHard(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.collReqHard).div(BPS) : this.cache.collReqHard;
     }
 
     /** @returns Liquidation Incentive Base in BPS or bigint */
-    getLiqIncBase(inBPS: true): typeBPS;
+    getLiqIncBase(inBPS: true): percentage;
     getLiqIncBase(inBPS: false): bigint;
     getLiqIncBase(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.liqIncBase).div(BPS) : this.cache.liqIncBase;
     }
 
     /** @returns Liquidation Incentive Curve in BPS or bigint */
-    getLiqIncCurve(inBPS: true): typeBPS;
+    getLiqIncCurve(inBPS: true): percentage;
     getLiqIncCurve(inBPS: false): bigint;
     getLiqIncCurve(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.liqIncCurve).div(BPS) : this.cache.liqIncCurve;
     }
 
     /** @returns Liquidation Incentive Min in BPS or bigint */
-    getLiqIncMin(inBPS: true): typeBPS;
+    getLiqIncMin(inBPS: true): percentage;
     getLiqIncMin(inBPS: false): bigint;
     getLiqIncMin(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.liqIncMin).div(BPS) : this.cache.liqIncMin;
     }
 
     /** @returns Liquidation Incentive Max in BPS or bigint */
-    getLiqIncMax(inBPS: true): typeBPS;
+    getLiqIncMax(inBPS: true): percentage;
     getLiqIncMax(inBPS: false): bigint;
     getLiqIncMax(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.liqIncMax).div(BPS) : this.cache.liqIncMax;
     }
 
     /** @returns Close Factor Base in BPS or bigint */
-    getCloseFactorBase(inBPS: true): typeBPS;
+    getCloseFactorBase(inBPS: true): percentage;
     getCloseFactorBase(inBPS: false): bigint;
     getCloseFactorBase(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.closeFactorBase).div(BPS) : this.cache.closeFactorBase;
     }
 
     /** @returns Close Factor Curve in BPS or bigint */
-    getCloseFactorCurve(inBPS: true): typeBPS;
+    getCloseFactorCurve(inBPS: true): percentage;
     getCloseFactorCurve(inBPS: false): bigint;
     getCloseFactorCurve(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.closeFactorCurve).div(BPS) : this.cache.closeFactorCurve;
     }
 
     /** @returns Close Factor Min in BPS or bigint */
-    getCloseFactorMin(inBPS: true): typeBPS;
+    getCloseFactorMin(inBPS: true): percentage;
     getCloseFactorMin(inBPS: false): bigint;
     getCloseFactorMin(inBPS: boolean) { 
         return inBPS ? Decimal(this.cache.closeFactorMin).div(BPS) : this.cache.closeFactorMin;
     }
 
     /** @returns Close Factor Max in BPS or bigint */
-    getCloseFactorMax(inBPS: true): typeBPS;
+    getCloseFactorMax(inBPS: true): percentage;
     getCloseFactorMax(inBPS: false): bigint;
     getCloseFactorMax(inBPS: boolean) { 
         return inBPS ? Decimal(this.cache.closeFactorMax).div(BPS)  : this.cache.closeFactorMax;
@@ -310,7 +310,7 @@ export class CToken {
 
     async fetchDecimals() {
         const decimals = await this.contract.decimals();
-        this.cache.asset.decimals = decimals;
+        this.cache.decimals = decimals;
         return decimals;
     }
 
@@ -332,7 +332,7 @@ export class CToken {
 
     async fetchSymbol() {
         const symbol = await this.contract.symbol();
-        this.cache.asset.symbol = symbol;
+        this.cache.symbol = symbol;
         return symbol;
     }
 
