@@ -8,7 +8,7 @@ export type bytes = `0x${string}`;
  * Represents the percentage value in the system.
  * This shuold return 0.7 which represents 70% (0.7 * 100)
  */
-export type percentage = Decimal;
+export type Percentage = Decimal;
 
 /**
  * USD in user representation which is value / 1e18
@@ -30,7 +30,7 @@ export type TokenInput = Decimal;
 /**
  * Indicator that a value is in BPS which is 1e4
  */
-export type typeBPS = bigint;
+export type TypeBPS = bigint;
 
 export type curvance_provider = JsonRpcSigner | Wallet | JsonRpcProvider;
 export type curvance_signer = JsonRpcSigner | Wallet;

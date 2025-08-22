@@ -1,10 +1,10 @@
-import { ChangeRate, contractSetup, EMPTY_ADDRESS, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
+import { BPS, ChangeRate, contractSetup, EMPTY_ADDRESS, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
 import { Contract } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
-import { BorrowableCToken, CToken, IBorrowableCToken } from "./CToken";
+import { BorrowableCToken, CToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
-import { address, curvance_provider, TokenInput, USD } from "../types";
+import { address, curvance_provider, percentage, TokenInput, USD, USD_WAD } from "../types";
 import { OracleManager } from "./OracleManager";
 
 export interface Plugins {
@@ -90,9 +90,10 @@ export class Market {
         }
     }
 
+    /** @returns {string} - The name of the market at deployment. */
     get name() { return this.cache.deploy.name; }
+    /** @returns {Plugins} - The address of the market's plugins by deploy name. */
     get plugins():Plugins { return this.cache.deploy.plugins ?? {}; }
-    
     /** @returns {bigint} - The length of the cooldown period in seconds. */
     get cooldownLength() { return this.cache.static.cooldownLength; }
     /** @returns {bigint[]} - A list of oracle identifiers which can be mapped to AdaptorTypes enum */
@@ -105,6 +106,11 @@ export class Market {
     get userDebt() { return toDecimal(this.cache.user.debt, 18n); }
     /** @returns {Decimal} - The user's maximum debt in USD. */
     get userMaxDebt() { return toDecimal(this.cache.user.maxDebt, 18n); }
+    /** @returns {Decimal} - The user's remaining credit in USD or in the token amount */
+    get userRemainingCredit(): USD {
+        const remaining = this.cache.user.maxDebt - this.cache.user.debt;
+        return toDecimal(remaining, 18n);
+    }
 
     /**
      * Get the user's position health.
@@ -134,7 +140,9 @@ export class Market {
     get userNet() {
         return this.userDeposits.sub(this.userDebt);
     }
-
+    
+    /** @returns Market LTV */
+    // TODO: This is probably wrong
     get ltv() {
         if (this.tokens.length === 0) {
             return { min: new Decimal(0), max: new Decimal(0) };
@@ -160,6 +168,7 @@ export class Market {
         return `${min.mul(100)}% - ${max.mul(100)}%`;
     }
 
+    /** @returns Total market deposits */
     get tvl() {
         let marketTvl = new Decimal(0);
         for(const token of this.tokens) {
@@ -168,6 +177,7 @@ export class Market {
         return marketTvl;
     }
 
+    /** @returns Total market debt */
     get totalDebt() {
         let marketDebt = new Decimal(0);
         for(const token of this.tokens) {
@@ -178,12 +188,39 @@ export class Market {
         return marketDebt;
     }
 
+    /** @returns Total market collateral */
     get totalCollateral() {
         let marketCollateral = new Decimal(0);
         for(const token of this.tokens) {
             marketCollateral = marketCollateral.add(token.getTotalCollateral(true));
         }
         return marketCollateral;
+    }
+
+    /**
+     * Returns what tokens eligible and ineligible to borrow from
+     * @returns What tokens can and cannot be borrowed from
+     */
+    getBorrowableCTokens() {
+        const result: {
+            eligible: BorrowableCToken[],
+            ineligible: BorrowableCToken[]
+        } = {
+            eligible: [],
+            ineligible: []
+        };
+
+        for(const token of this.tokens) {
+            if(token.isBorrowable) {
+                if(token.getUserCollateral(false) > 0) {
+                    result.ineligible.push(token as BorrowableCToken);
+                } else {
+                    result.eligible.push(token as BorrowableCToken);
+                }
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -232,6 +269,10 @@ export class Market {
         return earn.sub(debt);
     }
 
+    /**
+     * Searchs through all tokens and finds highest APY
+     * @returns {percentage} The highest APY among all tokens
+     */
     highestApy() {
         let maxApy = new Decimal(0);
         for(const token of this.tokens) {
@@ -243,6 +284,10 @@ export class Market {
         return maxApy;
     }
 
+    /**
+     * Does this market have the ability to borrow
+     * @returns True if borrowing is allowed, false otherwise
+     */
     hasBorrowing() {
         let canBorrow = false;
         for(const token of this.tokens) {
@@ -254,6 +299,11 @@ export class Market {
         return canBorrow;
     }
 
+    /**
+     * Gets the market status of
+     * @param account - Wallet address
+     * @returns collateral, max debt, debt for the market
+     */
     async statusOf(account: address) {
         const data = await this.contract.statusOf(account);
         return {
@@ -263,11 +313,22 @@ export class Market {
         }
     }
 
+    /**
+     * Preview the impact of the user descision for their deposit/borrow/leverage
+     * @param user - Wallet address
+     * @param collateral_ctoken - The collateral token
+     * @param debt_ctoken - The debt token
+     * @param deposit_amount - The colalteral amount
+     * @param borrow_amount - The debt amount
+     * @returns Supply, borrow & earn rates
+     */
     async previewAssetImpact(user: address, collateral_ctoken: CToken, debt_ctoken: BorrowableCToken, deposit_amount: TokenInput, borrow_amount: TokenInput) {
         const amount_in = toBigInt(deposit_amount.toNumber(), collateral_ctoken.decimals);
         const amount_out = toBigInt(borrow_amount.toNumber(), debt_ctoken.decimals);
         
         const preview = await this.reader.previewAssetImpact(user, collateral_ctoken.address, debt_ctoken.address, amount_in, amount_out);
+        
+        // TODO: Add change rates
         return {
             supply: preview.supply,
             borrow: preview.borrow,
@@ -275,37 +336,59 @@ export class Market {
         }
     }
 
+    /**
+     * Grabs the new position health when doing a deposit
+     * @param ctoken - Token you are expecting to deposit on
+     * @param collateral_change - Amount of new collateral in USD
+     * @returns The new position health
+     */
     async previewPositionHealthDeposit(ctoken: CToken, collateral_change: USD) {
         const provider = validateProviderAsSigner(this.provider);
-        const change = BigInt(collateral_change.mul(WAD_DECIMAL).toFixed(0));
+        const change = BigInt(collateral_change.mul(WAD_DECIMAL).toFixed(0)) as USD_WAD;
 
         const liq = await this.liquidationValuesOf(provider.address as address);
-
-        const impact = change / ctoken.getCollReqSoft(false) * WAD;
-        const soft = liq.soft * WAD + impact;
+        const impact = change * BPS / ctoken.getCollReqSoft(false);
+        const soft = liq.soft + impact;
         const debt = liq.debt;
         const result = debt > 0n ? soft / debt : 0n;
 
-        return result <= 0n ? null : Decimal(result).div(WAD);
+        return result <= 0n ? null : Decimal(result).div(WAD) as USD;
     }
 
+    /**
+     * Grabs the new position health when doing a borrow
+     * @param debt_change - Amount of new debt in USD
+     * @returns The new position health
+     */
     async previewPositionHealthBorrow(debt_change: USD) {
         const provider = validateProviderAsSigner(this.provider);
-        const change = BigInt(debt_change.mul(WAD_DECIMAL).toFixed(0));
+        const change = BigInt(debt_change.mul(WAD_DECIMAL).toFixed(0)) as USD_WAD;
 
         const liq = await this.liquidationValuesOf(provider.address as address);
         const soft = liq.soft * WAD;
         const debt = liq.debt + change;
         const result = debt > 0n ? soft / debt : 0n;
 
-        return result <= 0n ? null : Decimal(result).div(WAD);
+        return result <= 0n ? null : Decimal(result).div(WAD) as USD;
     }
 
+    /**
+     * Get liquidation values of for a given user
+     * @param account - user
+     * @returns The liquidation values of the user
+     */
     async liquidationValuesOf(account: address) {
         const [ soft, hard, debt ] = await this.contract.liquidationValuesOf(account);
         return { soft, hard, debt };
     }
 
+    /**
+     * Grab the current liquidation status of
+     * @param account - Account you wanna check liquidation status of on
+     * @param collateralToken - What token to use as collateral
+     * @param debtToken - What token to use as debt
+     * @returns The liquidation status of the account
+     */
     async liquidationStatusOf(account: address, collateralToken: address, debtToken: address) {
         const data = await this.contract.liquidationStatusOf(account, collateralToken, debtToken);
         return {
@@ -315,6 +398,15 @@ export class Market {
         }
     }
 
+    /**
+     * Grabs the new liquidity values based on changes
+     * @param account - The user's account address
+     * @param cTokenModified - The ctoken you are modifiying
+     * @param redemptionShares - Shares being redeemed
+     * @param borrowAssets - Amount of assets being borrowed
+     * @returns An object containing the hypothetical liquidity values
+     */
+    // TODO: This could probably be improved to just pass a ctoken & amount, the auto converts the shares
     async hypotheticalLiquidityOf(account: address, cTokenModified: address, redemptionShares: bigint, borrowAssets: bigint) {
         const data = await this.contract.hypotheticalLiquidityOf(account, cTokenModified, redemptionShares, borrowAssets);
         return {
@@ -324,6 +416,12 @@ export class Market {
         }
     }
 
+    /**
+     * Fetch the expiration date of a user's cooldown period
+     * @param account - The user's account address
+     * @param fetch - Whether to fetch the cooldown length from the contract
+     * @returns The expiration date of the cooldown period or null if not in cooldown
+     */
     async expiresAt(account: address, fetch = false) {
         const cooldownTimestamp = await this.contract.accountAssets(account);
         const cooldownLength = fetch || this.cooldownLength == 0n ? await this.contract.MIN_HOLD_PERIOD() : this.cooldownLength;
@@ -331,15 +429,19 @@ export class Market {
         return unlockTime == cooldownLength ? null : new Date(Number(unlockTime * 1000n));
     }
 
-    async multiHoldExpiresAt(markets: Market[], reader: ProtocolReader) {
+    /**
+     * Fetch multiple market cooldown expirations
+     * @param markets - Markets you want to search
+     * @returns An object mapping market addresses to their cooldown expiration dates OR null if its not in cooldown
+     */
+    async multiHoldExpiresAt(markets: Market[]) {
         const provider = validateProviderAsSigner(this.provider);
         if(markets.length == 0) {
             throw new Error("You can't fetch expirations for no markets.");
         }
 
         const marketAddresses = markets.map(market => market.address);
-        const cooldownTimestamps = await reader.marketMultiCooldown(marketAddresses, provider.address as address);
-        
+        const cooldownTimestamps = await this.reader.marketMultiCooldown(marketAddresses, provider.address as address);
 
         let cooldowns: { [address: address]: Date | null } = {};
         for(let i = 0; i < markets.length; i++) {
@@ -353,6 +455,14 @@ export class Market {
         return cooldowns;
     }
 
+    /**
+     * Grab all the markets available and set them up using the protocol reader efficient RPC calls / API cached calls
+     * @param provider - The RPC provider
+     * @param reader  - instace of the ProtocolReader class
+     * @param oracle_manager - instance of the OracleManager class
+     * @param all_deploy_data - Deploy data
+     * @returns An array of Market instances setup with protocol reader data
+     */
     static async getAll(provider: curvance_provider, reader: ProtocolReader, oracle_manager: OracleManager, all_deploy_data: { [key: string]: any }) {
         const user = "address" in provider ? provider.address : EMPTY_ADDRESS;
         const all_data = await reader.getAllMarketData(user as address);
