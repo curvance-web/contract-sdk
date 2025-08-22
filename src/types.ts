@@ -3,13 +3,10 @@ import { JsonRpcProvider, JsonRpcSigner, Wallet } from "ethers";
 
 export type address = `0x${string}`;
 export type bytes = `0x${string}`; 
-export type uint = bigint | number
-export type uint240 = uint;
-export type uint8 = uint;
-export type uint256 = uint;
-export type uint128 = uint;
 export type percentage = Decimal;
 export type USD = Decimal;
+export type USD_WAD = bigint;
+export type TokenInput = Decimal;
 export type typeBPS = Decimal;
 export type curvance_provider = JsonRpcSigner | Wallet | JsonRpcProvider;
 export type curvance_signer = JsonRpcSigner | Wallet;

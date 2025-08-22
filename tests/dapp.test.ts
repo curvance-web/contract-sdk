@@ -266,4 +266,25 @@ describe('Market Tests', () => {
             assert(unsigned_market_token.name == signed_market_token.name, `Token names should be the same`);
         }
     });
+
+    test(`[Explore] Preview impacts`, async () => {
+        const market = curvance.markets[1]!;
+        const debt_token = market.tokens[0]! as BorrowableCToken;
+        const coll_token = market.tokens[1]!;
+        const change_amount = Decimal(100.0);
+
+        console.log('Current position health', market.positionHealth);
+
+        const borrow = await market.previewPositionHealthBorrow(change_amount);
+        console.log('Borrow result (Position Health):', borrow);
+        console.log(`Borrow change`, borrow?.sub(market.positionHealth ?? 0) ?? 'N/A');
+
+        const deposit = await market.previewPositionHealthDeposit(coll_token, change_amount);
+        console.log(`Deposit result (Position Health):`, deposit);
+        console.log('Deposit change', deposit?.sub(market.positionHealth ?? 0)) ?? 'N/A';
+
+        // TODO: Fix
+        // const asset = await market.previewAssetImpact(account, coll_token, debt_token, Decimal(2.5), Decimal(1.0));
+        // console.log(`Asset impact result:`, asset);
+    });
 });

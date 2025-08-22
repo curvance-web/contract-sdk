@@ -107,7 +107,7 @@ export interface IProtocolReader {
     getDynamicMarketData(): Promise<DynamicMarketData[]>;
     getStaticMarketData(): Promise<StaticMarketData[]>;
     marketMultiCooldown(markets: address[], account: address): Promise<bigint[]>;
-    previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, deposit_amount: bigint): Promise<[bigint, bigint]>;
+    previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, new_collateral: bigint, new_debt: bigint): Promise<[bigint, bigint]>;
     hypotheticalMaxLeverage(account: address, borrowableCToken: address, cToken: address, assets: bigint): { maxDebtBorrowable: bigint, isOffset: boolean }
 }
 
@@ -191,8 +191,8 @@ export class ProtocolReader {
         return typedData;
     }
 
-    async previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, deposit_amount: bigint) {
-        const data = await this.contract.previewAssetImpact(user, collateral_ctoken, debt_ctoken, deposit_amount);
+    async previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, deposit_amount: bigint, borrow_amount: bigint) {
+        const data = await this.contract.previewAssetImpact(user, collateral_ctoken, debt_ctoken, deposit_amount, borrow_amount );
         return {
             supply: BigInt(data[0]),
             borrow: BigInt(data[1])

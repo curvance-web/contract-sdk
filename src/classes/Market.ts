@@ -1,10 +1,10 @@
-import { ChangeRate, contractSetup, EMPTY_ADDRESS, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
+import { ChangeRate, contractSetup, EMPTY_ADDRESS, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
 import { Contract } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
 import { BorrowableCToken, CToken, IBorrowableCToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
-import { address, curvance_provider, USD } from "../types";
+import { address, curvance_provider, TokenInput, USD } from "../types";
 import { OracleManager } from "./OracleManager";
 
 export interface Plugins {
@@ -43,7 +43,7 @@ export interface IMarket {
     hypotheticalLiquidityOf(account: address, cTokenModified: address, redemptionShares: bigint, borrowAssets: bigint): Promise<HypotheticalLiquidityOf>;
     statusOf(account: address): Promise<StatusOf>;
     liquidationStatusOf(account: address, collateralToken: address, debtToken: address): Promise<LiquidationStatusOf>;
-    liquidationValuesOf(account: address): Promise<{ soft: bigint, hard: bigint, debt: bigint }>;
+    liquidationValuesOf(account: address): Promise<[ bigint, bigint, bigint ]>;
 }
 
 export class Market {
@@ -263,8 +263,11 @@ export class Market {
         }
     }
 
-    async previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, deposit_amount: bigint) {
-        const preview = await this.reader.previewAssetImpact(user, collateral_ctoken, debt_ctoken, deposit_amount);
+    async previewAssetImpact(user: address, collateral_ctoken: CToken, debt_ctoken: BorrowableCToken, deposit_amount: TokenInput, borrow_amount: TokenInput) {
+        const amount_in = toBigInt(deposit_amount.toNumber(), collateral_ctoken.decimals);
+        const amount_out = toBigInt(borrow_amount.toNumber(), debt_ctoken.decimals);
+        
+        const preview = await this.reader.previewAssetImpact(user, collateral_ctoken.address, debt_ctoken.address, amount_in, amount_out);
         return {
             supply: preview.supply,
             borrow: preview.borrow,
@@ -274,24 +277,33 @@ export class Market {
 
     async previewPositionHealthDeposit(ctoken: CToken, collateral_change: USD) {
         const provider = validateProviderAsSigner(this.provider);
-        const liq = await this.contract.liquidationValuesOf(provider.address as address);
+        const change = BigInt(collateral_change.mul(WAD_DECIMAL).toFixed(0));
 
-        const impact = collateral_change.div(ctoken.getCollReqSoft(true));
-        const soft = Decimal(liq.soft * WAD).add(impact);
-        const debt = Decimal(liq.debt);
-        const result = soft.div(debt).div(WAD);
+        const liq = await this.liquidationValuesOf(provider.address as address);
 
-        return result.lessThanOrEqualTo(0) ? null : result;
+        const impact = change / ctoken.getCollReqSoft(false) * WAD;
+        const soft = liq.soft * WAD + impact;
+        const debt = liq.debt;
+        const result = debt > 0n ? soft / debt : 0n;
+
+        return result <= 0n ? null : Decimal(result).div(WAD);
     }
 
     async previewPositionHealthBorrow(debt_change: USD) {
         const provider = validateProviderAsSigner(this.provider);
-        const liq = await this.contract.liquidationValuesOf(provider.address as address);
-        
-        const soft = Decimal(liq.soft * WAD);
-        const debt = Decimal(liq.debt).add(debt_change);
+        const change = BigInt(debt_change.mul(WAD_DECIMAL).toFixed(0));
 
-        return debt.lessThanOrEqualTo(0) ? null : soft.div(debt).div(WAD);
+        const liq = await this.liquidationValuesOf(provider.address as address);
+        const soft = liq.soft * WAD;
+        const debt = liq.debt + change;
+        const result = debt > 0n ? soft / debt : 0n;
+
+        return result <= 0n ? null : Decimal(result).div(WAD);
+    }
+
+    async liquidationValuesOf(account: address) {
+        const [ soft, hard, debt ] = await this.contract.liquidationValuesOf(account);
+        return { soft, hard, debt };
     }
 
     async liquidationStatusOf(account: address, collateralToken: address, debtToken: address) {
