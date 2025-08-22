@@ -4,7 +4,7 @@ import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from 
 import { BorrowableCToken, CToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
-import { address, curvance_provider, percentage, TokenInput, USD, USD_WAD } from "../types";
+import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { OracleManager } from "./OracleManager";
 
 export interface Plugins {
@@ -114,7 +114,7 @@ export class Market {
 
     /**
      * Get the user's position health.
-     * @returns {Decimal | null} - The user's position health percentage or null if infinity
+     * @returns {Decimal | null} - The user's position health Percentage or null if infinity
      */
     get positionHealth() { 
         return this.cache.user.positionHealth == UINT256_MAX ? null : Decimal(this.cache.user.positionHealth).div(WAD_DECIMAL);
@@ -271,9 +271,9 @@ export class Market {
 
     /**
      * Searchs through all tokens and finds highest APY
-     * @returns {percentage} The highest APY among all tokens
+     * @returns The highest APY among all tokens
      */
-    highestApy() {
+    highestApy(): Percentage {
         let maxApy = new Decimal(0);
         for(const token of this.tokens) {
             const tokenApy = token.getApy();

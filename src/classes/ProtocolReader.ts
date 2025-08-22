@@ -1,7 +1,7 @@
 import { Contract } from "ethers";
 import { contractSetup } from "../helpers";
 import abi from '../abis/ProtocolReader.json'
-import { address, curvance_provider, typeBPS } from "../types";
+import { address, curvance_provider, TypeBPS } from "../types";
 
 export enum AdaptorTypes {
     CHAINLINK = 1,
@@ -32,17 +32,17 @@ export interface StaticMarketToken {
     collateralCap: bigint;
     debtCap: bigint;
     isListed: boolean;
-    collRatio: typeBPS;
-    collReqSoft: typeBPS;
-    collReqHard: typeBPS;
-    liqIncBase: typeBPS;
-    liqIncCurve: typeBPS;
-    liqIncMin: typeBPS;
-    liqIncMax: typeBPS;
-    closeFactorBase: typeBPS;
-    closeFactorCurve: typeBPS;
-    closeFactorMin: typeBPS;
-    closeFactorMax: typeBPS;
+    collRatio: TypeBPS;
+    collReqSoft: TypeBPS;
+    collReqHard: TypeBPS;
+    liqIncBase: TypeBPS;
+    liqIncCurve: TypeBPS;
+    liqIncMin: TypeBPS;
+    liqIncMax: TypeBPS;
+    closeFactorBase: TypeBPS;
+    closeFactorCurve: TypeBPS;
+    closeFactorMin: TypeBPS;
+    closeFactorMax: TypeBPS;
 }
 
 export interface StaticMarketData {
