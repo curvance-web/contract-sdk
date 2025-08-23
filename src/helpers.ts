@@ -105,17 +105,12 @@ async function tryAddGasBuffer(method: any, args: any[], bufferPercent: number):
         return false;
     }
 
-    try {
-        const estimatedGas = await method.estimateGas(...args);
-        const gasLimit = calculateGasWithBuffer(estimatedGas, bufferPercent);
-        
-        // Add the gas limit as transaction overrides
-        args.push({ gasLimit });
-        return true;
-    } catch (error) {
-        // If gas estimation fails, continue without buffer
-        return false;
-    }
+    const estimatedGas = await method.estimateGas(...args);
+    const gasLimit = calculateGasWithBuffer(estimatedGas, bufferPercent);
+    
+    // Add the gas limit as transaction overrides
+    args.push({ gasLimit });
+    return true;
 }
 
 /**
@@ -144,11 +139,17 @@ export function contractWithGasBuffer<T extends object>(contract: T, bufferPerce
             
             // Return a wrapped version of the method
             return async (...args: any[]) => {
-                // Try to add gas buffer before calling the method
-                await tryAddGasBuffer(originalMethod, args, bufferPercent);
-                
-                // Call the original method with potentially modified args
-                return originalMethod.apply(target, args);
+                try {
+                    // Try to add gas buffer before calling the method
+                    await tryAddGasBuffer(originalMethod, args, bufferPercent);
+                    
+                    // Call the original method with potentially modified args
+                    return await originalMethod.apply(target, args);
+                } catch (error: any) {
+                    // Just enhance the original error message with method context
+                    error.message = `Contract method '${String(methodName)}' failed: ${error.message}`;
+                    throw error;
+                }
             };
         }
     });
