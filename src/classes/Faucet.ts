@@ -14,7 +14,17 @@ export class Faucet {
     provider: curvance_provider;
     address: address;
     contract: Contract & IFaucet;
-
+    
+    token_symbols = [
+        "USDC",
+        "WBTC",
+        "SWETH",
+        "LUSD",
+        "mkUSD",
+        "mETH",
+        "mUSD"
+    ];
+    
     constructor(provider: curvance_provider, address: address) {
         this.provider = provider;
         this.address = address;

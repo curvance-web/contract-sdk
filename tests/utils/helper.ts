@@ -40,12 +40,30 @@ export async function setNativeBalance(provider: JsonRpcProvider, targetAddress:
 export const getTestSetup = async (private_key: string) => {
     const provider = new JsonRpcProvider(process.env.TEST_RPC);
     const wallet = new Wallet(private_key, provider);
+
     return {
         provider,
-        signer: wallet
+        signer: new NonceManagerSigner(wallet, await wallet.getNonce('latest'))
     };
 }
 
 export const getRpcUrl = (chain_prefix: ChainRpcPrefix) => {
     return `https://${chain_prefix}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
+}
+
+
+export class NonceManagerSigner extends Wallet {
+    private currentNonce: number;
+    
+    constructor(baseSigner: Wallet, startingNonce: number) {
+        super(baseSigner.privateKey, baseSigner.provider);
+        this.currentNonce = startingNonce;
+    }
+    
+    override async sendTransaction(transaction: any) {
+        if (!transaction.nonce) {
+            transaction.nonce = this.currentNonce++;
+        }
+        return super.sendTransaction(transaction);
+    }
 }

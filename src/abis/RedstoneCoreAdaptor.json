@@ -695,11 +695,6 @@
   },
   {
     "type": "error",
-    "name": "Bytes32Helper__ZeroLengthString",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "CalldataMustHaveValidPayload",
     "inputs": []
   },
@@ -726,6 +721,11 @@
   {
     "type": "error",
     "name": "DataPackageTimestampsMustBeEqual",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataTimestampCannotBeZero",
     "inputs": []
   },
   {
@@ -771,6 +771,17 @@
   },
   {
     "type": "error",
+    "name": "InvalidSignature",
+    "inputs": [
+      {
+        "name": "signedHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "RedstoneCoreAdaptor__AssetIsNotSupported",
     "inputs": []
   },
@@ -802,6 +813,22 @@
         "name": "receivedSigner",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TimestampsMustBeEqual",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TooLargeValueByteSize",
+    "inputs": [
+      {
+        "name": "valueByteSize",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   }

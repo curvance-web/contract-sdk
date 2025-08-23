@@ -51,6 +51,35 @@
   },
   {
     "type": "function",
+    "name": "debtBalanceAtTimestamp",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "borrowableCToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "debtBalance",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getAllDynamicState",
     "inputs": [
       {
@@ -339,6 +368,30 @@
   },
   {
     "type": "function",
+    "name": "getPositionHealth",
+    "inputs": [
+      {
+        "name": "mm",
+        "type": "address",
+        "internalType": "contract IMarketManager"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "positionHealth",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getPrice",
     "inputs": [
       {
@@ -373,7 +426,7 @@
   },
   {
     "type": "function",
-    "name": "getPriceOnly",
+    "name": "getPriceSafely",
     "inputs": [
       {
         "name": "asset",
@@ -389,11 +442,16 @@
         "name": "getLower",
         "type": "bool",
         "internalType": "bool"
+      },
+      {
+        "name": "errorCodeBreakpoint",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
       {
-        "name": "price",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -698,7 +756,7 @@
   },
   {
     "type": "function",
-    "name": "hypotheticalMaxRemainingLeverageOf",
+    "name": "hypotheticalLeverageOf",
     "inputs": [
       {
         "name": "account",
@@ -706,12 +764,12 @@
         "internalType": "address"
       },
       {
-        "name": "borrowableCToken",
+        "name": "cToken",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "cToken",
+        "name": "borrowableCToken",
         "type": "address",
         "internalType": "address"
       },
@@ -723,14 +781,24 @@
     ],
     "outputs": [
       {
-        "name": "maxDebtBorrowable",
+        "name": "currentLeverage",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "isOffset",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "adjustedMaxLeverage",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxLeverage",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDebtBorrowable",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -806,6 +874,21 @@
   {
     "type": "error",
     "name": "CentralRegistryLib__InvalidCentralRegistry",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProtocolReader__NonCollateralizable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProtocolReader__PriceError",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProtocolReader__TokenNotListed",
     "inputs": []
   }
 ]

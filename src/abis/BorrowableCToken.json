@@ -2067,11 +2067,6 @@
   },
   {
     "type": "error",
-    "name": "BaseCToken__UnsupportedAsset",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "BaseCToken__UnsupportedChain",
     "inputs": []
   },

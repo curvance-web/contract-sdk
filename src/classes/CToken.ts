@@ -261,7 +261,9 @@ export class CToken {
         return Decimal(this.cache.collRatio).div(BPS) as Percentage; 
     }
     
-    getAsset(asErc20 = true) { 
+    getAsset(asErc20: true): ERC20;
+    getAsset(asErc20: false): address;
+    getAsset(asErc20: boolean) { 
         return asErc20 ? new ERC20(this.provider, this.cache.asset.address, this.cache.asset) : this.cache.asset.address 
     }
     

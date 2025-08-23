@@ -1,15 +1,13 @@
 import { config } from 'dotenv';
 config({ quiet: true });
 import { test, describe, before } from 'node:test';
-
+import assert from 'node:assert';
 import { JsonRpcProvider } from 'ethers';
 import { address, curvance_signer } from '../src/types';
 import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock } from './utils/helper';
 import { setupChain } from '../src/setup';
 import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX } from '../src/helpers';
 import { BorrowableCToken, CToken } from '../src/classes/CToken';
-import { ERC20 } from '../src/classes/ERC20';
-import { assert } from 'console';
 import Decimal from 'decimal.js';
 
 
@@ -24,9 +22,29 @@ describe('Market Tests', () => {
         provider = setup.provider;
         signer = setup.signer;
         account = signer.address as address;
+        
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
     })
     
+    test('[Explore] Can deposit a borrowable token', async() => {
+        const market = curvance.markets[0]!;
+        const token_a = market.tokens[0]!;
+
+        assert(token_a.isBorrowable, "Token should be borrowable");
+        const tx = await token_a.deposit(100n, account);
+        await tx.wait();
+    });
+
+    test('[Explore] Zapping', async() => {
+        const market = curvance.markets.find(m => m.tokens.some(t => t.canZap));
+        assert(market, "Market could not be found that had zapping available");
+
+        const zappable_token = market.tokens.find(t => t.canZap);
+        assert(zappable_token, "No zappable token found");
+
+        
+    });
+
     test('[Explore] Can Zap or Leverage', async() => {
         const market = curvance.markets[0]!;
         
@@ -61,13 +79,12 @@ describe('Market Tests', () => {
 
         const tx = await curvance.faucet.claim(claim_tokens);
         await tx.wait();
-        await mineBlock(provider);
     });
 
     test(`[Explore] Approve all the markets with max approval amount`, async() => {
         for(const market of curvance.markets) {
             for(const token of market.tokens) {
-                const asset = token.getAsset() as ERC20
+                const asset = token.getAsset(true);
                 const allownace = await asset.allowance(account, token.address);
                 if(allownace >= UINT256_MAX / 2n) {
                     console.log(`Already approved ${token.symbol} -- skipping`);
@@ -76,7 +93,7 @@ describe('Market Tests', () => {
 
                 const tx = await asset.approve(token.address, UINT256_MAX);
                 await tx.wait();
-                await mineBlock(provider);
+    
             }
         }
     })
@@ -89,7 +106,6 @@ describe('Market Tests', () => {
         const amount = toBigInt(0.01, token.decimals);
         const tx = await token.deposit(amount, account);
         await tx.wait();
-        await mineBlock(provider);
     });
 
     test('[Explore] Deposit raw', async() => {
@@ -100,7 +116,6 @@ describe('Market Tests', () => {
         const amount = toBigInt(100, token.decimals);
         const tx = await token.deposit(amount, account);
         await tx.wait();
-        await mineBlock(provider);
     });
 
     test('[Explore] Deposit as collateral', async() => {
@@ -111,7 +126,6 @@ describe('Market Tests', () => {
         const amount = toBigInt(1, token.decimals);
         const tx = await token.depositAsCollateral(amount, account);
         await tx.wait();
-        await mineBlock(provider);
     })
 
     test('[Explore] Borrow', async() => {
@@ -122,10 +136,8 @@ describe('Market Tests', () => {
         const amount = toBigInt(15, token.decimals);
         const tx = await token.borrow(amount, account);
         await tx.wait();
-        await mineBlock(provider);
 
         await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
-        await mineBlock(provider);
     });
 
     test('[Dashboard] Withdraw', async () => {
@@ -136,7 +148,6 @@ describe('Market Tests', () => {
         const amount = toBigInt(1, token.decimals);
         const tx = await token.redeem(amount, account, account);
         await tx.wait();
-        await mineBlock(provider);
     });
 
     test('[Dashboard] Repay', async () => {
@@ -147,7 +158,6 @@ describe('Market Tests', () => {
         const amount = toBigInt(15, token.decimals);
         const tx = await token.repay(amount);
         await tx.wait();
-        await mineBlock(provider);
     });
 
     test('[Dashboard] Modify collateral', async () => {
@@ -159,24 +169,21 @@ describe('Market Tests', () => {
             // Deposit tokens to modify collateral on
             const tx = await token.deposit(100n, account);
             await tx.wait();
-            await mineBlock(provider);
         }
 
         {
             // Modify collateral up
             const tx = await token.postCollateral(100n);
             await tx.wait();
-            await mineBlock(provider);
 
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
-            await mineBlock(provider);
+
         }
 
         {
             // Modify collateral down
             const tx = await token.removeCollateral(100n);
             await tx.wait();
-            await mineBlock(provider);
         }
     });
 
@@ -203,7 +210,7 @@ describe('Market Tests', () => {
         for(const token of market.tokens) {
             console.log(`
                 Symbol: ${token.symbol} | Token: ${token.name} (${token.address}):
-                \tUnderlying: ${toDecimal(await (token.getAsset() as ERC20).balanceOf(account), token.decimals)}
+                \tUnderlying: ${toDecimal(await (token.getAsset(true)).balanceOf(account), token.decimals)}
                 \tBalance: ${toDecimal(await token.balanceOf(account), token.decimals)}
                 \tCollateral Cap: ${token.getCollateralCap(true)}
                 \tDebt Cap: ${token.getDebtCap(true)}
@@ -273,18 +280,41 @@ describe('Market Tests', () => {
         const coll_token = market.tokens[1]!;
         const change_amount = Decimal(100.0);
 
-        console.log('Current position health', market.positionHealth);
+        console.log('debt', debt_token.convertTokensToUsd(await debt_token.totalSupply()));
+        console.log('collateral', coll_token.convertTokensToUsd(await coll_token.totalSupply()));
 
-        const borrow = await market.previewPositionHealthBorrow(change_amount);
-        console.log('Borrow result (Position Health):', borrow);
-        console.log(`Borrow change`, borrow?.sub(market.positionHealth ?? 0) ?? 'N/A');
+        {
+            // Confirm position health calc is working correctly
+            const borrow = await market.previewPositionHealthBorrow(Decimal(0));
+            assert(
+                market.positionHealth == null ? market.positionHealth == borrow : borrow?.equals(market.positionHealth), 
+                `Position health should match with 0 change. Compared ${borrow} to ${market.positionHealth}`
+            );
+            const deposit = await market.previewPositionHealthDeposit(coll_token, Decimal(0));
+            assert(
+                market.positionHealth == null ? market.positionHealth == deposit : deposit?.equals(market.positionHealth!), 
+                `Position health should match with 0 change. Compared ${deposit} to ${market.positionHealth}`
+            );
+        }
 
-        const deposit = await market.previewPositionHealthDeposit(coll_token, change_amount);
-        console.log(`Deposit result (Position Health):`, deposit);
-        console.log('Deposit change', deposit?.sub(market.positionHealth ?? 0)) ?? 'N/A';
+        {
+            // Check borrow impact health factor
+            const borrow = await market.previewPositionHealthBorrow(change_amount);
+            console.log('Borrow result (Position Health):', borrow);
+            console.log(`Borrow change`, borrow == null ? 'N/A' : borrow.sub(market.positionHealth ?? 0).toFixed(18));
+        }
 
-        // TODO: Fix
-        // const asset = await market.previewAssetImpact(account, coll_token, debt_token, Decimal(2.5), Decimal(1.0));
-        // console.log(`Asset impact result:`, asset);
+        {
+            // Check deposit impact health factor
+            const deposit = await market.previewPositionHealthDeposit(coll_token, change_amount);
+            console.log(`Deposit result (Position Health):`, deposit);
+            console.log('Deposit change', deposit == null ? 'N/A' : deposit.sub(market.positionHealth ?? 0).toFixed(18));
+        }
+
+        {
+            // Check asset impact
+            const asset = await market.previewAssetImpact(account, coll_token, debt_token, Decimal(50_000), Decimal(5_000), 'day');
+            console.log(`Asset impact result:`, asset);
+        }
     });
 });
