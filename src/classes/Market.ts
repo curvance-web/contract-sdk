@@ -1,5 +1,5 @@
-import { BPS, ChangeRate, contractSetup, EMPTY_ADDRESS, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
-import { Contract } from "ethers";
+import { BPS, ChangeRate, contractSetup, EMPTY_ADDRESS, getRateSeconds, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
+import { Contract, parseUnits } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
 import { BorrowableCToken, CToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
@@ -322,17 +322,30 @@ export class Market {
      * @param borrow_amount - The debt amount
      * @returns Supply, borrow & earn rates
      */
-    async previewAssetImpact(user: address, collateral_ctoken: CToken, debt_ctoken: BorrowableCToken, deposit_amount: TokenInput, borrow_amount: TokenInput) {
+    async previewAssetImpact(user: address, collateral_ctoken: CToken, debt_ctoken: BorrowableCToken, deposit_amount: TokenInput, borrow_amount: TokenInput, rate_change: ChangeRate) {
         const amount_in = toBigInt(deposit_amount.toNumber(), collateral_ctoken.decimals);
         const amount_out = toBigInt(borrow_amount.toNumber(), debt_ctoken.decimals);
         
-        const preview = await this.reader.previewAssetImpact(user, collateral_ctoken.address, debt_ctoken.address, amount_in, amount_out);
-        
-        // TODO: Add change rates
+        const { supply, borrow } = await this.reader.previewAssetImpact(user, collateral_ctoken.address, debt_ctoken.address, amount_in, amount_out);
+        const supply_change = Decimal(supply * getRateSeconds(rate_change)).div(BPS);
+        const borrow_change = Decimal(borrow * getRateSeconds(rate_change)).div(BPS);
+
+        const amount_in_usd = collateral_ctoken.convertTokensToUsd(amount_in);
+        const amount_out_usd = debt_ctoken.convertTokensToUsd(amount_out);
+
         return {
-            supply: preview.supply,
-            borrow: preview.borrow,
-            earn: preview.supply - preview.borrow
+            supply: {
+                percent: supply_change,
+                change: amount_in_usd.mul(supply_change)
+            },
+            borrow: {
+                percent: borrow_change,
+                change: amount_out_usd.mul(borrow_change)
+            },
+            earn: {
+                percent: supply_change.sub(borrow_change),
+                change: amount_in_usd.mul(supply_change).sub(amount_out_usd.mul(borrow_change))
+            }
         }
     }
 
@@ -348,7 +361,7 @@ export class Market {
 
         const liq = await this.liquidationValuesOf(provider.address as address);
         const impact = change * BPS / ctoken.getCollReqSoft(false);
-        const soft = liq.soft + impact;
+        const soft = (liq.soft * WAD) + impact;
         const debt = liq.debt;
         const result = debt > 0n ? soft / debt : 0n;
 
