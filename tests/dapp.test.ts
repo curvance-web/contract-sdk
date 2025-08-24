@@ -37,10 +37,10 @@ describe('Market Tests', () => {
     });
 
     test('[Explore] Zapping - native vault', async() => {
-        const market = curvance.markets.find(m => m.tokens.some(t => t.zapTypes.includes('native-vault')));
+        const market = curvance.markets.find(m => m.tokens.some(t => t.canZap));
         assert(market, "Market could not be found that had zapping available");
 
-        const zappable_token = market.tokens.find(t => t.zapTypes.includes('native-vault'));
+        const zappable_token = market.tokens.find(t => t.canZap);
         assert(zappable_token, "No zappable token found");
 
         const balance_before = await zappable_token.balanceOf(account);
@@ -50,24 +50,22 @@ describe('Market Tests', () => {
         assert(balance_after > balance_before, "Balance should increase after zap deposit");
     });
 
-    // TODO: Figure out why we cant get a working test for this one
-    // test('[Explore] Zapping - native vault collateral', async() => {
-    //     const market = curvance.markets.find(m => m.tokens.some(t => t.zapTypes.includes('native-vault') && t.getCollateralCap(false) > 0n));
-    //     assert(market, "Market could not be found that had zapping available");
+    test('[Explore] Zapping - native vault collateral', async() => {
+        const market = curvance.markets.find(m => m.tokens.some(t => t.canZap && t.getCollateralCap(false) > 0n));
+        assert(market, "Market could not be found that had zapping available");
 
-    //     const zappable_token = market.tokens.find(t => t.zapTypes.includes('native-vault') && t.getCollateralCap(false) > 0n);
-    //     assert(zappable_token, "No zappable token found");
+        const zappable_token = market.tokens.find(t => t.canZap && t.getCollateralCap(false) > 0n);
+        assert(zappable_token, "No zappable token found");
 
-    //     await zappable_token.approvePlugin('native-vault');
-    //     await zappable_token.getAsset(true).approve(zappable_token.address, Decimal(1));
+        await zappable_token.approvePlugin('native-vault');
+        await zappable_token.getAsset(true).approve(zappable_token.address, Decimal(1));
 
-    //     console.log(zappable_token.getCollateralCap(false));
-    //     const balance_before = await zappable_token.balanceOf(account);
-    //     const tx = await zappable_token.depositAsCollateral(Decimal(.01), 'native-vault');
-    //     await tx.wait();
-    //     const balance_after = await zappable_token.balanceOf(account);
-    //     assert(balance_after > balance_before, "Balance should increase after zap deposit");
-    // });
+        const balance_before = await zappable_token.balanceOf(account);
+        const tx = await zappable_token.depositAsCollateral(Decimal(.01), 'native-vault');
+        await tx.wait();
+        const balance_after = await zappable_token.balanceOf(account);
+        assert(balance_after > balance_before, "Balance should increase after zap deposit");
+    });
     
     // TODO: [Explore] Deposit as zap
     // TODO: [Explore] Deposit with leverage

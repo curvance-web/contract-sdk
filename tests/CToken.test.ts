@@ -5,7 +5,7 @@ import assert from 'node:assert';
 import { JsonRpcProvider } from 'ethers';
 
 import { address, curvance_signer } from '../src/types';
-import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, setNativeBalance, TEST_ACCOUNTS } from './utils/helper';
+import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock, setNativeBalance, TEST_ACCOUNTS } from './utils/helper';
 import { CToken } from '../src/classes/CToken';
 import { setupChain } from '../src/setup';
 import { ERC20 } from '../src/classes/ERC20';
@@ -157,7 +157,8 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
             
             // Fast forward time by 20 minutes (1200 seconds)
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
-            
+            await mineBlock(provider);
+
             // Now try the transfer again - should work after time has passed
             const tx = await cToken.transfer(marketManager, amount);
             await tx.wait();
@@ -188,8 +189,6 @@ for(const { account_name, account_pk } of TEST_ACCOUNTS) {
                 let tx = await cToken.deposit(Decimal(0.003));
                 await tx.wait();
                 const beforeCollateral = await cToken.collateralPosted(account);
-
-                await fastForwardTime(provider, 10);
 
                 const amount = Decimal(0.001);
                 tx = await cToken.postCollateral(amount);

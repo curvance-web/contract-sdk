@@ -64,6 +64,13 @@ export class NonceManagerSigner extends Wallet {
         if (!transaction.nonce) {
             transaction.nonce = this.currentNonce++;
         }
-        return super.sendTransaction(transaction);
+
+        try {
+            const tx = await super.sendTransaction(transaction);
+            return tx;
+        } catch (error) {
+            this.currentNonce--;
+            throw error;
+        }
     }
 }

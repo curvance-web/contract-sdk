@@ -104,6 +104,7 @@ export class CToken extends Calldata<ICToken> {
     get remainingDebt() { return this.cache.debtCap - this.cache.debt }
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
+    get canZap() { return this.zapTypes.length > 0; }
 
     /** @returns Collateral Ratio in BPS or bigint */
     getCollRatio(inBPS: true): Percentage;
