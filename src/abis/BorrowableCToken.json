@@ -527,6 +527,19 @@
   },
   {
     "type": "function",
+    "name": "exchangeRateSafe",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "r",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "exchangeRateUpdated",
     "inputs": [],
     "outputs": [
@@ -605,11 +618,6 @@
             "name": "isCollateral",
             "type": "bool",
             "internalType": "bool"
-          },
-          {
-            "name": "exchangeRate",
-            "type": "uint256",
-            "internalType": "uint256"
           },
           {
             "name": "collateralPosted",

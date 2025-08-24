@@ -1,6 +1,7 @@
 import { address, curvance_provider } from "../types";
 import { contractSetup } from "../helpers";
 import { Contract } from "ethers";
+import { setup_config } from "../setup";
 
 export interface IOracleManager {
     getPrice(asset: address, inUSD: boolean, getLower: boolean): Promise<[bigint, bigint]>;
@@ -11,7 +12,7 @@ export class OracleManager {
     address: address;
     contract: Contract & IOracleManager;
 
-    constructor(provider: curvance_provider, address: address) {
+    constructor(address: address, provider: curvance_provider = setup_config.provider) {
         this.provider = provider;
         this.address = address as address;
         this.contract = contractSetup<IOracleManager>(provider, this.address, [

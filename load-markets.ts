@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { Wallet, JsonRpcProvider, Contract, parseUnits } from "ethers";
 import { setupChain } from "./src/setup";
 import { address } from "./src/types";
-import { UINT256_MAX } from "./src/helpers";
+import { toDecimal } from "./src/helpers";
 import { Decimal } from "decimal.js";
 import { TransactionResponse } from "ethers";
 import { NonceManagerSigner } from "./tests/utils/helper";
@@ -25,7 +25,6 @@ async function main() {
             if(!faucet.token_symbols.includes(token.asset.symbol)) {
                 continue;
             }
-            if(token.asset.symbol == 'WBTC') continue;
 
             const asset = token.getAsset(true);
             
@@ -37,17 +36,17 @@ async function main() {
             ], signer) as Contract & { mint(amount: bigint, overrides?: any): Promise<TransactionResponse> };
 
             const mint = await testnet_token.mint(amount_in_tokens);
-            await mint.wait();
+            // await mint.wait();
 
             const allowance = await asset.allowance(account, token.address);
             if(allowance < amount_in_tokens) {
-                const tx = await asset.approve(token.address, UINT256_MAX);
-                await tx.wait();
+                const tx = await asset.approve(token.address, null);
+                // await tx.wait();
             }
             
             console.log(`Depositing $${amount_in_usd}, ${amount_in_tokens} of ${token.symbol}`);
-            const deposit = await token.deposit(amount_in_tokens, account);
-            await deposit.wait();
+            const deposit = await token.deposit(toDecimal(amount_in_tokens, token.decimals));
+            // await deposit.wait();
         }
     }
 }

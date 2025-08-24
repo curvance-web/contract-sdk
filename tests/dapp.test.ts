@@ -2,13 +2,14 @@ import { config } from 'dotenv';
 config({ quiet: true });
 import { test, describe, before } from 'node:test';
 import assert from 'node:assert';
-import { JsonRpcProvider } from 'ethers';
+import { JsonRpcProvider, parseUnits } from 'ethers';
 import { address, curvance_signer } from '../src/types';
 import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock } from './utils/helper';
 import { setupChain } from '../src/setup';
-import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX } from '../src/helpers';
-import { BorrowableCToken, CToken } from '../src/classes/CToken';
+import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX, UINT256_MAX_DECIMAL } from '../src/helpers';
+import { CToken } from '../src/classes/CToken';
 import Decimal from 'decimal.js';
+import { BorrowableCToken } from '../src/classes/BorrowableCToken';
 
 
 describe('Market Tests', () => {
@@ -23,7 +24,7 @@ describe('Market Tests', () => {
         signer = setup.signer;
         account = signer.address as address;
         
-        curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
+        curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer, true);
     })
     
     test('[Explore] Can deposit a borrowable token', async() => {
@@ -31,28 +32,42 @@ describe('Market Tests', () => {
         const token_a = market.tokens[0]!;
 
         assert(token_a.isBorrowable, "Token should be borrowable");
-        const tx = await token_a.deposit(100n, account);
+        const tx = await token_a.deposit(Decimal(0.001));
         await tx.wait();
     });
 
-    test('[Explore] Zapping', async() => {
-        const market = curvance.markets.find(m => m.tokens.some(t => t.canZap));
+    test('[Explore] Zapping - native vault', async() => {
+        const market = curvance.markets.find(m => m.tokens.some(t => t.zapTypes.includes('native-vault')));
         assert(market, "Market could not be found that had zapping available");
 
-        const zappable_token = market.tokens.find(t => t.canZap);
+        const zappable_token = market.tokens.find(t => t.zapTypes.includes('native-vault'));
         assert(zappable_token, "No zappable token found");
 
-        
+        const balance_before = await zappable_token.balanceOf(account);
+        const tx = await zappable_token.deposit(Decimal(.01), 'native-vault');
+        await tx.wait();
+        const balance_after = await zappable_token.balanceOf(account);
+        assert(balance_after > balance_before, "Balance should increase after zap deposit");
     });
 
-    test('[Explore] Can Zap or Leverage', async() => {
-        const market = curvance.markets[0]!;
-        
-        for(const token of market.tokens) {
-            assert(typeof token.canZap === "boolean");
-            assert(typeof token.canLeverage === "boolean");
-        }
-    });
+    // TODO: Figure out why we cant get a working test for this one
+    // test('[Explore] Zapping - native vault collateral', async() => {
+    //     const market = curvance.markets.find(m => m.tokens.some(t => t.zapTypes.includes('native-vault') && t.getCollateralCap(false) > 0n));
+    //     assert(market, "Market could not be found that had zapping available");
+
+    //     const zappable_token = market.tokens.find(t => t.zapTypes.includes('native-vault') && t.getCollateralCap(false) > 0n);
+    //     assert(zappable_token, "No zappable token found");
+
+    //     await zappable_token.approvePlugin('native-vault');
+    //     await zappable_token.getAsset(true).approve(zappable_token.address, Decimal(1));
+
+    //     console.log(zappable_token.getCollateralCap(false));
+    //     const balance_before = await zappable_token.balanceOf(account);
+    //     const tx = await zappable_token.depositAsCollateral(Decimal(.01), 'native-vault');
+    //     await tx.wait();
+    //     const balance_after = await zappable_token.balanceOf(account);
+    //     assert(balance_after > balance_before, "Balance should increase after zap deposit");
+    // });
     
     // TODO: [Explore] Deposit as zap
     // TODO: [Explore] Deposit with leverage
@@ -91,7 +106,7 @@ describe('Market Tests', () => {
                     continue;
                 }
 
-                const tx = await asset.approve(token.address, UINT256_MAX);
+                const tx = await asset.approve(token.address, null);
                 await tx.wait();
     
             }
@@ -102,9 +117,7 @@ describe('Market Tests', () => {
         const market = curvance.markets[0]!;
         const token = market.tokens[0]!;
 
-        // This should be $100
-        const amount = toBigInt(0.01, token.decimals);
-        const tx = await token.deposit(amount, account);
+        const tx = await token.deposit(Decimal(0.01));
         await tx.wait();
     });
 
@@ -112,9 +125,7 @@ describe('Market Tests', () => {
         const market = curvance.markets[1]!;
         const token = market.tokens[0]!;
 
-        // This should be $100
-        const amount = toBigInt(100, token.decimals);
-        const tx = await token.deposit(amount, account);
+        const tx = await token.deposit(Decimal(100));
         await tx.wait();
     });
 
@@ -123,8 +134,7 @@ describe('Market Tests', () => {
         const token = market.tokens[1]!;
 
         // This should be $3600
-        const amount = toBigInt(1, token.decimals);
-        const tx = await token.depositAsCollateral(amount, account);
+        const tx = await token.depositAsCollateral(Decimal(1));
         await tx.wait();
     })
 
@@ -133,8 +143,7 @@ describe('Market Tests', () => {
         const token = market.tokens[0]! as BorrowableCToken;
 
         // This would be borrwing $15
-        const amount = toBigInt(15, token.decimals);
-        const tx = await token.borrow(amount, account);
+        const tx = await token.borrow(Decimal(15));
         await tx.wait();
 
         await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
@@ -145,8 +154,7 @@ describe('Market Tests', () => {
         const token = market.tokens[0]!;
 
         // Withdraw $1
-        const amount = toBigInt(1, token.decimals);
-        const tx = await token.redeem(amount, account, account);
+        const tx = await token.redeem(Decimal(1));
         await tx.wait();
     });
 
@@ -155,34 +163,32 @@ describe('Market Tests', () => {
         const token = market.tokens[0]! as BorrowableCToken;
 
         // Repay $15
-        const amount = toBigInt(15, token.decimals);
-        const tx = await token.repay(amount);
+        const tx = await token.repay(Decimal(15));
         await tx.wait();
     });
 
     test('[Dashboard] Modify collateral', async () => {
         const market = curvance.markets[1]!;
         const token = market.tokens[1]! as CToken;
+        const amount = Decimal(0.001);
         
         
         {
             // Deposit tokens to modify collateral on
-            const tx = await token.deposit(100n, account);
+            const tx = await token.deposit(amount);
             await tx.wait();
         }
 
         {
             // Modify collateral up
-            const tx = await token.postCollateral(100n);
+            const tx = await token.postCollateral(amount);
             await tx.wait();
-
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
-
         }
 
         {
             // Modify collateral down
-            const tx = await token.removeCollateral(100n);
+            const tx = await token.removeCollateral(amount);
             await tx.wait();
         }
     });
@@ -315,6 +321,18 @@ describe('Market Tests', () => {
             // Check asset impact
             const asset = await market.previewAssetImpact(account, coll_token, debt_token, Decimal(50_000), Decimal(5_000), 'day');
             console.log(`Asset impact result:`, asset);
+        }
+
+        {
+            // Check max leverage
+            const lev = await market.reader.hypotheticalLeverageOf(
+                account,
+                coll_token,
+                debt_token,
+                parseUnits('1000', coll_token.decimals)
+            );
+
+            console.log(lev);
         }
     });
 });

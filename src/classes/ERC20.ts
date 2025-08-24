@@ -1,8 +1,8 @@
-import { TransactionResponse } from "ethers";
-import { contractSetup } from "../helpers";
+import { parseUnits, TransactionResponse } from "ethers";
+import { contractSetup, UINT256_MAX } from "../helpers";
 import { Contract } from "ethers";
 import { StaticMarketAsset } from "./ProtocolReader";
-import { address, curvance_provider } from "../types";
+import { address, curvance_provider, TokenInput } from "../types";
 
 export interface IERC20 {
     balanceOf(account: address): Promise<bigint>;
@@ -49,12 +49,14 @@ export class ERC20 {
         return this.contract.balanceOf(account);    
     }
 
-    async transfer(to: address, amount: bigint) {
-        return this.contract.transfer(to, amount);
+    async transfer(to: address, amount: TokenInput) {
+        const tokens = parseUnits(amount.toString(), Number(this.decimals));
+        return this.contract.transfer(to, tokens);
     }
 
-    async approve(spender: address, amount: bigint) {
-        return this.contract.approve(spender, amount);
+    async approve(spender: address, amount: TokenInput | null) {
+        const tokens = amount == null ? UINT256_MAX : parseUnits(amount.toString(), Number(this.decimals));
+        return this.contract.approve(spender, tokens);
     }
 
     async fetchName() {

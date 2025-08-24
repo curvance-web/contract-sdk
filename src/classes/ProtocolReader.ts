@@ -1,7 +1,10 @@
 import { Contract } from "ethers";
-import { contractSetup } from "../helpers";
+import { contractSetup, WAD } from "../helpers";
 import abi from '../abis/ProtocolReader.json'
 import { address, curvance_provider, TypeBPS } from "../types";
+import Decimal from "decimal.js";
+import { setup_config } from "../setup";
+import { MarketToken } from "./Market";
 
 export enum AdaptorTypes {
     CHAINLINK = 1,
@@ -108,7 +111,7 @@ export interface IProtocolReader {
     getStaticMarketData(): Promise<StaticMarketData[]>;
     marketMultiCooldown(markets: address[], account: address): Promise<bigint[]>;
     previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, new_collateral: bigint, new_debt: bigint): Promise<[bigint, bigint]>;
-    hypotheticalMaxLeverage(account: address, borrowableCToken: address, cToken: address, assets: bigint): { maxDebtBorrowable: bigint, isOffset: boolean }
+    hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint): [ bigint, bigint, bigint, bigint ]
 }
 
 export class ProtocolReader {
@@ -116,7 +119,7 @@ export class ProtocolReader {
     address: address;
     contract: Contract & IProtocolReader;
 
-    constructor(provider: curvance_provider, address: address) {
+    constructor(address: address, provider: curvance_provider = setup_config.provider) {
         this.provider = provider;
         this.address = address;
         this.contract = contractSetup<IProtocolReader>(provider, address, abi);
@@ -199,11 +202,19 @@ export class ProtocolReader {
         };
     }
 
-    async hypotheticalMaxLeverage(account: address, borrowableCToken: address, cToken: address, assets: bigint) {
-        const data = await this.contract.hypotheticalMaxLeverage(account, borrowableCToken, cToken, assets);
-        return {
-            maxDebtBorrowable: BigInt(data.maxDebtBorrowable),
-            isOffset: data.isOffset
+    async hypotheticalLeverageOf(account: address, depositCToken: MarketToken, borrowableCToken: MarketToken, assets: bigint) {
+        const [ 
+            currentLeverage, 
+            adjustMaxLeverage,
+            maxLeverage,
+            maxDebtBorrowable 
+        ] = await this.contract.hypotheticalLeverageOf(account, depositCToken.address, borrowableCToken.address, assets);
+
+        return { 
+            currentLeverage: Decimal(currentLeverage).div(WAD),
+            adjustMaxLeverage: Decimal(adjustMaxLeverage).div(WAD),
+            maxLeverage: Decimal(maxLeverage).div(WAD),
+            maxDebtBorrowable: Decimal(maxDebtBorrowable).div(borrowableCToken.decimals)
         };
     }
 

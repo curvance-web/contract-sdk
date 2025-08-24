@@ -1,10 +1,11 @@
 import { convertDataPackagesResponse, getResponseTimestamp, requestDataPackages } from "@redstone-finance/sdk";
 import { address, bytes } from "../types";
-import { active_contracts } from "../setup";
 import { contractSetup } from "../helpers";
 import { solidityPacked, TransactionResponse } from "ethers";
-import { BorrowableCToken, CToken, MulticallAction } from "./CToken";
+import { CToken, MulticallAction } from "./CToken";
 import abi from '../abis/RedstoneCoreAdaptor.json';
+import { setup_config } from "../setup";
+import { MarketToken } from "./Market";
 
 export interface IRedstoneCoreAdaptor {
     writePrice(asset: address, inUSD: boolean, redstoneTimestamp: bigint): Promise<TransactionResponse>;
@@ -42,8 +43,8 @@ export class Redstone {
 
     }
 
-    static async buildMulticallStruct(ctoken: CToken | BorrowableCToken) {
-        const adaptor = active_contracts.RedstoneCoreAdaptor as address;
+    static async buildMultiCallAction(ctoken: MarketToken) {
+        const adaptor = setup_config.contracts.RedstoneCoreAdaptor as address;
         const contract = contractSetup<IRedstoneCoreAdaptor>(ctoken.provider, adaptor, abi);
         const { payload, timestamp } = await Redstone.getPayload(ctoken.asset.symbol);
         

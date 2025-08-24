@@ -1,17 +1,23 @@
 import { BPS, ChangeRate, contractSetup, EMPTY_ADDRESS, getRateSeconds, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
-import { Contract, parseUnits } from "ethers";
+import { Contract } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
-import { BorrowableCToken, CToken } from "./CToken";
+import { CToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
 import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { OracleManager } from "./OracleManager";
+import { setup_config } from "../setup";
+import { BorrowableCToken } from "./BorrowableCToken";
+
+export type MarketToken = CToken | BorrowableCToken;
 
 export interface Plugins {
     simplePositionManager?: address;
-    vaultPositionManager?: address;
     simpleZapper?: address;
+    vaultPositionManager?: address;
     vaultZapper?: address;
+    nativeVaultPositionManager?: address;
+    nativeVaultZapper?: address;
 }
 
 export interface StatusOf {
@@ -470,16 +476,15 @@ export class Market {
 
     /**
      * Grab all the markets available and set them up using the protocol reader efficient RPC calls / API cached calls
-     * @param provider - The RPC provider
      * @param reader  - instace of the ProtocolReader class
      * @param oracle_manager - instance of the OracleManager class
-     * @param all_deploy_data - Deploy data
+     * @param provider - The RPC provider
      * @returns An array of Market instances setup with protocol reader data
      */
-    static async getAll(provider: curvance_provider, reader: ProtocolReader, oracle_manager: OracleManager, all_deploy_data: { [key: string]: any }) {
+    static async getAll(reader: ProtocolReader, oracle_manager: OracleManager, provider: curvance_provider = setup_config.provider) {
         const user = "address" in provider ? provider.address : EMPTY_ADDRESS;
         const all_data = await reader.getAllMarketData(user as address);
-        const deploy_keys = Object.keys(all_deploy_data);
+        const deploy_keys = Object.keys(setup_config.contracts) as (keyof typeof setup_config.contracts)[];
 
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
@@ -490,12 +495,16 @@ export class Market {
             const market_address = staticData.address;
             let deploy_data: DeployData | undefined;
             for(const obj_key of deploy_keys) {
-                const data = all_deploy_data[obj_key]!;
+                const data = setup_config.contracts[obj_key]!;
                 
-                if(market_address == data?.address) {
+                if(typeof data != 'object') {
+                    continue;
+                }
+
+                if(market_address == data.address) {
                     deploy_data = {
                         name: obj_key,
-                        plugins: data.plugins
+                        plugins: 'plugins' in data ? data.plugins as { [key: string]: address } : {}
                     };
                     break;
                 }

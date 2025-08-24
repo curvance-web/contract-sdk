@@ -1,37 +1,61 @@
 import { JsonRpcProvider, JsonRpcSigner, Wallet } from "ethers";
 import { ChainRpcPrefix, getContractAddresses } from "./helpers";
 import { Market } from "./classes/Market";
-import { address } from './types';
+import { address, curvance_provider } from './types';
 import { ProtocolReader } from "./classes/ProtocolReader";
 import { Faucet } from "./classes/Faucet";
 import { OracleManager } from "./classes/OracleManager";
 
-export const backup_providers: Record<ChainRpcPrefix, JsonRpcProvider> = {
-    "monad-testnet": new JsonRpcProvider("https://rpc.ankr.com/monad_testnet")
+export let setup_config: {
+    chain: ChainRpcPrefix;
+    contracts: ReturnType<typeof getContractAddresses>;
+    provider: curvance_provider;
+    approval_protection: boolean;
 };
-export let active_contracts: ReturnType<typeof getContractAddresses>;
 
-export async function setupChain(chain: ChainRpcPrefix, signer: JsonRpcSigner | Wallet | JsonRpcProvider | null) {
-    active_contracts = getContractAddresses(chain);
+export const chain_config = {
+    'monad-testnet': {
+        provider: new JsonRpcProvider("https://rpc.ankr.com/monad_testnet"),
+        wrapped_native: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" as address,
+        vaults: [
+            { name: "apriori", contract: "0xb2f82D0f38dc453D596Ad40A37799446Cc89274A" as address },
+            { name: "fast-lane", contract: "0x3a98250F98Dd388C211206983453837C8365BDc1" as address },
+            { name: "magma", contract: "0xaEef2f6B429Cb59C9B2D7bB2141ADa993E8571c3" as address },
+            { name: "kintsu", contract: "0xe1d2439b75fb9746E7Bc6cB777Ae10AA7f7ef9c5" as address }
+        ]
+    }
+};
 
-    if(signer == null) {
-        signer = backup_providers[chain]!;
+export async function setupChain(chain: ChainRpcPrefix, provider: JsonRpcSigner | Wallet | JsonRpcProvider | null, approval_protection: boolean = false) {
+    if(!(chain in chain_config)) {
+        throw new Error("Chain does not have a corresponding config");
     }
 
-    if(!("ProtocolReader" in active_contracts)) {
+    if(provider == null) {
+        provider = chain_config[chain].provider!;
+    }
+
+    setup_config = {
+        chain,
+        provider,
+        approval_protection,
+        contracts: getContractAddresses(chain),
+    }
+
+    if(!("ProtocolReader" in setup_config.contracts)) {
         throw new Error(`Chain configuration for ${chain} is missing ProtocolReader address.`);
-    } else if (!("Faucet" in active_contracts)) {
+    } else if (!("Faucet" in setup_config.contracts)) {
         throw new Error(`Chain configuration for ${chain} is missing Faucet address.`);
-    } else if (!("OracleManager" in active_contracts)) {
+    } else if (!("OracleManager" in setup_config.contracts)) {
         throw new Error(`Chain configuration for ${chain} is missing OracleManager address.`);
     }
 
-    const reader = new ProtocolReader(signer, active_contracts.ProtocolReader as address)
-    const faucet = new Faucet(signer, active_contracts.Faucet as address);
-    const oracle_manager = new OracleManager(signer, active_contracts.OracleManager as address);
+    const reader = new ProtocolReader(setup_config.contracts.ProtocolReader as address)
+    const faucet = new Faucet(setup_config.contracts.Faucet as address);
+    const oracle_manager = new OracleManager(setup_config.contracts.OracleManager as address);
 
     return {
-        markets: await Market.getAll(signer, reader, oracle_manager, active_contracts),
+        markets: await Market.getAll(reader, oracle_manager),
         faucet,
         reader,
     };

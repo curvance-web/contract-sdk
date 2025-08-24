@@ -2,6 +2,7 @@ import { contractSetup } from "../helpers";
 import { Contract } from "ethers";
 import { TransactionResponse } from "ethers";
 import { address, curvance_provider } from "../types";
+import { setup_config } from "../setup";
 
 export interface IFaucet {
     userLastClaimed(user: address, token: address): Promise<bigint>;
@@ -25,7 +26,7 @@ export class Faucet {
         "mUSD"
     ];
     
-    constructor(provider: curvance_provider, address: address) {
+    constructor(address: address, provider: curvance_provider = setup_config.provider) {
         this.provider = provider;
         this.address = address;
         this.contract = contractSetup<IFaucet>(provider, this.address, [

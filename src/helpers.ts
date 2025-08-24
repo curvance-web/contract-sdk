@@ -1,7 +1,8 @@
 import { Contract, parseUnits } from "ethers";
 import { Decimal } from "decimal.js";
-import { address, curvance_provider, curvance_signer } from "./types";
+import { address, bytes, curvance_provider, curvance_signer } from "./types";
 import { chains } from "./chains";
+import { chain_config, setup_config } from "./setup";
 
 export type ChangeRate = "year" | "month" | "week" | "day";
 export type ChainRpcPrefix = keyof typeof chains;
@@ -21,7 +22,10 @@ export const SECONDS_PER_WEEK = 604_800n;
 export const SECONDS_PER_DAY = 86_400n
 
 export const UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
+export const UINT256_MAX_DECIMAL = Decimal(UINT256_MAX);
 export const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000" as address;
+export const NATIVE_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as address;
+export const EMPTY_BYTES = "0x" as bytes;
 
 export function getRateSeconds(rate: ChangeRate): bigint {
     switch (rate) {
@@ -44,6 +48,15 @@ export function toDecimal(value: bigint, decimals: bigint): Decimal {
 
 export function toBigInt(value: number, decimals: bigint): bigint {
     return parseUnits(value.toString(), decimals);
+}
+
+export function getChainConfig() {
+    const chain = setup_config.chain;
+    const config = chain_config[chain];
+    if (!config) {
+        throw new Error(`No configuration found for chain ${chain}`);
+    }
+    return config;
 }
 
 export function validateProviderAsSigner(provider: curvance_provider) {

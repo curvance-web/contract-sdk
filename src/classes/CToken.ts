@@ -1,20 +1,20 @@
-import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL, SECONDS_PER_YEAR, BPS, ChangeRate, getRateSeconds } from "../helpers";
+import { Contract, parseUnits, TransactionResponse } from "ethers";
+import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
-import { Market } from "./Market";
+import { Market, Plugins } from "./Market";
+import { Calldata } from "./Calldata";
 import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
-import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
-import irm_abi from '../abis/IDynamicIRM.json';
-import { address, bytes, curvance_provider, Percentage, USD } from "../types";
+import { address, bytes, curvance_provider, curvance_signer, Percentage, TokenInput, USD } from "../types";
 import { Redstone } from "./Redstone";
+import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
+import { setup_config } from "../setup";
 
 export interface AccountSnapshot {
     asset: address;
     decimals: bigint;
     isCollateral: boolean;
-    exchangeRate: bigint;
     collateralPosted: bigint;
     debtBalance: bigint;
 }
@@ -53,37 +53,20 @@ export interface ICToken {
     transfer(receiver: address, amount: bigint): Promise<TransactionResponse>;
     approve(spender: address, amount: bigint): Promise<TransactionResponse>;
     allowance(owner: address, spender: address): Promise<bigint>;
+    isDelegate(user: address, delegate: address): Promise<boolean>;
+    setDelegateApproval(delegate: address, approved: boolean): Promise<TransactionResponse>;
     // More functions available
 }
 
-export interface IBorrowableCToken extends ICToken {
-    borrow(amount: bigint, receiver: address): Promise<TransactionResponse>;
-    repay(amount: bigint): Promise<TransactionResponse>;
-    interestFee(): Promise<bigint>;
-    marketOutstandingDebt(): Promise<bigint>;
-    debtBalance(account: address): Promise<bigint>;
-    IRM(): Promise<address>;
-    // More functions available
-}
-
-export interface IDynamicIRM {
-    ADJUSTMENT_RATE(): Promise<bigint>;
-    linkedToken(): Promise<address>;
-    borrowRate(assetsHeld: bigint, debt: bigint): Promise<bigint>;
-    predictedBorrowRate(assetsHeld: bigint, debt: bigint): Promise<bigint>;
-    supplyRate(assetsHeld: bigint, debt: bigint, interestFee: bigint): Promise<bigint>;
-    adjustedBorrowRate(assetsHeld: bigint, debt: bigint): Promise<bigint>;
-    utilizationRate(assetsHeld: bigint, debt: bigint): Promise<bigint>;
-}
-
-// BaseCToken ABI
-export class CToken {
+export class CToken extends Calldata<ICToken> {
     provider: curvance_provider;
     address: address;
     contract: Contract & ICToken;
     abi: any;
     cache: StaticMarketToken & DynamicMarketToken & UserMarketToken;
     market: Market;
+    zapTypes: ZapperTypes[] = [];
+    leverageTypes: string[] = [];
 
     constructor(
         provider: curvance_provider, 
@@ -91,11 +74,22 @@ export class CToken {
         cache: StaticMarketToken & DynamicMarketToken & UserMarketToken, 
         market: Market
     ) {
+        super();
         this.provider = provider;
         this.address = address;
         this.contract = contractSetup<ICToken>(provider, address, base_ctoken_abi);
         this.cache = cache;
         this.market = market;
+        
+        const chain_config = getChainConfig();
+        const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
+        if("simpleZapper" in this.market.plugins) this.zapTypes.push('simple');
+        if("vaultZapper" in this.market.plugins && isVault) this.zapTypes.push('vault');
+        if("nativeVaultZapper" in this.market.plugins && isVault) this.zapTypes.push('native-vault');
+
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        if("vaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('vault');
+        if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -110,8 +104,6 @@ export class CToken {
     get remainingDebt() { return this.cache.debtCap - this.cache.debt }
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
-    get canZap() { return "simpleZapper" in this.market.plugins || "vaultZapper" in this.market.plugins }
-    get canLeverage() { return "simplePositionManager" in this.market.plugins || "vaultPositionManager" in this.market.plugins }
 
     /** @returns Collateral Ratio in BPS or bigint */
     getCollRatio(inBPS: true): Percentage;
@@ -273,8 +265,7 @@ export class CToken {
             price = asset ? this.cache.assetPriceLower : this.cache.sharePriceLower;
         }
 
-        // Use 1e18 always against USD
-        return Decimal(price).div(Decimal(1e18));
+        return Decimal(price).div(WAD) as USD;
     }
 
     getApy() {
@@ -308,6 +299,58 @@ export class CToken {
     async fetchTotalCollateral(inUSD = true): Promise<USD | bigint> {
         const totalCollateral = await this.contract.marketCollateralPosted();
         return inUSD ? this.fetchConvertTokensToUsd(totalCollateral) : totalCollateral;
+    }
+
+    getZapper(type: ZapperTypes) {
+        const signer = validateProviderAsSigner(this.provider);
+
+        let zap_contract: address;
+        
+        switch(type) {
+            case 'native-vault': zap_contract = this.market.plugins['nativeVaultZapper'] as address; break;
+            case 'vault': zap_contract = this.market.plugins['vaultZapper'] as address; break;
+            case 'simple': zap_contract = this.market.plugins['simpleZapper'] as address; break;
+            default: throw new Error("Unknown zapper type");
+        }
+
+        return new Zapper(zap_contract, signer, type);
+    }
+
+    async isPluginApproved(plugin: ZapperTypes) {
+        const signer = validateProviderAsSigner(this.provider);
+        const plugin_address = this.getPluginAddress(plugin);
+        return this.contract.isDelegate(signer.address as address, plugin_address);
+    }
+
+    async approvePlugin(plugin: ZapperTypes) {
+        const plugin_address = this.getPluginAddress(plugin);
+        return this.contract.setDelegateApproval(plugin_address, true);
+    }
+
+    getPluginAddress(plugin: ZapperTypes) {
+        if(!zapperTypeToName.has(plugin)) {
+            throw new Error("Plugin does not have a contract to map too");
+        }
+        const plugin_name = zapperTypeToName.get(plugin) as keyof Plugins;
+
+        if(plugin_name in this.market.plugins == false) {
+            throw new Error(`Plugin ${plugin_name} not found in market plugins`);
+        }
+
+        return this.market.plugins[plugin_name] as address;
+    }
+
+    async getAllowance(check_contract: address) {
+        const signer = validateProviderAsSigner(this.provider);
+        const erc20 = new ERC20(this.provider, this.address);
+        const allowance = await erc20.allowance(signer.address as address, check_contract);
+        return allowance;
+    }
+
+    async approve(amount: TokenInput | null, spender: address) {
+        const erc20 = new ERC20(this.provider, this.address);
+        const tx = await erc20.approve(spender, amount);
+        return tx;
     }
 
     async fetchDecimals() {
@@ -380,36 +423,41 @@ export class CToken {
         return this.contract.maxDeposit(receiver);
     }
 
-    async transfer(receiver: address, amount: bigint) {
-        return this.contract.transfer(receiver, amount);
+    async transfer(receiver: address, amount: TokenInput) {
+        const shares = this.convertTokenInput(amount, true);
+        return this.contract.transfer(receiver, shares);
     }
 
-    async redeemCollateral(shares: bigint, receiver: address, owner: address) {
-        return this.oracleRoute(
-            "redeemCollateral",
-            [shares, receiver, owner]
-        );
+    async redeemCollateral(amount: Decimal, receiver: address | null = null, owner: address | null = null) {
+        const signer = validateProviderAsSigner(this.provider);
+        if(receiver == null) receiver = signer.address as address;
+        if(owner == null) owner = signer.address as address;
+
+        const shares = this.convertTokenInput(amount, true);
+        const calldata = this.getCallData("redeemCollateral", [shares, receiver, owner]);
+        return this.oracleRoute(calldata);
     }
 
-    async postCollateral(shares: bigint) { 
-        return this.oracleRoute(
-            "postCollateral",
-            [shares]
-        );
+    async postCollateral(amount: TokenInput) {
+        const shares = this.convertTokenInput(amount, true);
+        const calldata = this.getCallData("postCollateral", [shares]);
+        return this.oracleRoute(calldata);
     }
 
-    async removeCollateral(shares: bigint) {
-        return this.oracleRoute(
-            "removeCollateral",
-            [shares]
-        );
+    async removeCollateral(amount: TokenInput) {
+        const shares = this.convertTokenInput(amount, true);
+        const calldata = this.getCallData("removeCollateral", [shares]);
+        return this.oracleRoute(calldata);
     }
 
-    async withdrawCollateral(assets: bigint, receiver: address, owner: address) {
-        return this.oracleRoute(
-            "withdrawCollateral",
-            [assets, receiver, owner]
-        );
+    async withdrawCollateral(amount: TokenInput, receiver: address | null = null, owner: address | null = null) {
+        const signer = validateProviderAsSigner(this.provider);
+        if(receiver == null) receiver = signer.address as address;
+        if(owner == null) owner = signer.address as address;
+
+        const assets = this.convertTokenInput(amount);
+        const calldata = this.getCallData("withdrawCollateral", [assets, receiver, owner]);
+        return this.oracleRoute(calldata);
     }
 
     async convertToAssets(shares: bigint) { 
@@ -420,14 +468,41 @@ export class CToken {
         return this.contract.convertToShares(assets);
     }
 
-    async deposit(assets: bigint, receiver: address) {
-        return this.oracleRoute(
-            "deposit",
-            [assets, receiver]
-        );
+    convertTokenInput(amount: TokenInput, inShares = false) {
+        const decimals = inShares ? this.decimals : this.asset.decimals;
+        return parseUnits(amount.toString(), Number(decimals))
     }
 
-    async depositAsCollateral(assets: bigint, receiver: address) {
+    async deposit(amount: TokenInput, zap: ZapperTypes = 'none',  receiver: address | null = null) {
+        const signer = validateProviderAsSigner(this.provider);
+        if(receiver == null) receiver = signer.address as address;
+        const assets = this.convertTokenInput(amount);
+
+        let calldata: bytes;
+        let calldata_overrides = {};
+        let zapper: Zapper | null = null;
+
+        if(zap == 'native-vault') {
+            zapper = this.getZapper(zap);
+            calldata = zapper.getNativeZapCalldata(this, assets, false);
+            calldata_overrides = { value: assets, to: zapper.address };
+        } else if(zap != 'none') {
+            // TODO: implement vault zap
+            // TODO: implement simple zap
+            throw new Error("This zap type is not supported");
+        } else {
+            calldata = this.getCallData("deposit", [assets, receiver]);
+        }
+
+        await this._checkDepositApprovals(signer, null, assets);
+        return this.oracleRoute(calldata, calldata_overrides);
+    }
+
+    async depositAsCollateral(amount: Decimal, zap: ZapperTypes = 'none',  receiver: address | null = null) {
+        const signer = validateProviderAsSigner(this.provider);
+        if(receiver == null) receiver = signer.address as address;
+        const assets = this.convertTokenInput(amount);
+
         const collateralCapError = "There is not enough collateral left in this tokens collateral cap for this deposit.";
         if(this.remainingCollateral == 0n) throw new Error(collateralCapError);
         if(this.remainingCollateral > 0n) {
@@ -437,17 +512,30 @@ export class CToken {
             }
         }
         
-        return this.oracleRoute(
-            "depositAsCollateral",
-            [assets, receiver]
-        );
+        let calldata: bytes;
+        let call_overrides: any = {};
+        let zapper: Zapper | null = null;
+        if(zap == 'native-vault') {
+            zapper = this.getZapper(zap);
+            calldata = zapper.getNativeZapCalldata(this, assets, true);
+            call_overrides = { value: assets, to: zapper.address }
+        } else if(zap != 'none') {
+            throw new Error("This zap type is not supported");
+        } else {
+            calldata = this.getCallData("depositAsCollateral", [assets, receiver]);
+        }
+
+        await this._checkDepositApprovals(signer, zapper, assets);
+        return this.oracleRoute(calldata, call_overrides);
     }
 
-    async redeem(shares: bigint, receiver: address, owner: address) {
-        return this.oracleRoute(
-            "redeem",
-            [shares, receiver, owner]
-        );
+    async redeem(amount: TokenInput, receiver: address | null = null, owner: address | null = null) {
+        const signer = validateProviderAsSigner(this.provider);
+        if(receiver == null) receiver = signer.address as address;
+        if(owner == null) owner = signer.address as address;
+        const shares = this.convertTokenInput(amount, true);
+        const calldata = this.getCallData("redeem", [shares, receiver, owner]);
+        return this.oracleRoute(calldata);
     }
 
     async collateralPosted(account: address) { 
@@ -464,7 +552,6 @@ export class CToken {
             asset: snapshot.asset,
             decimals: BigInt(snapshot.decimals),
             isCollateral: snapshot.isCollateral,
-            exchangeRate: BigInt(snapshot.exchangeRate),
             collateralPosted: BigInt(snapshot.collateralPosted),
             debtBalance: BigInt(snapshot.debtBalance)
         }
@@ -483,160 +570,49 @@ export class CToken {
         return this.getPrice(asset).mul(tokenAmountDecimal);
     }
 
-    buildMultiCall(functionName: string, exec_params: any[]) {
-        const encodedFunc = this.contract.interface.encodeFunctionData(functionName, exec_params);
+    buildMultiCallAction(calldata: bytes) {
         return {
             target: this.address,
             isPriceUpdate: false,
-            data: encodedFunc
+            data: calldata
         } as MulticallAction;
     }
 
-    async oracleRoute<T extends keyof (ICToken & IBorrowableCToken)>(
-        functionName: T,
-        exec_params: Parameters<(ICToken & IBorrowableCToken)[T]>
-    ): Promise<TransactionResponse> {
+    private async _checkDepositApprovals(signer: curvance_signer, zapper: Zapper | null, assets: bigint) {
+        if(setup_config.approval_protection && zapper) {
+            const plugin_allowed = await this.isPluginApproved(zapper.type);
+            if(!plugin_allowed) {
+                throw new Error(`Please approve the ${zapper.type} Zapper to be able to move ${this.symbol} on your behalf.`);
+            }
+        } else if(setup_config.approval_protection) {
+            const asset = this.getAsset(true);
+            const allowance = await asset.allowance(signer.address as address, this.address);
+            if(allowance < assets) {
+                throw new Error(`Please approve the ${asset.symbol} token for ${this.symbol}.`);
+            }
+        }
+    }
+
+    async oracleRoute(calldata: bytes, override: { [key: string]: any } = {}): Promise<TransactionResponse> {
+        const price_updates = await this.getPriceUpdates();
+
+        if(price_updates.length > 0) {
+            const token_action = this.buildMultiCallAction(calldata);
+            calldata = this.getCallData("multicall", [[...price_updates, token_action]]);
+        }
+
+        return this.executeCallData(calldata, override);
+    }
+
+    async getPriceUpdates(): Promise<MulticallAction[]> {
         const adapter_enums = this.adapters.map(num => Number(num));
 
+        let price_updates = [];
         if(adapter_enums.includes(AdaptorTypes.REDSTONE_CORE)) {
-            const price_update = await Redstone.buildMulticallStruct(this);
-            const token_action = await this.buildMultiCall(functionName as string, exec_params);
-            return this.multicall([price_update, token_action]);
+            const redstone = await Redstone.buildMultiCallAction(this);
+            price_updates.push(redstone);
         }
 
-        return (this.contract[functionName] as Function)(...exec_params);
-    }
-}
-
-// BorrowableCToken
-export class BorrowableCToken extends CToken {
-    override contract: Contract & IBorrowableCToken;
-    
-    constructor(
-        provider: curvance_provider, 
-        address: address,
-        cache: StaticMarketToken & DynamicMarketToken & UserMarketToken,
-        market: Market
-    ) {
-        super(provider, address, cache, market);
-        this.contract = contractSetup<IBorrowableCToken>(provider, address, borrowable_ctoken_abi);
-    }
-    
-    get liquidity() { return this.cache.liquidity; }
-    get borrowRate() { return this.cache.borrowRate; }
-    get predictedBorrowRate() { return this.cache.predictedBorrowRate; }
-    get utilizationRate() { return this.cache.utilizationRate; }
-    get supplyRate() { return this.cache.supplyRate; }
-
-    borrowChange(amount: USD, rateType: ChangeRate) {
-        const rate = this.borrowRate;
-        const rate_seconds = getRateSeconds(rateType);
-        const rate_percent = Decimal(rate * rate_seconds).div(BPS);
-        return amount.mul(rate_percent);
-    }
-
-    override async depositAsCollateral(assets: bigint, receiver: address) {
-        if(this.cache.userDebt > 0) {
-            throw new Error("Cannot deposit as collateral when there is outstanding debt");
-        }
-
-        return this.oracleRoute(
-            "depositAsCollateral",
-            [assets, receiver]
-        );
-    }
-
-    override async postCollateral(shares: bigint) {
-        if(this.cache.userDebt > 0) {
-            throw new Error("Cannot post collateral when there is outstanding debt");
-        }
-
-        return this.oracleRoute(
-            "postCollateral",
-            [shares]
-        );
-    }
-
-    async fetchDebt(inUSD: true): Promise<USD>;
-    async fetchDebt(inUSD: false): Promise<bigint>;
-    async fetchDebt(inUSD = true): Promise<USD | bigint> {
-        const totalDebt = await this.contract.marketOutstandingDebt();
-        return inUSD ? this.fetchConvertTokensToUsd(totalDebt) : totalDebt;
-    }
-
-    async borrow(amount: bigint, receiver: address) {
-        return this.oracleRoute(
-            "borrow",
-            [amount, receiver]
-        );
-    }
-
-    async dynamicIRM() {
-        const irm_addr = await this.contract.IRM();
-        return contractSetup<IDynamicIRM>(this.provider, irm_addr, irm_abi);
-    }
-
-    async fetchBorrowRate() {
-        const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
-        const debt = await this.contract.marketOutstandingDebt();
-        const borrowRate = (await irm.borrowRate(assetsHeld, debt)) * SECONDS_PER_YEAR;
-        this.cache.borrowRate = borrowRate;
-        return borrowRate;
-    }
-
-    async fetchPredictedBorrowRate() {
-        const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
-        const debt = await this.contract.marketOutstandingDebt();
-        const predictedBorrowRate = (await irm.predictedBorrowRate(assetsHeld, debt)) * SECONDS_PER_YEAR;
-        this.cache.predictedBorrowRate = predictedBorrowRate;
-        return predictedBorrowRate;
-    }
-
-    async fetchUtilizationRate() {
-        const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
-        const debt = await this.contract.marketOutstandingDebt();
-        const utilizationRate = (await irm.utilizationRate(assetsHeld, debt)) * SECONDS_PER_YEAR;
-        this.cache.utilizationRate = utilizationRate;
-        return utilizationRate;
-    }
-
-    async fetchSupplyRate() {
-        const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
-        const debt = await this.contract.marketOutstandingDebt();
-        const fee = await this.contract.interestFee();
-        const supplyRate = (await irm.supplyRate(assetsHeld, debt, fee)) * SECONDS_PER_YEAR;
-        this.cache.supplyRate = supplyRate;
-        return supplyRate;
-    }
-
-    async fetchLiquidity() {
-        const assetsHeld = await this.contract.totalAssets();
-        const debt = await this.contract.marketOutstandingDebt();
-        const liquidity = assetsHeld - debt;
-        this.cache.liquidity = liquidity;
-        return liquidity;
-    }
-
-    async repay(amount: bigint) {
-        return this.oracleRoute(
-            "repay",
-            [amount]
-        );
-    }
-
-    async interestFee() {
-        return this.contract.interestFee();
-    }
-
-    async marketOutstandingDebt() {
-        return this.contract.marketOutstandingDebt();
-    }
-
-    async debtBalance(account: address) {
-        return this.contract.debtBalance(account);
+        return price_updates;
     }
 }
