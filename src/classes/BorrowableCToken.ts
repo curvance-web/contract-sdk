@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { address, curvance_provider, TokenInput, USD } from "../types";
+import { address, curvance_provider, Percentage, TokenInput, USD } from "../types";
 import { CToken, ICToken } from "./CToken";
 import { DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { Market } from "./Market";
@@ -43,13 +43,33 @@ export class BorrowableCToken extends CToken {
     }
     
     get liquidity() { return this.cache.liquidity; }
-    get borrowRate() { return this.cache.borrowRate; }
-    get predictedBorrowRate() { return this.cache.predictedBorrowRate; }
-    get utilizationRate() { return this.cache.utilizationRate; }
-    get supplyRate() { return this.cache.supplyRate; }
+
+    getBorrowRate(inPercentage: true): Percentage;
+    getBorrowRate(inPercentage: false): bigint;
+    getBorrowRate(inPercentage: boolean) { 
+        return inPercentage ? Decimal(this.cache.borrowRate).div(BPS) : this.cache.borrowRate;
+    }
+
+    getPredictedBorrowRate(inPercentage: true): Percentage;
+    getPredictedBorrowRate(inPercentage: false): bigint;
+    getPredictedBorrowRate(inPercentage: boolean) { 
+        return inPercentage ? Decimal(this.cache.predictedBorrowRate).div(BPS) : this.cache.predictedBorrowRate;
+    }
+    
+    getUtilizationRate(inPercentage: true): Percentage;
+    getUtilizationRate(inPercentage: false): bigint;
+    getUtilizationRate(inPercentage: boolean) {
+        return inPercentage ? Decimal(this.cache.utilizationRate).div(BPS) : this.cache.utilizationRate;
+    }
+
+    getSupplyRate(inPercentage: true): Percentage;
+    getSupplyRate(inPercentage: false): bigint;
+    getSupplyRate(inPercentage: boolean) {
+        return inPercentage ? Decimal(this.cache.supplyRate).div(BPS) : this.cache.supplyRate;
+    }
 
     borrowChange(amount: USD, rateType: ChangeRate) {
-        const rate = this.borrowRate;
+        const rate = this.getBorrowRate(false);
         const rate_seconds = getRateSeconds(rateType);
         const rate_percent = Decimal(rate * rate_seconds).div(BPS);
         return amount.mul(rate_percent);

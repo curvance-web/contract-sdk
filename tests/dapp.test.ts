@@ -113,10 +113,12 @@ describe('Market Tests', () => {
 
             await cshMON.getAsset(true).approve(cshMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
             await cshMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
-            const debt_before = await cwMON.getUserDebt(true);
-            await cshMON.depositAndLeverage(Decimal(10), cwMON, Decimal(5), 'native-vault');
-            const debt_after = await cwMON.getUserDebt(true);
+            const debt_before = await cwMON.getUserDebt(false);
+            const tx = await cshMON.depositAndLeverage(Decimal(10), cwMON, Decimal(5), 'native-vault');
+            await tx.wait();
+            const debt_after = await cwMON.getUserDebt(false);
 
+            // TODO: This needs a better assert, currently debt isnt updated because it has to hit some debt accrue event
             console.log('Debt before: ', debt_before);
             console.log('Debt after: ', debt_after);
 

@@ -8,8 +8,8 @@ import { TransactionResponse } from "ethers";
 import { NonceManagerSigner } from "./tests/utils/helper";
 
 config();
-// const provider = new JsonRpcProvider("https://testnet-rpc.monad.xyz");
-const provider = new JsonRpcProvider(process.env.TEST_RPC);
+const provider = new JsonRpcProvider("https://testnet-rpc.monad.xyz");
+// const provider = new JsonRpcProvider(process.env.TEST_RPC);
 const baseSigner = new Wallet(process.env.DEPLOYER_PRIVATE_KEY as string, provider);
 
 main().catch(err => console.log(err));
@@ -36,17 +36,17 @@ async function main() {
             ], signer) as Contract & { mint(amount: bigint, overrides?: any): Promise<TransactionResponse> };
 
             const mint = await testnet_token.mint(amount_in_tokens);
-            // await mint.wait();
+            await mint.wait();
 
             const allowance = await asset.allowance(account, token.address);
             if(allowance < amount_in_tokens) {
                 const tx = await asset.approve(token.address, null);
-                // await tx.wait();
+                await tx.wait();
             }
             
             console.log(`Depositing $${amount_in_usd}, ${amount_in_tokens} of ${token.symbol}`);
             const deposit = await token.deposit(toDecimal(amount_in_tokens, token.decimals));
-            // await deposit.wait();
+            await deposit.wait();
         }
     }
 }
