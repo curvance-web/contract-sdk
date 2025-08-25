@@ -13,10 +13,13 @@ export type MarketToken = CToken | BorrowableCToken;
 
 export interface Plugins {
     simplePositionManager?: address;
-    simpleZapper?: address;
     vaultPositionManager?: address;
-    vaultZapper?: address;
     nativeVaultPositionManager?: address;
+}
+
+export interface Zappers {
+    simpleZapper?: address;
+    vaultZapper?: address;
     nativeVaultZapper?: address;
 }
 
@@ -484,7 +487,7 @@ export class Market {
     static async getAll(reader: ProtocolReader, oracle_manager: OracleManager, provider: curvance_provider = setup_config.provider) {
         const user = "address" in provider ? provider.address : EMPTY_ADDRESS;
         const all_data = await reader.getAllMarketData(user as address);
-        const deploy_keys = Object.keys(setup_config.contracts) as (keyof typeof setup_config.contracts)[];
+        const deploy_keys = Object.keys(setup_config.contracts.markets) as (keyof typeof setup_config.contracts.markets)[];
 
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
@@ -495,7 +498,7 @@ export class Market {
             const market_address = staticData.address;
             let deploy_data: DeployData | undefined;
             for(const obj_key of deploy_keys) {
-                const data = setup_config.contracts[obj_key]!;
+                const data = setup_config.contracts.markets[obj_key]!;
                 
                 if(typeof data != 'object') {
                     continue;

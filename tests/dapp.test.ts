@@ -37,7 +37,7 @@ describe('Market Tests', () => {
     });
 
     test('[Explore] Zapping - native vault', async() => {
-        const market = curvance.markets.find(m => m.tokens.some(t => t.canZap));
+        const market = curvance.markets.find(m => m.tokens.some(t => t.canZap && t.symbol == 'cshMON'));
         assert(market, "Market could not be found that had zapping available");
 
         const zappable_token = market.tokens.find(t => t.canZap);

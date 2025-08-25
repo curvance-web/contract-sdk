@@ -83,12 +83,7 @@ export class CToken extends Calldata<ICToken> {
         
         const chain_config = getChainConfig();
         const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
-        if("simpleZapper" in this.market.plugins) this.zapTypes.push('simple');
-        if("vaultZapper" in this.market.plugins && isVault) this.zapTypes.push('vault');
-        if("nativeVaultZapper" in this.market.plugins && isVault) this.zapTypes.push('native-vault');
-
-        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
-        if("vaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('vault');
+        if(isVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
     }
 
@@ -308,9 +303,9 @@ export class CToken extends Calldata<ICToken> {
         let zap_contract: address;
         
         switch(type) {
-            case 'native-vault': zap_contract = this.market.plugins['nativeVaultZapper'] as address; break;
-            case 'vault': zap_contract = this.market.plugins['vaultZapper'] as address; break;
-            case 'simple': zap_contract = this.market.plugins['simpleZapper'] as address; break;
+            case 'native-vault': zap_contract = setup_config.contracts.zappers['nativeVaultZapper'] as address; break;
+            case 'vault': zap_contract = setup_config.contracts.zappers['vaultZapper'] as address; break;
+            case 'simple': zap_contract = setup_config.contracts.zappers['simpleZapper'] as address; break;
             default: throw new Error("Unknown zapper type");
         }
 
@@ -332,13 +327,13 @@ export class CToken extends Calldata<ICToken> {
         if(!zapperTypeToName.has(plugin)) {
             throw new Error("Plugin does not have a contract to map too");
         }
-        const plugin_name = zapperTypeToName.get(plugin) as keyof Plugins;
+        const plugin_name = zapperTypeToName.get(plugin);
 
-        if(plugin_name in this.market.plugins == false) {
-            throw new Error(`Plugin ${plugin_name} not found in market plugins`);
+        if(!plugin_name || !setup_config.contracts.zappers || !(plugin_name in setup_config.contracts.zappers)) {
+            throw new Error(`Plugin ${plugin_name} not found in zappers`);
         }
 
-        return this.market.plugins[plugin_name] as address;
+        return setup_config.contracts.zappers[plugin_name] as address;
     }
 
     async getAllowance(check_contract: address) {

@@ -4,7 +4,7 @@ import { contractSetup, EMPTY_ADDRESS, EMPTY_BYTES, NATIVE_ADDRESS } from "../he
 import { CToken } from "./CToken";
 import { Calldata } from "./Calldata";
 import abi from '../abis/SimpleZapper.json';
-import { Plugins } from "./Market";
+import { Zappers } from "./Market";
 
 export interface Swap {
     inputToken: address,
@@ -16,8 +16,7 @@ export interface Swap {
 };
 
 export type ZapperTypes = 'none' | 'native-vault' | 'vault' | 'simple';
-
-export const zapperTypeToName = new Map<ZapperTypes, keyof Plugins>([
+export const zapperTypeToName = new Map<ZapperTypes, keyof Zappers>([
     ['native-vault', 'nativeVaultZapper'],
     ['vault', 'vaultZapper'],
     ['simple', 'simpleZapper']

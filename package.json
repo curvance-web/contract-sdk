@@ -1,6 +1,6 @@
 {
   "name": "curvance",
-  "version": "1.0.25",
+  "version": "1.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -26,7 +26,7 @@
     "up": "npm run build && npm publish",
     "fetch": "ts-node fetch-deployment.ts",
     "build": "tsc",
-    "test": "node --test --require ts-node/register --force-exit tests/*.test.ts",
+    "test": "node --test --test-concurrency=1 --require ts-node/register tests/*.test.ts",
     "test:ctoken": "ts-node tests/CToken.test.ts",
     "test:faucet": "ts-node tests/Faucet.test.ts",
     "test:market": "ts-node tests/Market.test.ts",
