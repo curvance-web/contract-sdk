@@ -1,8 +1,8 @@
 import { Contract, parseUnits, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig } from "../helpers";
+import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
-import { Market, Plugins } from "./Market";
+import { Market, MarketToken, Plugins, PluginTypes } from "./Market";
 import { Calldata } from "./Calldata";
 import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
@@ -10,6 +10,8 @@ import { address, bytes, curvance_provider, curvance_signer, Percentage, TokenIn
 import { Redstone } from "./Redstone";
 import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
 import { setup_config } from "../setup";
+import { PositionManager, PositionManagerTypes } from "./PositionManager";
+import { BorrowableCToken } from "./BorrowableCToken";
 
 export interface AccountSnapshot {
     asset: address;
@@ -100,6 +102,7 @@ export class CToken extends Calldata<ICToken> {
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
     get canZap() { return this.zapTypes.length > 0; }
+    get canLeverage() { return this.leverageTypes.length > 0; }
 
     /** @returns Collateral Ratio in BPS or bigint */
     getCollRatio(inBPS: true): Percentage;
@@ -297,43 +300,56 @@ export class CToken extends Calldata<ICToken> {
         return inUSD ? this.fetchConvertTokensToUsd(totalCollateral) : totalCollateral;
     }
 
-    getZapper(type: ZapperTypes) {
+    getPositionManager(type: PositionManagerTypes) {
         const signer = validateProviderAsSigner(this.provider);
 
-        let zap_contract: address;
-        
-        switch(type) {
-            case 'native-vault': zap_contract = setup_config.contracts.zappers['nativeVaultZapper'] as address; break;
-            case 'vault': zap_contract = setup_config.contracts.zappers['vaultZapper'] as address; break;
-            case 'simple': zap_contract = setup_config.contracts.zappers['simpleZapper'] as address; break;
-            default: throw new Error("Unknown zapper type");
-        }
+        let manager_contract: address = this.getPluginAddress(type, 'positionManager');
+
+        return new PositionManager(manager_contract, signer, type);
+    }
+
+    getZapper(type: ZapperTypes) {
+        const signer = validateProviderAsSigner(this.provider);
+        const zap_contract = this.getPluginAddress(type, 'zapper');
 
         return new Zapper(zap_contract, signer, type);
     }
 
-    async isPluginApproved(plugin: ZapperTypes) {
+    async isPluginApproved(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes) {
         const signer = validateProviderAsSigner(this.provider);
-        const plugin_address = this.getPluginAddress(plugin);
+        const plugin_address = this.getPluginAddress(plugin, type);
         return this.contract.isDelegate(signer.address as address, plugin_address);
     }
 
-    async approvePlugin(plugin: ZapperTypes) {
-        const plugin_address = this.getPluginAddress(plugin);
+    async approvePlugin(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes) {
+        const plugin_address = this.getPluginAddress(plugin, type);
         return this.contract.setDelegateApproval(plugin_address, true);
     }
 
-    getPluginAddress(plugin: ZapperTypes) {
-        if(!zapperTypeToName.has(plugin)) {
-            throw new Error("Plugin does not have a contract to map too");
-        }
-        const plugin_name = zapperTypeToName.get(plugin);
+    getPluginAddress(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes): address {
+        switch(type) {
+            case 'zapper': {
+                if(!zapperTypeToName.has(plugin)) {
+                    throw new Error("Plugin does not have a contract to map too");
+                }
+    
+                const plugin_name = zapperTypeToName.get(plugin);
+                if(!plugin_name || !setup_config.contracts.zappers || !(plugin_name in setup_config.contracts.zappers)) {
+                    throw new Error(`Plugin ${plugin_name} not found in zappers`);
+                }
+        
+                return setup_config.contracts.zappers[plugin_name] as address;
+            }
 
-        if(!plugin_name || !setup_config.contracts.zappers || !(plugin_name in setup_config.contracts.zappers)) {
-            throw new Error(`Plugin ${plugin_name} not found in zappers`);
-        }
+            case 'positionManager': {
+                switch(plugin) {
+                    case 'native-vault': return this.market.plugins.nativeVaultPositionManager as address;
+                    default: throw new Error("Unknown position manager type");
+                }
+            }
 
-        return setup_config.contracts.zappers[plugin_name] as address;
+            default: throw new Error("Unsupported plugin type");
+        }
     }
 
     async getAllowance(check_contract: address) {
@@ -469,6 +485,62 @@ export class CToken extends Calldata<ICToken> {
         return parseUnits(amount.toString(), Number(decimals))
     }
 
+    async maxRemainingLeverage(ctoken: BorrowableCToken, type: PositionManagerTypes) {
+        const manager = this.getPositionManager(type);
+        const amount = manager.maxRemainingLeverage(ctoken);
+
+        console.log(amount);
+        return amount;
+    }
+
+    async depositAndLeverage(
+        depositAmount: TokenInput, 
+        borrow: BorrowableCToken, 
+        borrowAmount: TokenInput, 
+        type: PositionManagerTypes, 
+        slippage_: TokenInput = Decimal(0.5)
+    ) {
+        const slippage = toBigInt(slippage_.toNumber(), 18n);
+        const manager = this.getPositionManager(type);
+        
+        let calldata: bytes;
+        // TODO: Implement vault & simple position manager
+
+        switch(type) {
+            case 'native-vault': {
+                calldata = manager.getDepositAndLeverageCalldata(
+                    this.convertTokenInput(depositAmount),
+                    {
+                        borrowableCToken: borrow.address,
+                        borrowAssets: borrow.convertTokenInput(borrowAmount),
+                        cToken: this.address,
+                        swapAction: {
+                            inputToken: EMPTY_ADDRESS,
+                            inputAmount: 0n,
+                            outputToken: EMPTY_ADDRESS,
+                            target: EMPTY_ADDRESS,
+                            slippage: 0n,
+                            call: "0x"
+                        },
+                        auxData: "0x",
+                    }, 
+                    slippage);
+                break;
+            }
+
+            default: throw new Error("Unsupported position manager type");
+        }
+
+        await this._checkAssetApproval(
+            manager.address,
+            this.convertTokenInput(depositAmount)
+        )
+        await this._checkPositionManagerApproval(manager);
+        return this.oracleRoute(calldata, {
+            to: manager.address
+        });
+    }
+
     async deposit(amount: TokenInput, zap: ZapperTypes = 'none',  receiver: address | null = null) {
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
@@ -490,7 +562,7 @@ export class CToken extends Calldata<ICToken> {
             calldata = this.getCallData("deposit", [assets, receiver]);
         }
 
-        await this._checkDepositApprovals(signer, null, assets);
+        await this._checkAssetApproval(this.address, assets);
         return this.oracleRoute(calldata, calldata_overrides);
     }
 
@@ -521,7 +593,7 @@ export class CToken extends Calldata<ICToken> {
             calldata = this.getCallData("depositAsCollateral", [assets, receiver]);
         }
 
-        await this._checkDepositApprovals(signer, zapper, assets);
+        await this._checkDepositApprovals(zapper, assets);
         return this.oracleRoute(calldata, call_overrides);
     }
 
@@ -574,19 +646,49 @@ export class CToken extends Calldata<ICToken> {
         } as MulticallAction;
     }
 
-    private async _checkDepositApprovals(signer: curvance_signer, zapper: Zapper | null, assets: bigint) {
-        if(setup_config.approval_protection && zapper) {
-            const plugin_allowed = await this.isPluginApproved(zapper.type);
-            if(!plugin_allowed) {
+    private async _checkPositionManagerApproval(manager: PositionManager) {
+        const isApproved = await this.isPluginApproved(manager.type, 'positionManager');
+        if (!isApproved) {
+            throw new Error(`PositionManager ${manager.address} is not approved for ${this.symbol}`);
+        }
+    }
+
+    private async _checkZapperApproval(zapper: Zapper) {
+        if(!setup_config.approval_protection) {
+            return;
+        }
+
+        if (setup_config.approval_protection && zapper) {
+            const plugin_allowed = await this.isPluginApproved(zapper.type, 'zapper');
+            if (!plugin_allowed) {
                 throw new Error(`Please approve the ${zapper.type} Zapper to be able to move ${this.symbol} on your behalf.`);
             }
-        } else if(setup_config.approval_protection) {
-            const asset = this.getAsset(true);
-            const allowance = await asset.allowance(signer.address as address, this.address);
-            if(allowance < assets) {
-                throw new Error(`Please approve the ${asset.symbol} token for ${this.symbol}.`);
-            }
         }
+    }
+
+    private async _checkAssetApproval(target: address, assets: bigint) {
+        if(!setup_config.approval_protection) {
+            return;
+        }
+
+        const asset = this.getAsset(true);
+        const owner = validateProviderAsSigner(this.provider).address as address;
+        const allowance = await asset.allowance(owner, target);
+        if(allowance < assets) {
+            throw new Error(`Please approve the ${asset.symbol} token for ${this.symbol}.`);
+        }
+    }
+
+    private async _checkDepositApprovals(zapper: Zapper | null, assets: bigint) {
+        if(!setup_config.approval_protection) {
+            return;
+        }
+
+        if(zapper) {
+            await this._checkZapperApproval(zapper);
+        }
+        
+        await this._checkAssetApproval(this.address, assets);
     }
 
     async oracleRoute(calldata: bytes, override: { [key: string]: any } = {}): Promise<TransactionResponse> {

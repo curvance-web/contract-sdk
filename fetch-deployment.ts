@@ -19,7 +19,9 @@ const contracts_used = [
     "IDynamicIRM",
     "MarketManagerIsolated",
     "ProtocolReader",
-    "RedstoneCoreAdaptor"
+    "RedstoneCoreAdaptor",
+    "SimpleZapper",
+    "SimplePositionManager",
 ];
 
 if(process.env.CONTRACT_REPO_PATH == undefined) {

@@ -1,7 +1,7 @@
 import { Contract } from "ethers";
-import { contractSetup, WAD } from "../helpers";
+import { contractSetup, toDecimal, WAD } from "../helpers";
 import abi from '../abis/ProtocolReader.json'
-import { address, curvance_provider, TypeBPS } from "../types";
+import { address, curvance_provider, TokenInput, TypeBPS } from "../types";
 import Decimal from "decimal.js";
 import { setup_config } from "../setup";
 import { MarketToken } from "./Market";
@@ -202,7 +202,8 @@ export class ProtocolReader {
         };
     }
 
-    async hypotheticalLeverageOf(account: address, depositCToken: MarketToken, borrowableCToken: MarketToken, assets: bigint) {
+    async hypotheticalLeverageOf(account: address, depositCToken: MarketToken, borrowableCToken: MarketToken, deposit_amount: TokenInput) {
+        const assets = depositCToken.convertTokenInput(deposit_amount, false);
         const [ 
             currentLeverage, 
             adjustMaxLeverage,
@@ -214,7 +215,7 @@ export class ProtocolReader {
             currentLeverage: Decimal(currentLeverage).div(WAD),
             adjustMaxLeverage: Decimal(adjustMaxLeverage).div(WAD),
             maxLeverage: Decimal(maxLeverage).div(WAD),
-            maxDebtBorrowable: Decimal(maxDebtBorrowable).div(borrowableCToken.decimals)
+            maxDebtBorrowable: toDecimal(maxDebtBorrowable, borrowableCToken.decimals)
         };
     }
 

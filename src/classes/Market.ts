@@ -10,6 +10,7 @@ import { setup_config } from "../setup";
 import { BorrowableCToken } from "./BorrowableCToken";
 
 export type MarketToken = CToken | BorrowableCToken;
+export type PluginTypes = 'zapper' | 'positionManager';
 
 export interface Plugins {
     simplePositionManager?: address;

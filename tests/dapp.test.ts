@@ -4,12 +4,14 @@ import { test, describe, before } from 'node:test';
 import assert from 'node:assert';
 import { JsonRpcProvider, parseUnits } from 'ethers';
 import { address, curvance_signer } from '../src/types';
-import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock } from './utils/helper';
-import { setupChain } from '../src/setup';
+import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock, setNativeBalance } from './utils/helper';
+import { chain_config, setupChain } from '../src/setup';
 import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX, UINT256_MAX_DECIMAL } from '../src/helpers';
 import { CToken } from '../src/classes/CToken';
 import Decimal from 'decimal.js';
 import { BorrowableCToken } from '../src/classes/BorrowableCToken';
+import { ERC20 } from '../src/classes/ERC20';
+import { MarketToken } from '../src/classes/Market';
 
 
 describe('Market Tests', () => {
@@ -57,7 +59,7 @@ describe('Market Tests', () => {
         const zappable_token = market.tokens.find(t => t.canZap && t.getCollateralCap(false) > 0n);
         assert(zappable_token, "No zappable token found");
 
-        await zappable_token.approvePlugin('native-vault');
+        await zappable_token.approvePlugin('native-vault', 'zapper');
         await zappable_token.getAsset(true).approve(zappable_token.address, Decimal(1));
 
         const balance_before = await zappable_token.balanceOf(account);
@@ -65,6 +67,61 @@ describe('Market Tests', () => {
         await tx.wait();
         const balance_after = await zappable_token.balanceOf(account);
         assert(balance_after > balance_before, "Balance should increase after zap deposit");
+    });
+        
+    test('[Explore] Monad, Leverage', async() => {
+        // Yoink some wMON from a whale and put it in curvance
+        {
+            const guy_with_a_ton_of_wmon = "0xFA735CcA8424e4eF30980653bf9015331d9929dB";
+            await provider.send("anvil_impersonateAccount", [guy_with_a_ton_of_wmon]);
+            const impersonatedSigner = await provider.getSigner(guy_with_a_ton_of_wmon);
+
+            const imp_curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, impersonatedSigner, true);
+            const shMON_market = imp_curvance.markets.find(m => m.tokens.some(t => t.symbol == 'cshMON'))!;
+            const [ cwMON ] = shMON_market.tokens as [ BorrowableCToken, CToken ];
+    
+            const cwMON_before_balance = await cwMON.totalSupply();
+            await cwMON.getAsset(true).approve(cwMON.address, null);
+            const amount = Decimal(100);
+            await cwMON.deposit(amount);
+            const cwMON_balance = await cwMON.totalSupply();
+            assert(cwMON_balance > cwMON_before_balance, `cwMON balance should be increased`);
+
+            await provider.send("anvil_stopImpersonatingAccount", [guy_with_a_ton_of_wmon]);
+        }
+        
+        {
+            setNativeBalance(provider, account, BigInt(1000e18)); // 1000 MON
+            const shMON_market = curvance.markets.find(m => m.tokens.some(t => t.symbol == 'cshMON'))!;
+            const [ cwMON, cshMON ] = shMON_market.tokens as [BorrowableCToken, CToken];
+
+            // Deposit with zapper then withdraw so we have some shMON to use in the leverage test
+            // NOTE: You can't zap & leverage in the same action so this needs to be minted first
+
+            await cshMON.getAsset(true).approve(cshMON.address, null);
+            await cshMON.deposit(Decimal(200), 'native-vault');
+            await cshMON.redeem(Decimal(150));
+            assert(await cshMON.getAsset(true).balanceOf(account) > cshMON.convertTokenInput(Decimal(100), false), "shMON balance cannot cover leverage");
+
+            // NOTE: This doesnt seem to actually return a good leverage amount
+            // const leverage_info = await shMON_market.reader.hypotheticalLeverageOf(account, cshMON, cwMON, Decimal(100));
+            // console.log(leverage_info);
+
+            // NOTE: This caused a MulDivFailed error
+            // const max_leverage = await cwMON.maxRemainingLeverage(cwMON as BorrowableCToken, 'native-vault');
+            // console.log(await cwMON.totalAssets());
+
+            await cshMON.getAsset(true).approve(cshMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
+            await cshMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
+            const debt_before = await cwMON.getUserDebt(true);
+            await cshMON.depositAndLeverage(Decimal(10), cwMON, Decimal(5), 'native-vault');
+            const debt_after = await cwMON.getUserDebt(true);
+
+            console.log('Debt before: ', debt_before);
+            console.log('Debt after: ', debt_after);
+
+            await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
+        }
     });
     
     // TODO: [Explore] Deposit as zap
@@ -327,7 +384,7 @@ describe('Market Tests', () => {
                 account,
                 coll_token,
                 debt_token,
-                parseUnits('1000', coll_token.decimals)
+                Decimal(1000)
             );
 
             console.log(lev);
