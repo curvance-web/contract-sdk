@@ -3,7 +3,7 @@ import { address, curvance_provider, Percentage, TokenInput, USD } from "../type
 import { CToken, ICToken } from "./CToken";
 import { DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { Market } from "./Market";
-import { BPS, ChangeRate, contractSetup, getRateSeconds, validateProviderAsSigner } from "../helpers";
+import { BPS, ChangeRate, contractSetup, getRateSeconds, validateProviderAsSigner, WAD } from "../helpers";
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
 import Decimal from "decimal.js";
@@ -59,7 +59,7 @@ export class BorrowableCToken extends CToken {
     getUtilizationRate(inPercentage: true): Percentage;
     getUtilizationRate(inPercentage: false): bigint;
     getUtilizationRate(inPercentage: boolean) {
-        return inPercentage ? Decimal(this.cache.utilizationRate).div(BPS) : this.cache.utilizationRate;
+        return inPercentage ? Decimal(this.cache.utilizationRate).div(WAD) : this.cache.utilizationRate;
     }
 
     getSupplyRate(inPercentage: true): Percentage;
