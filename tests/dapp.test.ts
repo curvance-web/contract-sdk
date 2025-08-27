@@ -29,6 +29,46 @@ describe('Market Tests', () => {
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer, true);
     })
     
+    test('[Explore] Borrowable tokens', async () => {
+        
+        // Deploy some test collateral
+        {
+            const test = curvance.markets[1]!;
+            const token = test.tokens[1]!;
+            console.log('Before collateral: ' + token.cache.userCollateral);
+            await token.depositAsCollateral(Decimal(0.1));
+            console.log('After collateral: ' + token.cache.userCollateral);
+
+            console.log(`Deposited collateral for: ` + await token.collateralPosted());
+        }
+
+        for(const market of curvance.markets) {
+            console.log(`${market.name}`);
+            const borrowable = market.getBorrowableCTokens();
+
+            console.log(`\t Deposits: $${market.userDeposits}`);
+            console.log(`\t Collateral: $${market.userCollateral}`);
+            console.log(`\t Debt: $${market.userDebt}`);
+            console.log(`\t Borrowable (${borrowable.eligible.length}): ${borrowable.eligible.map(t => `${t.symbol}: ($${t.getLiquidity(true).toFixed(18)})`).join(', ')}`);
+            console.log(`\t Ineligible (${borrowable.ineligible.length}): ${borrowable.ineligible.map(t=> `${t.symbol}`).join(', ')}`);
+            console.log('----------------------------------');
+        }
+    });
+
+    test('Balances', async () => {
+        for(const market of curvance.markets) {
+            console.log(`${market.name}`);
+            
+            for(const token of market.tokens) {
+                console.log(`\t ${token.symbol} - ${token.name}`);
+                console.log(`\t\t ${token.symbol} (share): ${token.getUserShareBalance(false)}`);
+                console.log(`\t\t ${token.symbol} (asset): ${token.getUserShareBalance(false)}`);
+                console.log(`\t\t ${token.asset.symbol}: ${token.getUserUnderlyingBalance(false)}`);
+            }
+            console.log('----------------------------------');
+        }
+    });
+
     test('[Explore] Can deposit a borrowable token', async() => {
         const market = curvance.markets[0]!;
         const token_a = market.tokens[0]!;
