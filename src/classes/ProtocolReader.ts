@@ -80,6 +80,7 @@ export interface UserMarketToken {
     address: address;
     userAssetBalance: bigint;
     userShareBalance: bigint;
+    userUnderlyingBalance: bigint;
     userCollateral: bigint;
     userDebt: bigint;
 }
@@ -185,6 +186,7 @@ export class ProtocolReader {
                     address: token._address,
                     userAssetBalance: BigInt(token.userAssetBalance),
                     userShareBalance: BigInt(token.userShareBalance),
+                    userUnderlyingBalance: BigInt(token.userUnderlyingBalance),
                     userCollateral: BigInt(token.userCollateral),
                     userDebt: BigInt(token.userDebt)
                 }))

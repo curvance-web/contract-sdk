@@ -1,5 +1,5 @@
 import { Contract, parseUnits, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS } from "../helpers";
+import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS, toDecimal } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market, MarketToken, Plugins, PluginTypes } from "./Market";
@@ -181,18 +181,25 @@ export class CToken extends Calldata<ICToken> {
         return inBPS ? Decimal(this.cache.closeFactorMax).div(BPS)  : this.cache.closeFactorMax;
     }
 
-    /** @returns User assets in USD or token */
+    /** @returns User shares in USD (native balance amount) or token */
     getUserShareBalance(inUSD: true): USD;
-    getUserShareBalance(inUSD: false): bigint;
-    getUserShareBalance(inUSD: boolean): USD | bigint { 
-        return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, true) : this.cache.userShareBalance;
+    getUserShareBalance(inUSD: false): TokenInput;
+    getUserShareBalance(inUSD: boolean): USD | TokenInput { 
+        return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, true) : toDecimal(this.cache.userShareBalance, this.decimals);
     }
 
-    /** @returns User assets in USD or token */
+    /** @returns User assets in USD (this is the raw balance that the token exchanges too) or token */
     getUserAssetBalance(inUSD: true): USD;
-    getUserAssetBalance(inUSD: false): bigint;
-    getUserAssetBalance(inUSD: boolean): USD | bigint {
-        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : this.cache.userAssetBalance;
+    getUserAssetBalance(inUSD: false): TokenInput;
+    getUserAssetBalance(inUSD: boolean): USD | TokenInput {
+        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : toDecimal(this.cache.userAssetBalance, this.decimals);
+    }
+
+    /** @returns User underlying assets in USD or token */
+    getUserUnderlyingBalance(inUSD: true): USD;
+    getUserUnderlyingBalance(inUSD: false): TokenInput;
+    getUserUnderlyingBalance(inUSD: boolean): USD | TokenInput {
+        return inUSD ? this.convertTokensToUsd(this.cache.userUnderlyingBalance) : toDecimal(this.cache.userUnderlyingBalance, this.decimals);
     }
     
     /** @returns Token Collateral Cap in USD or token */

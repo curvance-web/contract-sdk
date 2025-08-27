@@ -256,6 +256,11 @@
                     "internalType": "uint256"
                   },
                   {
+                    "name": "userUnderlyingBalance",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
                     "name": "userCollateral",
                     "type": "uint256",
                     "internalType": "uint256"
@@ -732,6 +737,11 @@
                   },
                   {
                     "name": "userShareBalance",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "userUnderlyingBalance",
                     "type": "uint256",
                     "internalType": "uint256"
                   },
