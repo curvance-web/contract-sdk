@@ -220,9 +220,11 @@ export class Market {
             ineligible: []
         };
 
+        const users_market_collateral = this.userCollateral;
+
         for(const token of this.tokens) {
             if(token.isBorrowable) {
-                if(token.getUserCollateral(false) > 0) {
+                if(token.getUserCollateral(false) > 0 || users_market_collateral.lessThanOrEqualTo(0)) {
                     result.ineligible.push(token as BorrowableCToken);
                 } else {
                     result.eligible.push(token as BorrowableCToken);

@@ -101,6 +101,7 @@ export class CToken extends Calldata<ICToken> {
     get remainingDebt() { return this.cache.debtCap - this.cache.debt }
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
+    get exchangeRate() { return this.cache.exchangeRate; }
     get canZap() { return this.zapTypes.length > 0; }
     get canLeverage() { return this.leverageTypes.length > 0; }
 
@@ -426,8 +427,10 @@ export class CToken extends Calldata<ICToken> {
         return this.contract.totalAssets(); 
     }
 
-    async exchangeRate() { 
-        return this.contract.exchangeRate(); 
+    async getExchangeRate() { 
+        const rate = await this.contract.exchangeRate(); 
+        this.cache.exchangeRate = rate;
+        return rate;
     }
 
     async marketCollateralPosted() { 
@@ -489,7 +492,8 @@ export class CToken extends Calldata<ICToken> {
 
     convertTokenInput(amount: TokenInput, inShares = false) {
         const decimals = inShares ? this.decimals : this.asset.decimals;
-        return parseUnits(amount.toString(), Number(decimals))
+        const newAmount = parseUnits(amount.toString(), Number(decimals));
+        return inShares ? newAmount * this.exchangeRate : newAmount;
     }
 
     async maxRemainingLeverage(ctoken: BorrowableCToken, type: PositionManagerTypes) {
