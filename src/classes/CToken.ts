@@ -45,7 +45,6 @@ export interface ICToken {
     redeem(shares: bigint, receiver: address, owner: address): Promise<TransactionResponse>;
     marketCollateralPosted(): Promise<bigint>;
     collateralPosted(account: address): Promise<bigint>;
-    withdrawCollateral(assets: bigint, receiver: address, owner: address): Promise<TransactionResponse>;
     redeemCollateral(shares: bigint, receiver: address, owner: address): Promise<TransactionResponse>;
     postCollateral(shares: bigint): Promise<TransactionResponse>;
     removeCollateral(shares: bigint): Promise<TransactionResponse>;
@@ -469,16 +468,6 @@ export class CToken extends Calldata<ICToken> {
     async removeCollateral(amount: TokenInput) {
         const shares = this.convertTokenInput(amount, true);
         const calldata = this.getCallData("removeCollateral", [shares]);
-        return this.oracleRoute(calldata);
-    }
-
-    async withdrawCollateral(amount: TokenInput, receiver: address | null = null, owner: address | null = null) {
-        const signer = validateProviderAsSigner(this.provider);
-        if(receiver == null) receiver = signer.address as address;
-        if(owner == null) owner = signer.address as address;
-
-        const assets = this.convertTokenInput(amount);
-        const calldata = this.getCallData("withdrawCollateral", [assets, receiver, owner]);
         return this.oracleRoute(calldata);
     }
 
