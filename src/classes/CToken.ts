@@ -192,7 +192,7 @@ export class CToken extends Calldata<ICToken> {
     getUserAssetBalance(inUSD: true): USD;
     getUserAssetBalance(inUSD: false): TokenInput;
     getUserAssetBalance(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : toDecimal(this.cache.userAssetBalance, this.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : toDecimal(this.cache.userAssetBalance, this.asset.decimals);
     }
 
     /** @returns User underlying assets in USD or token */
@@ -223,18 +223,18 @@ export class CToken extends Calldata<ICToken> {
         return inUSD ? this.convertTokensToUsd(this.cache.collateral) : this.cache.collateral;
     }
 
-    /** @returns Token Debt in USD or token */
+    /** @returns Token Debt in USD or USD WAD */
     getDebt(inUSD: true): USD;
     getDebt(inUSD: false): USD_WAD;
     getDebt(inUSD: boolean): USD | USD_WAD {
         return inUSD ? this.convertTokensToUsd(this.cache.debt) : this.cache.debt;
     }
 
-    /** @returns User Collateral in USD or token */
+    /** @returns User Collateral in USD or asset token amount */
     getUserCollateral(inUSD: true): USD;
     getUserCollateral(inUSD: false): TokenInput;
     getUserCollateral(inUSD: boolean): USD | bigint {
-        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : toDecimal(this.cache.userCollateral, this.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : this.convertBigInt(this.cache.userCollateral, true);
     }
 
     /** @returns User Debt in USD or USD WAD */
@@ -477,6 +477,12 @@ export class CToken extends Calldata<ICToken> {
 
     async convertToShares(assets: bigint) {
         return this.contract.convertToShares(assets);
+    }
+
+    convertBigInt(amount: bigint, inShares = false) {
+        const decimals = inShares ? this.decimals : this.asset.decimals;
+        const raw_amount = inShares ? (amount * this.exchangeRate) / WAD : amount;
+        return toDecimal(raw_amount, decimals);
     }
 
     convertTokenInput(amount: TokenInput, inShares = false) {
