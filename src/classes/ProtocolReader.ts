@@ -82,6 +82,7 @@ export interface UserMarketToken {
     userShareBalance: bigint;
     userUnderlyingBalance: bigint;
     userCollateral: bigint;
+    exchangeRate: bigint;
     userDebt: bigint;
 }
 
@@ -188,6 +189,7 @@ export class ProtocolReader {
                     userShareBalance: BigInt(token.userShareBalance),
                     userUnderlyingBalance: BigInt(token.userUnderlyingBalance),
                     userCollateral: BigInt(token.userCollateral),
+                    exchangeRate: BigInt(token.exchangeRate),
                     userDebt: BigInt(token.userDebt)
                 }))
             }))
