@@ -224,7 +224,7 @@ export class Market {
 
         for(const token of this.tokens) {
             if(token.isBorrowable) {
-                if(token.getUserCollateral(false) > 0 || users_market_collateral.lessThanOrEqualTo(0)) {
+                if(token.getUserCollateral(false).greaterThan(0) || users_market_collateral.lessThanOrEqualTo(0)) {
                     result.ineligible.push(token as BorrowableCToken);
                 } else {
                     result.eligible.push(token as BorrowableCToken);
@@ -322,6 +322,18 @@ export class Market {
             collateral: BigInt(data.collateral),
             maxDebt: BigInt(data.maxDebt),
             debt: BigInt(data.debt)
+        }
+    }
+
+    async reloadUserData(account: address) {
+        const data = (await this.reader.getUserData(account))
+            .markets.find(market => market.address == this.address)!;
+
+        this.cache.user = data;
+
+        for(const token of this.tokens) {
+            const new_cache = data.tokens.find(t => t.address == token.address)!;
+            token.cache = {...token.cache, ...new_cache};
         }
     }
 

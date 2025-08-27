@@ -6,7 +6,7 @@ import { Market, MarketToken, Plugins, PluginTypes } from "./Market";
 import { Calldata } from "./Calldata";
 import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
-import { address, bytes, curvance_provider, curvance_signer, Percentage, TokenInput, USD } from "../types";
+import { address, bytes, curvance_provider, curvance_signer, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { Redstone } from "./Redstone";
 import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
 import { setup_config } from "../setup";
@@ -175,7 +175,7 @@ export class CToken extends Calldata<ICToken> {
         return inBPS ? Decimal(this.cache.closeFactorMin).div(BPS) : this.cache.closeFactorMin;
     }
 
-    /** @returns Close Factor Max in BPS or bigint */
+    /** @returns Close Factor Max in Percentage or bigint */
     getCloseFactorMax(inBPS: true): Percentage;
     getCloseFactorMax(inBPS: false): bigint;
     getCloseFactorMax(inBPS: boolean) { 
@@ -203,45 +203,45 @@ export class CToken extends Calldata<ICToken> {
         return inUSD ? this.convertTokensToUsd(this.cache.userUnderlyingBalance) : toDecimal(this.cache.userUnderlyingBalance, this.decimals);
     }
     
-    /** @returns Token Collateral Cap in USD or token */
+    /** @returns Token Collateral Cap in USD or USD WAD */
     getCollateralCap(inUSD: true): USD;
-    getCollateralCap(inUSD: false): bigint;
-    getCollateralCap(inUSD: boolean): USD | bigint {
+    getCollateralCap(inUSD: false): USD_WAD;
+    getCollateralCap(inUSD: boolean): USD | USD_WAD {
         return inUSD ? this.convertTokensToUsd(this.cache.collateralCap) : this.cache.collateralCap;
     }
 
-    /** @returns Token Debt Cap in USD or token */
+    /** @returns Token Debt Cap in USD or USD WAD */
     getDebtCap(inUSD: true): USD;
     getDebtCap(inUSD: false): bigint;
     getDebtCap(inUSD: boolean): USD | bigint { 
         return inUSD ? this.convertTokensToUsd(this.cache.debtCap) : this.cache.debtCap;
     }
 
-    /** @returns Token Collateral in USD or token*/
+    /** @returns Token Collateral in USD or USD WAD*/
     getCollateral(inUSD: true): USD;
-    getCollateral(inUSD: false): bigint;
-    getCollateral(inUSD: boolean): USD | bigint { 
+    getCollateral(inUSD: false): USD_WAD;
+    getCollateral(inUSD: boolean): USD | USD_WAD { 
         return inUSD ? this.convertTokensToUsd(this.cache.collateral) : this.cache.collateral;
     }
 
     /** @returns Token Debt in USD or token */
     getDebt(inUSD: true): USD;
-    getDebt(inUSD: false): bigint;
-    getDebt(inUSD: boolean): USD | bigint {
+    getDebt(inUSD: false): USD_WAD;
+    getDebt(inUSD: boolean): USD | USD_WAD {
         return inUSD ? this.convertTokensToUsd(this.cache.debt) : this.cache.debt;
     }
 
     /** @returns User Collateral in USD or token */
     getUserCollateral(inUSD: true): USD;
-    getUserCollateral(inUSD: false): bigint;
+    getUserCollateral(inUSD: false): TokenInput;
     getUserCollateral(inUSD: boolean): USD | bigint {
-        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : this.cache.userCollateral;
+        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : toDecimal(this.cache.userCollateral, this.decimals);
     }
 
-    /** @returns User Debt in USD or token */
+    /** @returns User Debt in USD or USD WAD */
     getUserDebt(inUSD: true): USD;
-    getUserDebt(inUSD: false): bigint;
-    getUserDebt(inUSD: boolean): USD | bigint {
+    getUserDebt(inUSD: false): USD_WAD;
+    getUserDebt(inUSD: boolean): USD | USD_WAD {
         return inUSD ? this.convertTokensToUsd(this.cache.userDebt) : this.cache.userDebt;
     }
 
@@ -493,14 +493,14 @@ export class CToken extends Calldata<ICToken> {
     convertTokenInput(amount: TokenInput, inShares = false) {
         const decimals = inShares ? this.decimals : this.asset.decimals;
         const newAmount = parseUnits(amount.toString(), Number(decimals));
-        return inShares ? newAmount * this.exchangeRate : newAmount;
+
+        return inShares ? (newAmount * this.exchangeRate) / WAD : newAmount;
     }
 
     async maxRemainingLeverage(ctoken: BorrowableCToken, type: PositionManagerTypes) {
         const manager = this.getPositionManager(type);
         const amount = manager.maxRemainingLeverage(ctoken);
 
-        console.log(amount);
         return amount;
     }
 
@@ -617,8 +617,9 @@ export class CToken extends Calldata<ICToken> {
         return this.oracleRoute(calldata);
     }
 
-    async collateralPosted(account: address) { 
-        return this.contract.collateralPosted(account); 
+    async collateralPosted(account: address | null = null) {
+        if(!account) account = validateProviderAsSigner(this.provider).address as address;
+        return this.contract.collateralPosted(account);
     }
 
     async multicall(calls: MulticallAction[]) { 
@@ -645,7 +646,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     convertTokensToUsd(tokenAmount: bigint, asset = true) {
-        const tokenAmountDecimal = Decimal(tokenAmount).div(WAD_DECIMAL);
+        const tokenAmountDecimal = toDecimal(tokenAmount, asset ? this.asset.decimals : this.decimals);
         return this.getPrice(asset).mul(tokenAmountDecimal);
     }
 
@@ -703,6 +704,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async oracleRoute(calldata: bytes, override: { [key: string]: any } = {}): Promise<TransactionResponse> {
+        const signer = validateProviderAsSigner(this.provider);
         const price_updates = await this.getPriceUpdates();
 
         if(price_updates.length > 0) {
@@ -710,7 +712,10 @@ export class CToken extends Calldata<ICToken> {
             calldata = this.getCallData("multicall", [[...price_updates, token_action]]);
         }
 
-        return this.executeCallData(calldata, override);
+        const tx = await this.executeCallData(calldata, override);
+        await this.market.reloadUserData(signer.address as address);
+
+        return tx;
     }
 
     async getPriceUpdates(): Promise<MulticallAction[]> {
