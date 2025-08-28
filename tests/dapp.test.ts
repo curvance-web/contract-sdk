@@ -34,14 +34,16 @@ describe('Market Tests', () => {
         // Deploy some test collateral
         {
             const test = curvance.markets[1]!;
-            const token = test.tokens[1]!;
-            console.log('Before collateral: ' + token.cache.userCollateral);
-            await token.depositAsCollateral(Decimal(0.1));
-            console.log('After collateral: ' + token.cache.userCollateral);
+            const [ borrow, deposit ] = test.tokens as [BorrowableCToken, CToken];
 
-            console.log(`Deposited collateral for: ` + await token.collateralPosted());
+            console.log('Before collateral: ' + deposit.cache.userCollateral);
+            await deposit.depositAsCollateral(Decimal(0.1));
+            console.log('After collateral: ' + deposit.cache.userCollateral);
+            console.log(`Deposited collateral for: ` + await deposit.collateralPosted());
+            await borrow.borrow(Decimal(100));
         }
 
+        let count = 0;
         for(const market of curvance.markets) {
             console.log(`${market.name}`);
             const borrowable = market.getBorrowableCTokens();
@@ -49,10 +51,21 @@ describe('Market Tests', () => {
             console.log(`\t Deposits: $${market.userDeposits}`);
             console.log(`\t Collateral: $${market.userCollateral}`);
             console.log(`\t Debt: $${market.userDebt}`);
-            console.log(`\t Borrowable (${borrowable.eligible.length}): ${borrowable.eligible.map(t => `${t.symbol}: ($${t.getLiquidity(true).toFixed(18)})`).join(', ')}`);
+            console.log(`\t Position Health: ${market.positionHealth}`);
+            console.log(`\t Borrow limit: ${market.userMaxDebt}`);
+            console.log(`\t Borrow remaining: ${market.userRemainingCredit}`);
+            console.log(`\t Borrowable (${borrowable.eligible.length})`);
+            for(const token of borrowable.eligible) {
+                console.log(`\t\t ${token.symbol}`);
+                console.log(`\t\t\t Liquidation price: ${token.liquidationPrice.toFixed(18)}`);
+                console.log(`\t\t\t Liquidity: ${token.getLiquidity(true)}`);
+            }
             console.log(`\t Ineligible (${borrowable.ineligible.length}): ${borrowable.ineligible.map(t=> `${t.symbol}`).join(', ')}`);
             console.log('----------------------------------');
+            count++;
+            if(count > 2) break;
         }
+
     });
 
     test('Balances', async () => {

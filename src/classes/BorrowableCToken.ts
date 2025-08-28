@@ -41,6 +41,11 @@ export class BorrowableCToken extends CToken {
         super(provider, address, cache, market);
         this.contract = contractSetup<IBorrowableCToken>(provider, address, borrowable_ctoken_abi);
     }
+
+    get liquidationPrice(): USD {
+        const coll_usd = this.cache.sharePrice * (this.market.cache.user.collateral / this.cache.collReqSoft);
+        return Decimal(coll_usd / this.market.cache.user.debt).div(WAD);
+    }
     
     getLiquidity(inUSD: true): USD;
     getLiquidity(inUSD: false): USD_WAD;

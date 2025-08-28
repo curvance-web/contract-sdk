@@ -233,7 +233,7 @@ export class CToken extends Calldata<ICToken> {
     /** @returns User Collateral in USD or asset token amount */
     getUserCollateral(inUSD: true): USD;
     getUserCollateral(inUSD: false): TokenInput;
-    getUserCollateral(inUSD: boolean): USD | bigint {
+    getUserCollateral(inUSD: boolean): USD | TokenInput {
         return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : this.convertBigInt(this.cache.userCollateral, true);
     }
 

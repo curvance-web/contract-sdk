@@ -110,13 +110,13 @@ export class Market {
     get adapters() { return this.cache.static.adapters; }
     /** @returns {Date | null} - Market cooldown, activated by Collateralization or Borrowing. Lasts as long as {this.cooldownLength} which is currently 20mins */
     get cooldown() { return this.cache.user.cooldown == this.cooldownLength ? null : new Date(Number(this.cache.user.cooldown * 1000n)); }
-    /** @returns {Decimal} - The user's collateral in USD. */
+    /** @returns {Decimal} - The user's collateral in Shares. */
     get userCollateral() { return toDecimal(this.cache.user.collateral, 18n); }
-    /** @returns {Decimal} - The user's debt in USD. */
+    /** @returns {USD} - The user's debt in USD. */
     get userDebt() { return toDecimal(this.cache.user.debt, 18n); }
-    /** @returns {Decimal} - The user's maximum debt in USD. */
+    /** @returns {USD} - The user's maximum debt in USD. */
     get userMaxDebt() { return toDecimal(this.cache.user.maxDebt, 18n); }
-    /** @returns {Decimal} - The user's remaining credit in USD or in the token amount */
+    /** @returns {USD} - The user's remaining credit in USD or in the token amount */
     get userRemainingCredit(): USD {
         const remaining = this.cache.user.maxDebt - this.cache.user.debt;
         return toDecimal(remaining, 18n);
@@ -124,7 +124,7 @@ export class Market {
 
     /**
      * Get the user's position health.
-     * @returns {Decimal | null} - The user's position health Percentage or null if infinity
+     * @returns {USD | null} - The user's position health Percentage or null if infinity
      */
     get positionHealth() { 
         return this.cache.user.positionHealth == UINT256_MAX ? null : Decimal(this.cache.user.positionHealth).div(WAD_DECIMAL);
@@ -132,7 +132,7 @@ export class Market {
 
     /**
      * Get the total user deposits in USD.
-     * @returns {Decimal} - The total user deposits in USD.
+     * @returns {USD} - The total user deposits in USD.
      */
     get userDeposits() {
         let total_deposits = Decimal(0);
@@ -145,7 +145,7 @@ export class Market {
 
     /**
      * Get the user's net position in USD.
-     * @returns {Decimal} - The user's net position in USD.
+     * @returns {USD} - The user's net position in USD.
      */
     get userNet() {
         return this.userDeposits.sub(this.userDebt);
