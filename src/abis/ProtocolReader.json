@@ -236,6 +236,11 @@
                 "internalType": "uint256"
               },
               {
+                "name": "priceStale",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
                 "name": "tokens",
                 "type": "tuple[]",
                 "internalType": "struct ProtocolReader.UserMarketToken[]",
@@ -396,6 +401,11 @@
         "name": "positionHealth",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "priceStale",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -724,6 +734,11 @@
                 "name": "cooldown",
                 "type": "uint256",
                 "internalType": "uint256"
+              },
+              {
+                "name": "priceStale",
+                "type": "bool",
+                "internalType": "bool"
               },
               {
                 "name": "tokens",

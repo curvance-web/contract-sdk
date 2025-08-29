@@ -44,6 +44,11 @@ export class BorrowableCToken extends CToken {
 
     get liquidationPrice(): USD {
         const coll_usd = this.cache.sharePrice * (this.market.cache.user.collateral / this.cache.collReqSoft);
+        
+        if(coll_usd == 0n || this.market.cache.user.debt == 0n) {
+            return Decimal(0);
+        }
+
         return Decimal(coll_usd / this.market.cache.user.debt).div(WAD);
     }
     

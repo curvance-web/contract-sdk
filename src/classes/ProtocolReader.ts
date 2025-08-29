@@ -93,6 +93,7 @@ export interface UserMarket {
     debt: bigint;
     positionHealth: bigint;
     cooldown: bigint;
+    priceStale: boolean;
     tokens: UserMarketToken[]
 }
 
@@ -183,6 +184,7 @@ export class ProtocolReader {
                 debt: BigInt(market.debt),
                 positionHealth: BigInt(market.positionHealth),
                 cooldown: BigInt(market.cooldown),
+                priceStale: market.priceStale,
                 tokens: market.tokens.map((token: any) => ({
                     address: token._address,
                     userAssetBalance: BigInt(token.userAssetBalance),

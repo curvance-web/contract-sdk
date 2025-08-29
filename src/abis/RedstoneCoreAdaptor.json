@@ -695,6 +695,11 @@
   },
   {
     "type": "error",
+    "name": "Bytes32Helper__ExcessiveLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "CalldataMustHaveValidPayload",
     "inputs": []
   },
