@@ -29,6 +29,14 @@ describe('Market Tests', () => {
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer, true);
     })
     
+    test('[Explore] Deposit with a token using redstone pull', async() => {
+        const market = curvance.markets[0]!;
+        const token = market.tokens[0]!;
+
+        const tx = await token.deposit(Decimal(0.01));
+        await tx.wait();
+    });
+
     test('[Explore] Borrowable tokens', async () => {
         
         // Deploy some test collateral
@@ -36,10 +44,12 @@ describe('Market Tests', () => {
             const test = curvance.markets[1]!;
             const [ borrow, deposit ] = test.tokens as [BorrowableCToken, CToken];
 
-            console.log('Before collateral: ' + deposit.cache.userCollateral);
+            assert(deposit.symbol == 'cSWETH', `Not cSWETH: ${deposit.symbol}`);
+            const before = deposit.cache.userCollateral;
             await deposit.depositAsCollateral(Decimal(0.1));
-            console.log('After collateral: ' + deposit.cache.userCollateral);
-            console.log(`Deposited collateral for: ` + await deposit.collateralPosted());
+            const after = deposit.cache.userCollateral;
+            assert(after > before, 'Collateral not increased');
+            assert(after == await deposit.collateralPosted(), 'Cached collateral should match contract');
             await borrow.borrow(Decimal(100));
         }
 
@@ -131,8 +141,9 @@ describe('Market Tests', () => {
 
             const imp_curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, impersonatedSigner, true);
             const shMON_market = imp_curvance.markets.find(m => m.tokens.some(t => t.symbol == 'cshMON'))!;
-            const [ cwMON ] = shMON_market.tokens as [ BorrowableCToken, CToken ];
+            const [ cshMON, cwMON ] = shMON_market.tokens as [ MarketToken, MarketToken  ];
     
+            assert(`${cwMON.symbol}` == 'cWMON', `Expected cWMON for deposit, recevied: ${cwMON.symbol}`);
             const cwMON_before_balance = await cwMON.totalSupply();
             await cwMON.getAsset(true).approve(cwMON.address, null);
             const amount = Decimal(100);
@@ -146,15 +157,18 @@ describe('Market Tests', () => {
         {
             setNativeBalance(provider, account, BigInt(1000e18)); // 1000 MON
             const shMON_market = curvance.markets.find(m => m.tokens.some(t => t.symbol == 'cshMON'))!;
-            const [ cwMON, cshMON ] = shMON_market.tokens as [BorrowableCToken, CToken];
+            const [ cshMON, cwMON ] = shMON_market.tokens as [BorrowableCToken, BorrowableCToken];
 
             // Deposit with zapper then withdraw so we have some shMON to use in the leverage test
             // NOTE: You can't zap & leverage in the same action so this needs to be minted first
-
-            await cshMON.getAsset(true).approve(cshMON.address, null);
-            await cshMON.deposit(Decimal(200), 'native-vault');
-            await cshMON.redeem(Decimal(150));
-            assert(await cshMON.getAsset(true).balanceOf(account) > cshMON.convertTokenInput(Decimal(100), false), "shMON balance cannot cover leverage");
+            {
+                assert(`${cshMON.symbol}` == 'cshMON', `Expected cshMON for deposit & redeem, received: ${cshMON.symbol}`);
+                await cshMON.getAsset(true).approve(cshMON.address, null);
+                await cshMON.deposit(Decimal(200), 'native-vault');
+                await cshMON.redeem(Decimal(150));
+                const balance = await cshMON.getAsset(true).balanceOf(account);
+                assert(balance > cshMON.convertTokenInput(Decimal(100), false), "shMON balance cannot cover leverage");
+            }
 
             // NOTE: This doesnt seem to actually return a good leverage amount
             // const leverage_info = await shMON_market.reader.hypotheticalLeverageOf(account, cshMON, cwMON, Decimal(100));
@@ -164,7 +178,9 @@ describe('Market Tests', () => {
             // const max_leverage = await cwMON.maxRemainingLeverage(cwMON as BorrowableCToken, 'native-vault');
             // console.log(await cwMON.totalAssets());
 
-            await cshMON.getAsset(true).approve(cshMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
+            const asset = cshMON.getAsset(true); 
+            await asset.approve(cshMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
+            await cshMON.approve(null, asset.address as address); // Approved shMON to be transfered by cshMON
             await cshMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
             const debt_before = await cwMON.getUserDebt(false);
             const tx = await cshMON.depositAndLeverage(Decimal(10), cwMON, Decimal(5), 'native-vault');
@@ -222,14 +238,6 @@ describe('Market Tests', () => {
             }
         }
     })
-
-    test('[Explore] Deposit with a token using redstone pull', async() => {
-        const market = curvance.markets[0]!;
-        const token = market.tokens[0]!;
-
-        const tx = await token.deposit(Decimal(0.01));
-        await tx.wait();
-    });
 
     test('[Explore] Deposit raw', async() => {
         const market = curvance.markets[1]!;
