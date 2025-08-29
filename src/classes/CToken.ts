@@ -492,6 +492,27 @@ export class CToken extends Calldata<ICToken> {
         return inShares ? (newAmount * this.exchangeRate) / WAD : newAmount;
     }
 
+    /**
+     * Get a list of tokens mapped to their respective zap options
+     * @returns A list of tokens mapped to their respective zap options
+     */
+    async getZapTokens() {
+        if(!this.canZap) {
+            throw new Error("This token does not support zapping, therefor we cannot provide a zap list");
+        }
+
+        let tokens: { [key: string]: ZapperTypes } = {};
+        tokens[this.symbol] = 'none';
+
+        if(this.zapTypes.includes('native-vault')) {
+            tokens['native'] = 'native-vault';
+        }
+
+        // @NOTE: You are probably wondering... why the hell is this an async function,
+        // The future plan for other zappers will be to query an API for a token list which will require this to be async 
+        return tokens;
+    }
+
     async maxRemainingLeverage(ctoken: BorrowableCToken, type: PositionManagerTypes) {
         const manager = this.getPositionManager(type);
         const amount = manager.maxRemainingLeverage(ctoken);
