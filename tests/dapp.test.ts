@@ -180,7 +180,6 @@ describe('Market Tests', () => {
 
             const asset = cshMON.getAsset(true); 
             await asset.approve(cshMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
-            await cshMON.approve(null, asset.address as address); // Approved shMON to be transfered by cshMON
             await cshMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
             const debt_before = await cwMON.getUserDebt(false);
             const tx = await cshMON.depositAndLeverage(Decimal(10), cwMON, Decimal(5), 'native-vault');
