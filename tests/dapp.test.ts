@@ -37,6 +37,21 @@ describe('Market Tests', () => {
         await tx.wait();
     });
 
+    test('[Explore] Deposit token list', async() => {
+        const market = curvance.markets.find(m => m.tokens.some(t => t.canZap && t.symbol == 'cshMON'));
+        const [ cshMON ] = market!.tokens as [ MarketToken, MarketToken  ];
+
+        const deposit_tokens = await cshMON.getDepositTokens();
+        for(const zap of deposit_tokens) {
+            const token = zap.interface;
+            console.log(
+                token.symbol, 
+                await token.getPrice(true, true, false), 
+                await token.balanceOf(account, true)
+            );
+        }
+    });
+
     test('[Explore] Borrowable tokens', async () => {
         
         // Deploy some test collateral
@@ -181,21 +196,12 @@ describe('Market Tests', () => {
             const asset = cshMON.getAsset(true); 
             await asset.approve(cshMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
             await cshMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
-            const debt_before = await cwMON.getUserDebt(false);
             const tx = await cshMON.depositAndLeverage(Decimal(10), cwMON, Decimal(5), 'native-vault');
             await tx.wait();
-            const debt_after = await cwMON.getUserDebt(false);
-
-            // TODO: This needs a better assert, currently debt isnt updated because it has to hit some debt accrue event
-            console.log('Debt before: ', debt_before);
-            console.log('Debt after: ', debt_after);
 
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
         }
     });
-    
-    // TODO: [Explore] Deposit as zap
-    // TODO: [Explore] Deposit with leverage
 
     test('[Faucet] Redeem all tokens', async() => {
         const market = curvance.markets[0]!;

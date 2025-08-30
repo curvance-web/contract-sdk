@@ -1,8 +1,11 @@
 import { parseUnits, TransactionResponse } from "ethers";
-import { contractSetup, UINT256_MAX } from "../helpers";
+import { contractSetup, UINT256_MAX, WAD } from "../helpers";
 import { Contract } from "ethers";
 import { StaticMarketAsset } from "./ProtocolReader";
-import { address, curvance_provider, TokenInput } from "../types";
+import { address, curvance_provider, TokenInput, USD } from "../types";
+import { setup_config } from "../setup";
+import { OracleManager } from "./OracleManager";
+import Decimal from "decimal.js";
 
 export interface IERC20 {
     balanceOf(account: address): Promise<bigint>;
@@ -45,8 +48,16 @@ export class ERC20 {
     get decimals() { return this.cache?.decimals; }
     get totalSupply() { return this.cache?.totalSupply; }
 
-    async balanceOf(account: address) {
-        return this.contract.balanceOf(account);    
+
+    
+    async balanceOf(account: address): Promise<bigint>
+    async balanceOf(account: address, in_token_input: true): Promise<TokenInput>
+    async balanceOf(account: address, in_token_input: false): Promise<bigint>
+    async balanceOf(account: address, in_token_input: boolean = false): Promise<bigint | TokenInput> {
+        const amount = await this.contract.balanceOf(account);
+
+        const decimals = this.decimals ?? await this.contract.decimals();
+        return in_token_input ? Decimal(amount).div(decimals) : amount;
     }
 
     async transfer(to: address, amount: TokenInput) {
@@ -85,6 +96,16 @@ export class ERC20 {
 
     async allowance(owner: address, spender: address) {
         return this.contract.allowance(owner, spender);
+    }
+
+    async getPrice(inTokenInput: true, inUSD: boolean, getLower: boolean): Promise<USD>
+    async getPrice(inTokenInput: false, inUSD: boolean, getLower: boolean): Promise<bigint>
+    async getPrice(inTokenInput: boolean, inUSD = true, getLower = false): Promise<USD | bigint> {
+        const oracle_manager = new OracleManager(setup_config.contracts.OracleManager as address, this.provider);
+        const price = await oracle_manager.getPrice(this.address, inUSD, getLower);
+
+        const decimals = this.decimals ?? await this.contract.decimals();
+        return inTokenInput ? Decimal(price).div(decimals) : price;
     }
 
     private setCache<K extends keyof StaticMarketAsset>(key: K, value: StaticMarketAsset[K]) {

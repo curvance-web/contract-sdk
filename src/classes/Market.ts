@@ -443,7 +443,6 @@ export class Market {
      * @param borrowAssets - Amount of assets being borrowed
      * @returns An object containing the hypothetical liquidity values
      */
-    // TODO: This could probably be improved to just pass a ctoken & amount, the auto converts the shares
     async hypotheticalLiquidityOf(account: address, cTokenModified: address, redemptionShares: bigint, borrowAssets: bigint) {
         const data = await this.contract.hypotheticalLiquidityOf(account, cTokenModified, redemptionShares, borrowAssets);
         return {

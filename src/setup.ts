@@ -16,6 +16,7 @@ export let setup_config: {
 export const chain_config = {
     'monad-testnet': {
         provider: new JsonRpcProvider("https://rpc.ankr.com/monad_testnet"),
+        native_symbol: 'MON',
         wrapped_native: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" as address,
         vaults: [
             { name: "apriori", contract: "0xb2f82D0f38dc453D596Ad40A37799446Cc89274A" as address },

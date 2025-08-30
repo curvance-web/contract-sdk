@@ -12,6 +12,7 @@ import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
 import { setup_config } from "../setup";
 import { PositionManager, PositionManagerTypes } from "./PositionManager";
 import { BorrowableCToken } from "./BorrowableCToken";
+import { NativeToken } from "./NativeToken";
 
 export interface AccountSnapshot {
     asset: address;
@@ -25,6 +26,11 @@ export interface MulticallAction {
     target: address;
     isPriceUpdate: boolean;
     data: bytes;
+}
+
+export interface ZapToken {
+    interface: NativeToken | ERC20;
+    type: ZapperTypes;
 }
 
 export interface ICToken {
@@ -492,20 +498,18 @@ export class CToken extends Calldata<ICToken> {
         return inShares ? (newAmount * this.exchangeRate) / WAD : newAmount;
     }
 
-    /**
-     * Get a list of tokens mapped to their respective zap options
-     * @returns A list of tokens mapped to their respective zap options
-     */
-    async getZapTokens() {
-        if(!this.canZap) {
-            throw new Error("This token does not support zapping, therefor we cannot provide a zap list");
-        }
-
-        let tokens: { [key: string]: ZapperTypes } = {};
-        tokens[this.symbol] = 'none';
+    /** @returns A list of tokens mapped to their respective zap options */
+    async getDepositTokens() {
+        let tokens: ZapToken[] = [{
+            interface: this.getAsset(true),
+            type: 'none'
+        }];
 
         if(this.zapTypes.includes('native-vault')) {
-            tokens['native'] = 'native-vault';
+            tokens.push({
+                interface: new NativeToken(setup_config.chain, this.provider),
+                type: 'native-vault'
+            });
         }
 
         // @NOTE: You are probably wondering... why the hell is this an async function,
