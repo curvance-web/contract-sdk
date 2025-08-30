@@ -104,8 +104,7 @@ export class ERC20 {
         const oracle_manager = new OracleManager(setup_config.contracts.OracleManager as address, this.provider);
         const price = await oracle_manager.getPrice(this.address, inUSD, getLower);
 
-        const decimals = this.decimals ?? await this.contract.decimals();
-        return inTokenInput ? Decimal(price).div(decimals) : price;
+        return inTokenInput ? Decimal(price).div(WAD) : price;
     }
 
     private setCache<K extends keyof StaticMarketAsset>(key: K, value: StaticMarketAsset[K]) {

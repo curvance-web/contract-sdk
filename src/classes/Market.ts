@@ -383,13 +383,18 @@ export class Market {
         const provider = validateProviderAsSigner(this.provider);
         const change = BigInt(collateral_change.mul(WAD_DECIMAL).toFixed(0)) as USD_WAD;
 
-        const liq = await this.liquidationValuesOf(provider.address as address);
-        const impact = change * BPS / ctoken.getCollReqSoft(false);
-        const soft = (liq.soft * WAD) + impact;
-        const debt = liq.debt;
-        const result = debt > 0n ? soft / debt : 0n;
-
-        return result <= 0n ? null : Decimal(result).div(WAD) as USD;
+        try {
+            const liq = await this.liquidationValuesOf(provider.address as address);
+            const impact = change * BPS / ctoken.getCollReqSoft(false);
+            const soft = (liq.soft * WAD) + impact;
+            const debt = liq.debt;
+            const result = debt > 0n ? soft / debt : 0n;
+    
+            return result <= 0n ? null : Decimal(result).div(WAD) as USD;
+        } catch(e) {
+            console.error(e);
+            throw new Error("Failed to get liquidation values, likely due to price not being updated.");
+        }
     }
 
     /**
@@ -401,12 +406,17 @@ export class Market {
         const provider = validateProviderAsSigner(this.provider);
         const change = BigInt(debt_change.mul(WAD_DECIMAL).toFixed(0)) as USD_WAD;
 
-        const liq = await this.liquidationValuesOf(provider.address as address);
-        const soft = liq.soft * WAD;
-        const debt = liq.debt + change;
-        const result = debt > 0n ? soft / debt : 0n;
-
-        return result <= 0n ? null : Decimal(result).div(WAD) as USD;
+        try {
+            const liq = await this.liquidationValuesOf(provider.address as address);
+            const soft = liq.soft * WAD;
+            const debt = liq.debt + change;
+            const result = debt > 0n ? soft / debt : 0n;
+    
+            return result <= 0n ? null : Decimal(result).div(WAD) as USD;
+        } catch(e) {
+            console.error(e);
+            throw new Error("Failed to get liquidation values, likely due to price not being updated.");
+        }
     }
 
     /**

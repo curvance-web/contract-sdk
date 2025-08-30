@@ -39,7 +39,7 @@ describe('Market Tests', () => {
 
     test('[Explore] Deposit token list', async() => {
         const market = curvance.markets.find(m => m.tokens.some(t => t.canZap && t.symbol == 'cshMON'));
-        const [ cshMON ] = market!.tokens as [ MarketToken, MarketToken  ];
+        const [ cshMON ] = market!.tokens as [ MarketToken, MarketToken ];
 
         const deposit_tokens = await cshMON.getDepositTokens();
         for(const zap of deposit_tokens) {
@@ -66,6 +66,7 @@ describe('Market Tests', () => {
             assert(after > before, 'Collateral not increased');
             assert(after == await deposit.collateralPosted(), 'Cached collateral should match contract');
             await borrow.borrow(Decimal(100));
+            await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
         }
 
         let count = 0;
@@ -80,6 +81,8 @@ describe('Market Tests', () => {
             console.log(`\t Borrow limit: ${market.userMaxDebt}`);
             console.log(`\t Borrow remaining: ${market.userRemainingCredit}`);
             console.log(`\t Borrowable (${borrowable.eligible.length})`);
+            console.log(`\t Deposit change: ${market.getUserDepositsChange('year').toFixed(18)}`);
+            console.log(`\t Debt change: ${market.getUserDebtChange('year').toFixed(18)}`);
             for(const token of borrowable.eligible) {
                 console.log(`\t\t ${token.symbol}`);
                 console.log(`\t\t\t Liquidation price: ${token.liquidationPrice.toFixed(18)}`);

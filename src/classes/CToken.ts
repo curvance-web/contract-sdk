@@ -251,10 +251,11 @@ export class CToken extends Calldata<ICToken> {
     }
 
     earnChange(amount: USD, rateType: ChangeRate) {
-        const rate = this.getApy();
+        const rate = this.getApy(false);
         const rate_seconds = getRateSeconds(rateType);
-        const rate_percent = rate.mul(rate_seconds);
-        return amount.mul(rate_percent);
+        const rate_percent = Decimal(rate).mul(rate_seconds).div(BPS);
+
+        return amount.mul(rate_percent).div(WAD);
     }
 
     /**
@@ -280,9 +281,12 @@ export class CToken extends Calldata<ICToken> {
         return Decimal(price).div(WAD) as USD;
     }
 
-    getApy() {
+    getApy(): Percentage;
+    getApy(asTokenInput: false): bigint;
+    getApy(asTokenInput: true): Percentage
+    getApy(asTokenInput = true): Percentage | bigint {
         // TODO: add underlying yield rate
-        return Decimal(this.cache.supplyRate).div(BPS);
+        return asTokenInput ? Decimal(this.cache.supplyRate).div(BPS) : this.cache.supplyRate;
     }
     
     getTvl(inUSD: true): USD;
