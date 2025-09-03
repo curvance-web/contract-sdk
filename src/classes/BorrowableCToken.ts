@@ -85,9 +85,9 @@ export class BorrowableCToken extends CToken {
     borrowChange(amount: USD, rateType: ChangeRate) {
         const rate = this.getBorrowRate(false);
         const rate_seconds = getRateSeconds(rateType);
-        const rate_percent = Decimal(rate).mul(rate_seconds).div(BPS);
+        const rate_percent = Decimal(rate * rate_seconds).div(WAD);
 
-        return amount.mul(rate_percent).div(WAD);
+        return amount.mul(rate_percent);
     }
 
     override async depositAsCollateral(amount: TokenInput, zap: ZapperTypes = 'none',  receiver: address | null = null) {

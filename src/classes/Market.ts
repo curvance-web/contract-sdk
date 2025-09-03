@@ -347,28 +347,29 @@ export class Market {
      * @returns Supply, borrow & earn rates
      */
     async previewAssetImpact(user: address, collateral_ctoken: CToken, debt_ctoken: BorrowableCToken, deposit_amount: TokenInput, borrow_amount: TokenInput, rate_change: ChangeRate) {
-        const amount_in = toBigInt(deposit_amount.toNumber(), collateral_ctoken.decimals);
-        const amount_out = toBigInt(borrow_amount.toNumber(), debt_ctoken.decimals);
+        const amount_in = toBigInt(deposit_amount.toNumber(), collateral_ctoken.asset.decimals);
+        const amount_out = toBigInt(borrow_amount.toNumber(), debt_ctoken.asset.decimals);
         
         const { supply, borrow } = await this.reader.previewAssetImpact(user, collateral_ctoken.address, debt_ctoken.address, amount_in, amount_out);
-        const supply_change = Decimal(supply * getRateSeconds(rate_change)).div(BPS);
-        const borrow_change = Decimal(borrow * getRateSeconds(rate_change)).div(BPS);
+        const supply_percent = Decimal(supply * getRateSeconds(rate_change)).div(WAD);
+        const borrow_percent = Decimal(borrow * getRateSeconds(rate_change)).div(WAD);
 
-        const amount_in_usd = collateral_ctoken.convertTokensToUsd(amount_in);
-        const amount_out_usd = debt_ctoken.convertTokensToUsd(amount_out);
+        const supply_change = debt_ctoken.convertTokensToUsd(amount_in).mul(supply_percent);
+        const borrow_change = collateral_ctoken.convertTokensToUsd(amount_out).mul(borrow_percent);
 
+        // TODO: Take in account the users current market position into this calculation
         return {
             supply: {
-                percent: supply_change,
-                change: amount_in_usd.mul(supply_change)
+                percent: supply_percent,
+                change: supply_change
             },
             borrow: {
-                percent: borrow_change,
-                change: amount_out_usd.mul(borrow_change)
+                percent: borrow_percent,
+                change: borrow_change
             },
             earn: {
                 percent: supply_change.sub(borrow_change),
-                change: amount_in_usd.mul(supply_change).sub(amount_out_usd.mul(borrow_change))
+                change: supply_change.sub(borrow_change)
             }
         }
     }

@@ -16,10 +16,10 @@ export const WAD_SQUARED = BigInt(1e36);
 export const WAD_CUBED_BPS_OFFSET = BigInt(1e50);
 export const WAD_DECIMAL = new Decimal(WAD);
 
-export const SECONDS_PER_YEAR = 31_536_000n;
-export const SECONDS_PER_MONTH = 2_592_000n;
-export const SECONDS_PER_WEEK = 604_800n;
-export const SECONDS_PER_DAY = 86_400n
+export const SECONDS_PER_YEAR = 31_536_000n; // 365 days
+export const SECONDS_PER_MONTH = 2_592_000n; // 30 days
+export const SECONDS_PER_WEEK = 604_800n; // 7 days
+export const SECONDS_PER_DAY = 86_400n // 1 day
 
 export const UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
 export const UINT256_MAX_DECIMAL = Decimal(UINT256_MAX);

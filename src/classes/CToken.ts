@@ -253,9 +253,8 @@ export class CToken extends Calldata<ICToken> {
     earnChange(amount: USD, rateType: ChangeRate) {
         const rate = this.getApy(false);
         const rate_seconds = getRateSeconds(rateType);
-        const rate_percent = Decimal(rate).mul(rate_seconds).div(BPS);
-
-        return amount.mul(rate_percent).div(WAD);
+        const rate_percent = Decimal(rate * rate_seconds).div(WAD);
+        return amount.mul(rate_percent);
     }
 
     /**
