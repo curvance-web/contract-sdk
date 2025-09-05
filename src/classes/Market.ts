@@ -35,12 +35,6 @@ export interface DeployData {
     plugins: { [key: string]: address }
 }
 
-export interface LiquidationStatusOf {
-    lFactor: bigint;
-    collateralPrice: bigint;
-    debtPrice: bigint;
-}
-
 export interface HypotheticalLiquidityOf {
     collateralSurplus: bigint,
     liquidityDeficit: bigint,
@@ -52,8 +46,6 @@ export interface IMarket {
     MIN_HOLD_PERIOD(): Promise<bigint>;
     hypotheticalLiquidityOf(account: address, cTokenModified: address, redemptionShares: bigint, borrowAssets: bigint): Promise<HypotheticalLiquidityOf>;
     statusOf(account: address): Promise<StatusOf>;
-    liquidationStatusOf(account: address, collateralToken: address, debtToken: address): Promise<LiquidationStatusOf>;
-    liquidationValuesOf(account: address): Promise<[ bigint, bigint, bigint ]>;
 }
 
 export class Market {
@@ -377,73 +369,59 @@ export class Market {
     /**
      * Grabs the new position health when doing a deposit
      * @param ctoken - Token you are expecting to deposit on
-     * @param collateral_change - Amount of new collateral in USD
+     * @param amount - Amount of assets being deposited
      * @returns The new position health
      */
-    async previewPositionHealthDeposit(ctoken: CToken, collateral_change: USD) {
+    async previewPositionHealthDeposit(ctoken: CToken, amount: TokenInput) {
         const provider = validateProviderAsSigner(this.provider);
-        const change = BigInt(collateral_change.mul(WAD_DECIMAL).toFixed(0)) as USD_WAD;
-
-        try {
-            const liq = await this.liquidationValuesOf(provider.address as address);
-            const impact = change * BPS / ctoken.getCollReqSoft(false);
-            const soft = (liq.soft * WAD) + impact;
-            const debt = liq.debt;
-            const result = debt > 0n ? soft / debt : 0n;
-    
-            return result <= 0n ? null : Decimal(result).div(WAD) as USD;
-        } catch(e) {
-            console.error(e);
-            throw new Error("Failed to get liquidation values, likely due to price not being updated.");
+        const user = provider.address as address;
+        const data = await this.reader.getPositionHealth(
+            this.address, 
+            user, 
+            ctoken.address, 
+            EMPTY_ADDRESS, 
+            true, 
+            toBigInt(amount, ctoken.decimals), 
+            false, 
+            0n, 
+            0n
+        );
+        
+        if(data.errorCodeHit) {
+            throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
+
+        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
     }
 
     /**
      * Grabs the new position health when doing a borrow
-     * @param debt_change - Amount of new debt in USD
+     * @param token - Token you are expecting to borrow on
+     * @param amount - Amount of assets being borrowed
      * @returns The new position health
      */
-    async previewPositionHealthBorrow(debt_change: USD) {
+    async previewPositionHealthBorrow(token: BorrowableCToken, amount: TokenInput) {
         const provider = validateProviderAsSigner(this.provider);
-        const change = BigInt(debt_change.mul(WAD_DECIMAL).toFixed(0)) as USD_WAD;
-
-        try {
-            const liq = await this.liquidationValuesOf(provider.address as address);
-            const soft = liq.soft * WAD;
-            const debt = liq.debt + change;
-            const result = debt > 0n ? soft / debt : 0n;
-    
-            return result <= 0n ? null : Decimal(result).div(WAD) as USD;
-        } catch(e) {
-            console.error(e);
-            throw new Error("Failed to get liquidation values, likely due to price not being updated.");
+        const user = provider.address as address;
+        const data = await this.reader.getPositionHealth(
+            this.address, 
+            user, 
+            EMPTY_ADDRESS, 
+            token.address, 
+            false, 
+            0n, 
+            false, 
+            toBigInt(amount, token.decimals), 
+            0n
+        );
+        
+        if(data.errorCodeHit) {
+            throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
-    }
 
-    /**
-     * Get liquidation values of for a given user
-     * @param account - user
-     * @returns The liquidation values of the user
-     */
-    async liquidationValuesOf(account: address) {
-        const [ soft, hard, debt ] = await this.contract.liquidationValuesOf(account);
-        return { soft, hard, debt };
-    }
+        console.log(data);
 
-    /**
-     * Grab the current liquidation status of
-     * @param account - Account you wanna check liquidation status of on
-     * @param collateralToken - What token to use as collateral
-     * @param debtToken - What token to use as debt
-     * @returns The liquidation status of the account
-     */
-    async liquidationStatusOf(account: address, collateralToken: address, debtToken: address) {
-        const data = await this.contract.liquidationStatusOf(account, collateralToken, debtToken);
-        return {
-            lFactor: BigInt(data.lFactor),
-            collateralPrice: BigInt(data.collateralPrice),
-            debtPrice: BigInt(data.debtPrice)
-        }
+        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
     }
 
     /**

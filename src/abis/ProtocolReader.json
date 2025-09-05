@@ -12,6 +12,19 @@
   },
   {
     "type": "function",
+    "name": "AUCTION_BUFFER",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MARKET_ASSET_RESERVE",
     "inputs": [],
     "outputs": [
@@ -236,7 +249,7 @@
                 "internalType": "uint256"
               },
               {
-                "name": "priceStale",
+                "name": "errorCodeHit",
                 "type": "bool",
                 "internalType": "bool"
               },
@@ -394,6 +407,41 @@
         "name": "account",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "cToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "borrowableCToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "isDeposit",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "collateralAssets",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "isRepayment",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "debtAssets",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "bufferTime",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -403,7 +451,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "priceStale",
+        "name": "errorCodeHit",
         "type": "bool",
         "internalType": "bool"
       }
@@ -736,7 +784,7 @@
                 "internalType": "uint256"
               },
               {
-                "name": "priceStale",
+                "name": "errorCodeHit",
                 "type": "bool",
                 "internalType": "bool"
               },

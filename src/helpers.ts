@@ -46,7 +46,7 @@ export function toDecimal(value: bigint, decimals: bigint): Decimal {
     return new Decimal(value).div(new Decimal(10).pow(decimals));
 }
 
-export function toBigInt(value: number, decimals: bigint): bigint {
+export function toBigInt(value: number | Decimal, decimals: bigint): bigint {
     return parseUnits(value.toString(), decimals);
 }
 

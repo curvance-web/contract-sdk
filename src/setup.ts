@@ -27,7 +27,7 @@ export const chain_config = {
     }
 };
 
-export async function setupChain(chain: ChainRpcPrefix, provider: JsonRpcSigner | Wallet | JsonRpcProvider | null, approval_protection: boolean = false) {
+export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provider | null, approval_protection: boolean = false) {
     if(!(chain in chain_config)) {
         throw new Error("Chain does not have a corresponding config");
     }

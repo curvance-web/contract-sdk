@@ -114,7 +114,8 @@ export interface IProtocolReader {
     getStaticMarketData(): Promise<StaticMarketData[]>;
     marketMultiCooldown(markets: address[], account: address): Promise<bigint[]>;
     previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, new_collateral: bigint, new_debt: bigint): Promise<[bigint, bigint]>;
-    hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint): [ bigint, bigint, bigint, bigint ]
+    hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint): [ bigint, bigint, bigint, bigint ];
+    getPositionHealth(market: address, account: address, ctoken: address, borrowableCToken: address, isDeposit: boolean, collateralAssets: bigint, isRepayment: boolean, debtAssets: bigint, bufferTime: bigint): Promise<[bigint, boolean]>;
 }
 
 export class ProtocolReader {
@@ -139,6 +140,24 @@ export class ProtocolReader {
             staticMarket : all[0],
             dynamicMarket: all[1],
             userData     : all[2]
+        }
+    }
+
+    async getPositionHealth(
+        market: address, 
+        account: address, 
+        ctoken: address, 
+        borrowableCToken: address, 
+        isDeposit: boolean, 
+        collateralAssets: bigint, 
+        isRepayment: boolean, 
+        debtAssets: bigint, 
+        bufferTime: bigint
+    ) {
+        const data = await this.contract.getPositionHealth(market, account, ctoken, borrowableCToken, isDeposit, collateralAssets, isRepayment, debtAssets, bufferTime);
+        return {
+            positionHealth: BigInt(data[0]),
+            errorCodeHit: data[1]
         }
     }
     

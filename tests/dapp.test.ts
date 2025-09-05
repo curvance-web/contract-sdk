@@ -410,14 +410,17 @@ describe('Market Tests', () => {
         const market = curvance.markets[1]!;
         const debt_token = market.tokens[0]! as BorrowableCToken;
         const coll_token = market.tokens[1]!;
-        const change_amount = Decimal(100.0);
 
-        console.log('debt', debt_token.convertTokensToUsd(await debt_token.totalSupply()));
-        console.log('collateral', coll_token.convertTokensToUsd(await coll_token.totalSupply()));
+        console.log('deposits', market.userDeposits);
+        console.log('debt', market.userDebt);
+        console.log('collateral', market.userCollateral);
+        console.log('position health', market.positionHealth);
+        console.log('Debt token symbol', debt_token.symbol);
+        console.log('Coll token symbol', coll_token.symbol);
 
         {
             // Confirm position health calc is working correctly
-            const borrow = await market.previewPositionHealthBorrow(Decimal(0));
+            const borrow = await market.previewPositionHealthBorrow(debt_token, Decimal(0));
             assert(
                 market.positionHealth == null ? market.positionHealth == borrow : borrow?.equals(market.positionHealth), 
                 `Position health should match with 0 change. Compared ${borrow} to ${market.positionHealth}`
@@ -431,14 +434,14 @@ describe('Market Tests', () => {
 
         {
             // Check borrow impact health factor
-            const borrow = await market.previewPositionHealthBorrow(change_amount);
+            const borrow = await market.previewPositionHealthBorrow(debt_token, Decimal(10));
             console.log('Borrow result (Position Health):', borrow);
             console.log(`Borrow change`, borrow == null ? 'N/A' : borrow.sub(market.positionHealth ?? 0).toFixed(18));
         }
 
         {
             // Check deposit impact health factor
-            const deposit = await market.previewPositionHealthDeposit(coll_token, change_amount);
+            const deposit = await market.previewPositionHealthDeposit(coll_token, Decimal(0.5));
             console.log(`Deposit result (Position Health):`, deposit);
             console.log('Deposit change', deposit == null ? 'N/A' : deposit.sub(market.positionHealth ?? 0).toFixed(18));
         }
