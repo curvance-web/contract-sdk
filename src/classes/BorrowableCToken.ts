@@ -61,13 +61,13 @@ export class BorrowableCToken extends CToken {
     getBorrowRate(inPercentage: true): Percentage;
     getBorrowRate(inPercentage: false): bigint;
     getBorrowRate(inPercentage: boolean) { 
-        return inPercentage ? Decimal(this.cache.borrowRate).div(BPS) : this.cache.borrowRate;
+        return inPercentage ? Decimal(this.cache.borrowRate).div(WAD) : this.cache.borrowRate;
     }
 
     getPredictedBorrowRate(inPercentage: true): Percentage;
     getPredictedBorrowRate(inPercentage: false): bigint;
     getPredictedBorrowRate(inPercentage: boolean) { 
-        return inPercentage ? Decimal(this.cache.predictedBorrowRate).div(BPS) : this.cache.predictedBorrowRate;
+        return inPercentage ? Decimal(this.cache.predictedBorrowRate).div(WAD) : this.cache.predictedBorrowRate;
     }
     
     getUtilizationRate(inPercentage: true): Percentage;
@@ -79,7 +79,7 @@ export class BorrowableCToken extends CToken {
     getSupplyRate(inPercentage: true): Percentage;
     getSupplyRate(inPercentage: false): bigint;
     getSupplyRate(inPercentage: boolean) {
-        return inPercentage ? Decimal(this.cache.supplyRate).div(BPS) : this.cache.supplyRate;
+        return inPercentage ? Decimal(this.cache.supplyRate).div(WAD) : this.cache.supplyRate;
     }
 
     borrowChange(amount: USD, rateType: ChangeRate) {

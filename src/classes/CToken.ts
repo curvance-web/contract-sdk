@@ -285,7 +285,7 @@ export class CToken extends Calldata<ICToken> {
     getApy(asTokenInput: true): Percentage
     getApy(asTokenInput = true): Percentage | bigint {
         // TODO: add underlying yield rate
-        return asTokenInput ? Decimal(this.cache.supplyRate).div(BPS) : this.cache.supplyRate;
+        return asTokenInput ? Decimal(this.cache.supplyRate).div(WAD) : this.cache.supplyRate;
     }
     
     getTvl(inUSD: true): USD;
