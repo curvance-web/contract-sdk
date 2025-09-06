@@ -1,5 +1,5 @@
 import { parseUnits, TransactionResponse } from "ethers";
-import { contractSetup, UINT256_MAX, WAD } from "../helpers";
+import { contractSetup, toBigInt, UINT256_MAX, WAD } from "../helpers";
 import { Contract } from "ethers";
 import { StaticMarketAsset } from "./ProtocolReader";
 import { address, curvance_provider, TokenInput, USD } from "../types";
@@ -61,7 +61,8 @@ export class ERC20 {
     }
 
     async transfer(to: address, amount: TokenInput) {
-        const tokens = parseUnits(amount.toString(), Number(this.decimals));
+        const decimals = this.decimals ?? await this.contract.decimals();
+        const tokens = toBigInt(amount, decimals);
         return this.contract.transfer(to, tokens);
     }
 

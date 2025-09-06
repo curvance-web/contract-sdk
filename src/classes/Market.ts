@@ -317,6 +317,16 @@ export class Market {
         }
     }
 
+    async reloadMarketData() {
+        const dynamic_data = await this.reader.getDynamicMarketData();
+        this.cache.dynamic = dynamic_data.find(m => m.address == this.address)!;
+
+        for(const token of this.tokens) {
+            const new_cache = this.cache.dynamic.tokens.find(t => t.address == token.address)!;
+            token.cache = {...token.cache, ...new_cache};
+        }
+    }
+
     async reloadUserData(account: address) {
         const data = (await this.reader.getUserData(account))
             .markets.find(market => market.address == this.address)!;

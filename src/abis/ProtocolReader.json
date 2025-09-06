@@ -51,6 +51,19 @@
   },
   {
     "type": "function",
+    "name": "MIN_ACTIVE_LOAN_SIZE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "centralRegistry",
     "inputs": [],
     "outputs": [
@@ -839,6 +852,55 @@
   },
   {
     "type": "function",
+    "name": "hypotheticalBorrowOf",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "borrowableCTokenModified",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "borrowAssets",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "hypotheticalLeverageOf",
     "inputs": [
       {
@@ -882,6 +944,60 @@
         "name": "maxDebtBorrowable",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "loanSizeError",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "errorCodeHit",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hypotheticalRedemptionOf",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "cTokenModified",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "redemptionShares",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"

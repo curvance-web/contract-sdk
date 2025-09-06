@@ -368,14 +368,25 @@ export class CToken extends Calldata<ICToken> {
         }
     }
 
-    async getAllowance(check_contract: address) {
+    async getAllowance(check_contract: address, underlying = true) {
         const signer = validateProviderAsSigner(this.provider);
-        const erc20 = new ERC20(this.provider, this.address);
+        const erc20 = new ERC20(this.provider, underlying ? this.asset.address : this.address);
         const allowance = await erc20.allowance(signer.address as address, check_contract);
         return allowance;
     }
+    
+    /**
+     * Approves the underlying asset to be used with the ctoken contract.
+     * @param amount - if null it will approve the max uint256, otherwise the amount specified
+     * @returns tx
+     */
+    async approveUnderlying(amount: TokenInput | null = null) {
+        const erc20 = new ERC20(this.provider, this.asset.address);
+        const tx = await erc20.approve(this.address, amount);
+        return tx;
+    }
 
-    async approve(amount: TokenInput | null, spender: address) {
+    async approve(amount: TokenInput | null = null, spender: address) {
         const erc20 = new ERC20(this.provider, this.address);
         const tx = await erc20.approve(spender, amount);
         return tx;
@@ -525,6 +536,16 @@ export class CToken extends Calldata<ICToken> {
         const amount = manager.maxRemainingLeverage(ctoken);
 
         return amount;
+    }
+
+    async hypotheticalRedemptionOf(amount: TokenInput) {
+        const signer = validateProviderAsSigner(this.provider);
+        const shares = this.convertTokenInput(amount, true);
+        return this.market.reader.hypotheticalRedemptionOf(
+            signer.address as address,
+            this,
+            shares
+        )
     }
 
     async depositAndLeverage(

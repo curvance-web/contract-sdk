@@ -104,6 +104,16 @@ export class BorrowableCToken extends CToken {
         return super.postCollateral(amount);
     }
 
+    async hypotheticalBorrowOf(amount: TokenInput) {
+        const signer = validateProviderAsSigner(this.provider);
+        const assets = this.convertTokenInput(amount);
+        return this.market.reader.hypotheticalBorrowOf(
+            signer.address as address,
+            this,
+            assets
+        )
+    }
+
     async fetchDebt(inUSD: true): Promise<USD>;
     async fetchDebt(inUSD: false): Promise<bigint>;
     async fetchDebt(inUSD = true): Promise<USD | bigint> {

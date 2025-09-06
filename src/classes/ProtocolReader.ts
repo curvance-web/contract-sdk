@@ -5,6 +5,8 @@ import { address, curvance_provider, TokenInput, TypeBPS } from "../types";
 import Decimal from "decimal.js";
 import { setup_config } from "../setup";
 import { MarketToken } from "./Market";
+import { BorrowableCToken } from "./BorrowableCToken";
+import { CToken } from "./CToken";
 
 export enum AdaptorTypes {
     CHAINLINK = 1,
@@ -116,6 +118,8 @@ export interface IProtocolReader {
     previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, new_collateral: bigint, new_debt: bigint): Promise<[bigint, bigint]>;
     hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint): [ bigint, bigint, bigint, bigint ];
     getPositionHealth(market: address, account: address, ctoken: address, borrowableCToken: address, isDeposit: boolean, collateralAssets: bigint, isRepayment: boolean, debtAssets: bigint, bufferTime: bigint): Promise<[bigint, boolean]>;
+    hypotheticalRedemptionOf(account: address, ctoken: address, redeemShares: bigint): Promise<[bigint, bigint, boolean, boolean]>;
+    hypotheticalBorrowOf(account: address, borrowableCToken: address, borrowAssets: bigint): Promise<[bigint, bigint, boolean, boolean]>;
 }
 
 export class ProtocolReader {
@@ -140,6 +144,26 @@ export class ProtocolReader {
             staticMarket : all[0],
             dynamicMarket: all[1],
             userData     : all[2]
+        }
+    }
+
+    async hypotheticalRedemptionOf(account: address, ctoken: CToken, shares: bigint) {
+        const data = await this.contract.hypotheticalRedemptionOf(account, ctoken.address, shares);
+        return {
+            excess: BigInt(data[0]),
+            deficit: BigInt(data[1]),
+            isPossible: data[2],
+            priceStale: data[3]
+        }
+    }
+
+    async hypotheticalBorrowOf(account: address, ctoken: BorrowableCToken, assets: bigint) {
+        const data = await this.contract.hypotheticalBorrowOf(account, ctoken.address, assets);
+        return {
+            excess: BigInt(data[0]),
+            deficit: BigInt(data[1]),
+            isPossible: data[2],
+            priceStale: data[3]
         }
     }
 

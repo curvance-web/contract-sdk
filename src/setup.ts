@@ -21,8 +21,8 @@ export const chain_config = {
         vaults: [
             { name: "apriori", contract: "0xb2f82D0f38dc453D596Ad40A37799446Cc89274A" as address },
             { name: "fast-lane", contract: "0x3a98250F98Dd388C211206983453837C8365BDc1" as address },
-            { name: "magma", contract: "0xaEef2f6B429Cb59C9B2D7bB2141ADa993E8571c3" as address },
-            { name: "kintsu", contract: "0xe1d2439b75fb9746E7Bc6cB777Ae10AA7f7ef9c5" as address }
+            // { name: "magma", contract: "0xaEef2f6B429Cb59C9B2D7bB2141ADa993E8571c3" as address }, //Has no deposit function for some reason
+            // { name: "kintsu", contract: "0xe1d2439b75fb9746E7Bc6cB777Ae10AA7f7ef9c5" as address } //Has a deposit function but uses uint96 instead of uint256
         ]
     }
 };
@@ -45,19 +45,15 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
 
     if(!("ProtocolReader" in setup_config.contracts)) {
         throw new Error(`Chain configuration for ${chain} is missing ProtocolReader address.`);
-    } else if (!("Faucet" in setup_config.contracts)) {
-        throw new Error(`Chain configuration for ${chain} is missing Faucet address.`);
     } else if (!("OracleManager" in setup_config.contracts)) {
         throw new Error(`Chain configuration for ${chain} is missing OracleManager address.`);
     }
 
     const reader = new ProtocolReader(setup_config.contracts.ProtocolReader as address)
-    const faucet = new Faucet(setup_config.contracts.Faucet as address);
     const oracle_manager = new OracleManager(setup_config.contracts.OracleManager as address);
 
     return {
         markets: await Market.getAll(reader, oracle_manager),
-        faucet,
         reader,
     };
 }
