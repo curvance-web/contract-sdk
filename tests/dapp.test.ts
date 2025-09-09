@@ -89,12 +89,6 @@ describe('Market Tests', () => {
         }
     })
 
-    test('[Explore] Weird number inputs', async() => {
-        const amount = Decimal(0.000000073093595879);
-        const tokens = cAprMON.convertTokenInput(amount);
-        assert(typeof tokens === 'bigint');
-    });
-
     test('[Explore] Deposit token list', async() => {
         const deposit_tokens = await cAprMON.getDepositTokens();
         let type_list = deposit_tokens.map(t => t.type);
@@ -431,5 +425,19 @@ describe('Market Tests', () => {
             const data = await cWMON.hypotheticalBorrowOf(Decimal(1));
             console.log(data);
         }
+    });
+
+    test('[Explore] Weird number inputs', async() => {
+        const amounts = [
+            Decimal(0.000000031802381055),
+            Decimal(0.000000073093595879)
+        ];
+
+        for(const amount of amounts) {
+            const tokens = cAprMON.convertTokenInput(amount);
+            assert(typeof tokens === 'bigint');
+        }
+
+        await cWMON.repay(amounts[0]!);
     });
 });

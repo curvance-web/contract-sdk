@@ -47,7 +47,7 @@ export function toDecimal(value: bigint, decimals: bigint): Decimal {
 }
 
 export function toBigInt(value: number | Decimal, decimals: bigint): bigint {
-    if(value instanceof Decimal) {
+    if(Decimal.isDecimal(value)) {
         return BigInt(value.mul(Decimal(10).pow(decimals)).toFixed(0));
     }
 
