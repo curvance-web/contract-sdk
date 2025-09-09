@@ -1,4 +1,4 @@
-import { Contract, parseUnits, TransactionResponse } from "ethers";
+import { Contract, TransactionResponse } from "ethers";
 import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS, toDecimal } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
@@ -507,7 +507,7 @@ export class CToken extends Calldata<ICToken> {
 
     convertTokenInput(amount: TokenInput, inShares = false) {
         const decimals = inShares ? this.decimals : this.asset.decimals;
-        const newAmount = parseUnits(amount.toString(), Number(decimals));
+        const newAmount = toBigInt(amount, decimals);
 
         return inShares ? (newAmount * this.exchangeRate) / WAD : newAmount;
     }

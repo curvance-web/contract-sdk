@@ -1,4 +1,4 @@
-import { parseUnits, TransactionResponse } from "ethers";
+import { TransactionResponse } from "ethers";
 import { contractSetup, toBigInt, UINT256_MAX, WAD } from "../helpers";
 import { Contract } from "ethers";
 import { StaticMarketAsset } from "./ProtocolReader";
@@ -67,7 +67,8 @@ export class ERC20 {
     }
 
     async approve(spender: address, amount: TokenInput | null) {
-        const tokens = amount == null ? UINT256_MAX : parseUnits(amount.toString(), Number(this.decimals));
+        const decimals = this.decimals ?? await this.fetchDecimals();
+        const tokens = amount == null ? UINT256_MAX : toBigInt(amount, decimals);
         return this.contract.approve(spender, tokens);
     }
 
