@@ -207,12 +207,12 @@ export class CToken extends Calldata<ICToken> {
     getUserUnderlyingBalance(inUSD: boolean): USD | TokenInput {
         return inUSD ? this.convertTokensToUsd(this.cache.userUnderlyingBalance) : toDecimal(this.cache.userUnderlyingBalance, this.decimals);
     }
-    
+
     /** @returns Token Collateral Cap in USD or USD WAD */
     getCollateralCap(inUSD: true): USD;
     getCollateralCap(inUSD: false): USD_WAD;
     getCollateralCap(inUSD: boolean): USD | USD_WAD {
-        return inUSD ? this.convertTokensToUsd(this.cache.collateralCap) : this.cache.collateralCap;
+        return inUSD ? this.convertToUsd(this.cache.collateralCap) : this.cache.collateralCap;
     }
 
     /** @returns Token Debt Cap in USD or USD WAD */
@@ -226,28 +226,28 @@ export class CToken extends Calldata<ICToken> {
     getCollateral(inUSD: true): USD;
     getCollateral(inUSD: false): USD_WAD;
     getCollateral(inUSD: boolean): USD | USD_WAD { 
-        return inUSD ? this.convertTokensToUsd(this.cache.collateral) : this.cache.collateral;
+        return inUSD ? this.convertToUsd(this.cache.collateral) : this.cache.collateral;
     }
 
     /** @returns Token Debt in USD or USD WAD */
     getDebt(inUSD: true): USD;
     getDebt(inUSD: false): USD_WAD;
     getDebt(inUSD: boolean): USD | USD_WAD {
-        return inUSD ? this.convertTokensToUsd(this.cache.debt) : this.cache.debt;
+        return inUSD ? this.convertToUsd(this.cache.debt) : this.cache.debt;
     }
 
     /** @returns User Collateral in USD or asset token amount */
     getUserCollateral(inUSD: true): USD;
-    getUserCollateral(inUSD: false): TokenInput;
-    getUserCollateral(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : this.convertBigInt(this.cache.userCollateral, true);
+    getUserCollateral(inUSD: false): bigint;
+    getUserCollateral(inUSD: boolean): USD | bigint {
+        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : this.cache.userCollateral;
     }
 
     /** @returns User Debt in USD or USD WAD */
     getUserDebt(inUSD: true): USD;
     getUserDebt(inUSD: false): USD_WAD;
     getUserDebt(inUSD: boolean): USD | USD_WAD {
-        return inUSD ? this.convertTokensToUsd(this.cache.userDebt) : this.cache.userDebt;
+        return inUSD ? this.convertToUsd(this.cache.userDebt) : this.cache.userDebt;
     }
 
     earnChange(amount: USD, rateType: ChangeRate) {
@@ -698,8 +698,12 @@ export class CToken extends Calldata<ICToken> {
         // Reload cache
         await this.fetchPrice(asset);
         await this.fetchDecimals();
-        
+
         return this.convertTokensToUsd(tokenAmount, asset);
+    }
+
+    convertToUsd(usd_amount: bigint) {
+        return toDecimal(usd_amount, 18n) as USD;
     }
 
     convertTokensToUsd(tokenAmount: bigint, asset = true) {
