@@ -440,4 +440,9 @@ describe('Market Tests', () => {
 
         await cWMON.repay(amounts[0]!);
     });
+
+    test('[Dashboard] Find max withdraw', async () => {
+        const maxWithdraw = await cAprMON.maxRedemption();
+        assert(maxWithdraw.greaterThan(0), "Max withdraw should be greater than 0");
+    });
 });

@@ -499,7 +499,7 @@ export class CToken extends Calldata<ICToken> {
         return this.contract.convertToShares(assets);
     }
 
-    async maxRedemption(): TokenInput {
+    async maxRedemption() {
         const signer = validateProviderAsSigner(this.provider);
         const data = await this.market.reader.maxRedemptionOf(signer.address as address, this);
 
