@@ -216,7 +216,7 @@ export class Market {
 
         for(const token of this.tokens) {
             if(token.isBorrowable) {
-                if(token.getUserCollateral(false).greaterThan(0) || users_market_collateral.lessThanOrEqualTo(0)) {
+                if(token.getUserCollateral(false) > 0 || users_market_collateral.lessThanOrEqualTo(0)) {
                     result.ineligible.push(token as BorrowableCToken);
                 } else {
                     result.eligible.push(token as BorrowableCToken);
@@ -376,6 +376,43 @@ export class Market {
         }
     }
 
+
+    /**
+     * Grabs the new position health when doing a redeem
+     * @param ctoken - Token you are expecting to redeem on
+     * @param amount - Amount of assets being redeemed
+     * @returns The new position health
+     */
+    async previewPositionHealthRedeem(ctoken: CToken, amount: TokenInput) {
+        const provider = validateProviderAsSigner(this.provider);
+        const user = provider.address as address;
+        const redeem_amount = await ctoken.convertToShares(toBigInt(amount, ctoken.decimals));
+        const existing_collateral = ctoken.getUserCollateral(false);
+
+        if(redeem_amount > existing_collateral) {
+            throw new Error(`Insufficient collateral: Existing (${existing_collateral}) < Redeem amount (${redeem_amount})`);
+        }
+
+        const new_collateral = existing_collateral - redeem_amount;
+        const data = await this.reader.getPositionHealth(
+            this.address,
+            user,
+            ctoken.address,
+            EMPTY_ADDRESS,
+            false,
+            new_collateral,
+            false,
+            0n,
+            0n
+        );
+
+        if(data.errorCodeHit) {
+            throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
+        }
+
+        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+    }
+
     /**
      * Grabs the new position health when doing a deposit
      * @param ctoken - Token you are expecting to deposit on
@@ -396,7 +433,7 @@ export class Market {
             0n, 
             0n
         );
-        
+
         if(data.errorCodeHit) {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }

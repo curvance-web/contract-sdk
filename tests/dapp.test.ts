@@ -445,4 +445,10 @@ describe('Market Tests', () => {
         const maxWithdraw = await cAprMON.maxRedemption();
         assert(maxWithdraw.greaterThan(0), "Max withdraw should be greater than 0");
     });
+
+    test('[Dashboard] Redeem position health update', async() => {
+        const before_ph = market.positionHealth;
+        const new_ph = await market.previewPositionHealthRedeem(cAprMON, Decimal(1));
+        assert(new_ph! < before_ph!, "Position health should increase after redeeming");
+    });
 });
