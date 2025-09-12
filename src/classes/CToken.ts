@@ -499,6 +499,19 @@ export class CToken extends Calldata<ICToken> {
         return this.contract.convertToShares(assets);
     }
 
+    async maxRedemption(): TokenInput {
+        const signer = validateProviderAsSigner(this.provider);
+        const data = await this.market.reader.maxRedemptionOf(signer.address as address, this);
+
+        if(data.errorCodeHit) {
+            throw new Error(`Error fetching max redemption. Possible stale price or other issues...`);
+        }
+
+        const all_shares = data.maxCollateralizedShares + data.maxUncollateralizedShares;
+        const all_assets = await this.convertToAssets(all_shares);
+        return this.convertBigInt(all_assets, false) as TokenInput;
+    }
+
     convertBigInt(amount: bigint, inShares = false) {
         const decimals = inShares ? this.decimals : this.asset.decimals;
         const raw_amount = inShares ? (amount * this.exchangeRate) / WAD : amount;

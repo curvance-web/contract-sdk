@@ -7,6 +7,7 @@ import { setup_config } from "../setup";
 import { MarketToken } from "./Market";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { CToken } from "./CToken";
+import { error } from "console";
 
 export enum AdaptorTypes {
     CHAINLINK = 1,
@@ -120,6 +121,7 @@ export interface IProtocolReader {
     getPositionHealth(market: address, account: address, ctoken: address, borrowableCToken: address, isDeposit: boolean, collateralAssets: bigint, isRepayment: boolean, debtAssets: bigint, bufferTime: bigint): Promise<[bigint, boolean]>;
     hypotheticalRedemptionOf(account: address, ctoken: address, redeemShares: bigint): Promise<[bigint, bigint, boolean, boolean]>;
     hypotheticalBorrowOf(account: address, borrowableCToken: address, borrowAssets: bigint): Promise<[bigint, bigint, boolean, boolean]>;
+    maxRedemptionOf(account: address, ctoken: address): Promise<[bigint, bigint, boolean]>;
 }
 
 export class ProtocolReader {
@@ -145,6 +147,15 @@ export class ProtocolReader {
             dynamicMarket: all[1],
             userData     : all[2]
         }
+    }
+
+    async maxRedemptionOf(account: address, ctoken: CToken) {
+        const data = await this.contract.maxRedemptionOf(account, ctoken.address);
+        return {
+            maxCollateralizedShares: BigInt(data[0]),
+            maxUncollateralizedShares: BigInt(data[1]),
+            errorCodeHit: data[2]
+        };
     }
 
     async hypotheticalRedemptionOf(account: address, ctoken: CToken, shares: bigint) {
