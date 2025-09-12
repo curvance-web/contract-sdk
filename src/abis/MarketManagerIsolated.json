@@ -6,6 +6,11 @@
         "name": "cr",
         "type": "address",
         "internalType": "contract ICentralRegistry"
+      },
+      {
+        "name": "minLoan",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"

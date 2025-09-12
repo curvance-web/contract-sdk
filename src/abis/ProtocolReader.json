@@ -1028,6 +1028,40 @@
   },
   {
     "type": "function",
+    "name": "maxRedemptionOf",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "cTokenRedeemed",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "collateralizedSharesRedeemable",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "uncollateralizedShares",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "errorHit",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "previewAssetImpact",
     "inputs": [
       {
