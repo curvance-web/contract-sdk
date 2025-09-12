@@ -26,7 +26,7 @@
   "VaultAggregator-WMON-aprMON": "0xA20925f22231Bd0E2fd9Da261Bb477495a550a40",
   "VaultAggregator-WMON-shMON": "0x66db56FAF91591b64B82d66894842b4e3dfC34F7",
   "markets": {
-    "Apriori (aprMON) / wMON": {
+    "aprMON & wMON": {
       "address": "0xfE6499a02868406C3852170FB0BF425C85ec0831",
       "plugins": {
         "nativeVaultPositionManager": "0xd0CCbBEECbEF03ec465326189A8671A7424E83b6"
@@ -38,7 +38,7 @@
       },
       "WMON-DynamicIRM": "0xbf185E1a19269c9Cf65E7a9e516e5EAA424d02a2"
     },
-    "Fastlane (shMON) / wMON": {
+    "shMON & wMON": {
       "address": "0xCbF9F41c673609b16d5925e4e83572B1312096Ab",
       "plugins": {
         "nativeVaultPositionManager": "0x52DE402804b61271B7158487e6240D8eD49b8C56"
@@ -50,7 +50,7 @@
       },
       "WMON-DynamicIRM": "0x5bF71c4050da42aF4C1822D850AF32bc437ee9b3"
     },
-    "Kintsu (sMON) / wMON": {
+    "sMON & wMON": {
       "address": "0x1dA6881Db841dCc7DBc34bf6d87827b5EC908af0",
       "plugins": {
         "nativeVaultPositionManager": "0x70A4a6729E0FF27Cb7971F242e6d4d119504A248"
@@ -62,7 +62,7 @@
       },
       "WMON-DynamicIRM": "0xb421eF20C9FdeE67F60E0D1185E81932B310C802"
     },
-    "Magma (gMON) / wMON": {
+    "gMON & wMON": {
       "address": "0x4b9C6939E667fA2c71F9f4733E44f1ab3630b345",
       "plugins": {
         "nativeVaultPositionManager": "0x037FFC54BEA4eE1Dc373c308E57D5f1bF824F058"
