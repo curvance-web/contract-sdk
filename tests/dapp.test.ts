@@ -89,24 +89,6 @@ describe('Market Tests', () => {
         }
     })
 
-    test('[Dashboard] Use 0 to repay max & withdraw max', async () => {
-        // Setup position
-        await cAprMON.approvePlugin('native-vault', 'zapper');
-        await cAprMON.approveUnderlying();
-        await cAprMON.depositAsCollateral(Decimal(5), 'native-vault');
-        await cWMON.borrow(Decimal(.01));
-        await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
-
-        // Repay
-        {
-            const before = await cWMON.debtBalance(account);
-            await cWMON.repay(Decimal(0));
-            const after = await cWMON.debtBalance(account);
-            assert(before > 0n, "Should of had some debt before repay");
-            assert(after == 0n, "Should of repaid all debt with 0 input");
-        }
-    });
-
     test('[Explore] Deposit token list', async() => {
         const deposit_tokens = await cAprMON.getDepositTokens();
         let type_list = deposit_tokens.map(t => t.type);
@@ -468,5 +450,22 @@ describe('Market Tests', () => {
         const before_ph = market.positionHealth;
         const new_ph = await market.previewPositionHealthRedeem(cAprMON, Decimal(1));
         assert(new_ph! < before_ph!, "Position health should increase after redeeming");
+    });
+
+    test('[Dashboard] Use 0 to repay max', async () => {
+        // Setup position
+        await cAprMON.approvePlugin('native-vault', 'zapper');
+        await cAprMON.approveUnderlying();
+        await cAprMON.depositAsCollateral(Decimal(1), 'native-vault');
+        await cWMON.borrow(Decimal(.01));
+        await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
+
+        // Repay
+        const before = await cWMON.debtBalance(account);
+        await cWMON.repay(Decimal(0));
+        const after = await cWMON.debtBalance(account);
+        assert(before > 0n, "Should of had some debt before repay");
+        assert(after == 0n, "Should of repaid all debt with 0 input");
+        await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
     });
 });
