@@ -216,7 +216,7 @@ export class Market {
 
         for(const token of this.tokens) {
             if(token.isBorrowable) {
-                if(token.getUserCollateral(false) > 0 || users_market_collateral.lessThanOrEqualTo(0)) {
+                if(token.getUserCollateral(false).greaterThan(0) || users_market_collateral.lessThanOrEqualTo(0)) {
                     result.ineligible.push(token as BorrowableCToken);
                 } else {
                     result.eligible.push(token as BorrowableCToken);
@@ -387,7 +387,7 @@ export class Market {
         const provider = validateProviderAsSigner(this.provider);
         const user = provider.address as address;
         const redeem_amount = await ctoken.convertToShares(toBigInt(amount, ctoken.decimals));
-        const existing_collateral = ctoken.getUserCollateral(false);
+        const existing_collateral = ctoken.cache.userCollateral;
 
         if(redeem_amount > existing_collateral) {
             throw new Error(`Insufficient collateral: Existing (${existing_collateral}) < Redeem amount (${redeem_amount})`);
