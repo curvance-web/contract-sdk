@@ -205,14 +205,14 @@ export class CToken extends Calldata<ICToken> {
     getUserShareBalance(inUSD: true): USD;
     getUserShareBalance(inUSD: false): TokenInput;
     getUserShareBalance(inUSD: boolean): USD | TokenInput { 
-        return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, true) : toDecimal(this.cache.userShareBalance, this.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, false) : toDecimal(this.cache.userShareBalance, this.decimals);
     }
 
     /** @returns User assets in USD (this is the raw balance that the token exchanges too) or token */
     getUserAssetBalance(inUSD: true): USD;
     getUserAssetBalance(inUSD: false): TokenInput;
     getUserAssetBalance(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : toDecimal(this.cache.userAssetBalance, this.asset.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance, true) : toDecimal(this.cache.userAssetBalance, this.asset.decimals);
     }
 
     /** @returns User underlying assets in USD or token */
@@ -518,7 +518,10 @@ export class CToken extends Calldata<ICToken> {
         return this.contract.convertToShares(assets);
     }
 
-    async maxRedemption() {
+    async maxRedemption(): Promise<TokenInput>;
+    async maxRedemption(in_shares: true): Promise<bigint>;
+    async maxRedemption(in_shares: false): Promise<TokenInput>;
+    async maxRedemption(in_shares: boolean = false): Promise<TokenInput | bigint> {
         const signer = validateProviderAsSigner(this.provider);
         const data = await this.market.reader.maxRedemptionOf(signer.address as address, this);
 
@@ -527,6 +530,9 @@ export class CToken extends Calldata<ICToken> {
         }
 
         const all_shares = data.maxCollateralizedShares + data.maxUncollateralizedShares;
+
+        if(in_shares) return all_shares;
+
         const all_assets = await this.convertToAssets(all_shares);
         return this.convertBigInt(all_assets, false) as TokenInput;
     }
@@ -685,12 +691,25 @@ export class CToken extends Calldata<ICToken> {
         return this.oracleRoute(calldata, call_overrides);
     }
 
-    async redeem(amount: TokenInput, receiver: address | null = null, owner: address | null = null) {
-        const signer = validateProviderAsSigner(this.provider);
-        if(receiver == null) receiver = signer.address as address;
-        if(owner == null) owner = signer.address as address;
-        const shares = this.convertTokenInput(amount, true);
+    async redeem(amount: TokenInput) {
+        const signer   = validateProviderAsSigner(this.provider);
+        const receiver = signer.address as address;
+        const owner    = signer.address as address;
+        
+        const max_shares = await this.maxRedemption(true);
+        const converted_shares = this.convertTokenInput(amount, true);
+        const shares = max_shares < converted_shares ? max_shares : converted_shares;
+
         const calldata = this.getCallData("redeem", [shares, receiver, owner]);
+        return this.oracleRoute(calldata);
+    }
+
+    async redeemShares(amount: bigint) {
+        const signer = validateProviderAsSigner(this.provider);
+        const receiver = signer.address as address;
+        const owner = signer.address as address;
+
+        const calldata = this.getCallData("redeem", [amount, receiver, owner]);
         return this.oracleRoute(calldata);
     }
 

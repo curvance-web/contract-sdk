@@ -478,4 +478,9 @@ describe('Market Tests', () => {
         assert(diff.equals(0), `Difference between formatted tokens & dollars_to_token should be zero but is: ${diff.toFixed(18)}`);
         assert(formatted_tokens.equals(dollars_to_token), "When converted from Token -> USD -> Token. Token amount before & after should match.");
     });
+
+    test('[Dashboard] Max withdraw', async() => {
+        const max = await cAprMON.maxRedemption();
+        await cAprMON.redeem(max);
+    });
 });
