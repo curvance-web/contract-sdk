@@ -370,7 +370,7 @@ export class Market {
                 change: borrow_change
             },
             earn: {
-                percent: supply_change.sub(borrow_change),
+                percent: supply_percent.sub(borrow_percent),
                 change: supply_change.sub(borrow_change)
             }
         }
