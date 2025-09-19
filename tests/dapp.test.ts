@@ -468,4 +468,14 @@ describe('Market Tests', () => {
         assert(after == 0n, "Should of repaid all debt with 0 input");
         await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
     });
+
+    test('Conversions', async () => {
+        const token_amount = await cAprMON.balanceOf(account);
+        const dollars = cAprMON.convertTokensToUsd(token_amount, false);
+        const dollars_to_token = cAprMON.convertUsdToTokens(dollars, false, false);
+        const formatted_tokens = cAprMON.convertBigInt(token_amount, true);
+        const diff = formatted_tokens.sub(dollars_to_token);
+        assert(diff.equals(0), `Difference between formatted tokens & dollars_to_token should be zero but is: ${diff.toFixed(18)}`);
+        assert(formatted_tokens.equals(dollars_to_token), "When converted from Token -> USD -> Token. Token amount before & after should match.");
+    });
 });

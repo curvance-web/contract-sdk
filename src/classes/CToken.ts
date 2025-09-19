@@ -102,13 +102,27 @@ export class CToken extends Calldata<ICToken> {
     get decimals() { return this.cache.decimals; }
     get symbol() { return this.cache.symbol; }
     get name() { return this.cache.name; }
-    get remainingCollateral() { return this.cache.collateralCap - this.cache.collateral }
-    get remainingDebt() { return this.cache.debtCap - this.cache.debt }
     get asset() { return this.cache.asset }
     get isBorrowable() { return this.cache.isBorrowable; }
     get exchangeRate() { return this.cache.exchangeRate; }
     get canZap() { return this.zapTypes.length > 0; }
     get canLeverage() { return this.leverageTypes.length > 0; }
+    
+    /** @returns Remaining Collateral cap */
+    getRemainingCollateral(formatted: true): USD;
+    getRemainingCollateral(formatted: false): USD_WAD;
+    getRemainingCollateral(formatted: boolean = true): USD | USD_WAD { 
+        const inUsdWad = this.cache.collateralCap - this.cache.collateral;
+        return formatted ? Decimal(inUsdWad).div(WAD) as USD : inUsdWad as USD_WAD;
+    }
+        
+    /** @returns Remaining Debt cap */
+    getRemainingDebt(formatted: true): USD;
+    getRemainingDebt(formatted: false): USD_WAD;
+    getRemainingDebt(formatted:boolean = true): USD | USD_WAD { 
+        const inUsdWad = this.cache.debtCap - this.cache.debt;
+        return formatted ? Decimal(inUsdWad).div(WAD) as USD : inUsdWad as USD_WAD;
+    }
 
     /** @returns Collateral Ratio in BPS or bigint */
     getCollRatio(inBPS: true): Percentage;
@@ -645,10 +659,11 @@ export class CToken extends Calldata<ICToken> {
         const assets = this.convertTokenInput(amount);
 
         const collateralCapError = "There is not enough collateral left in this tokens collateral cap for this deposit.";
-        if(this.remainingCollateral == 0n) throw new Error(collateralCapError);
-        if(this.remainingCollateral > 0n) {
+        const remainingCollateral = this.getRemainingCollateral(false);
+        if(remainingCollateral == 0n) throw new Error(collateralCapError);
+        if(remainingCollateral > 0n) {
             const shares = await this.convertToShares(assets);
-            if(shares > this.remainingCollateral) {
+            if(shares > remainingCollateral) {
                 throw new Error(collateralCapError);
             }
         }
