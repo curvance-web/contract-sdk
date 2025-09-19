@@ -271,13 +271,18 @@ export class CToken extends Calldata<ICToken> {
         return asErc20 ? new ERC20(this.provider, this.cache.asset.address, this.cache.asset) : this.cache.asset.address 
     }
     
-    getPrice(asset = false, lower = false) { 
+    getPrice(): USD;
+    getPrice(asset: boolean): USD;
+    getPrice(asset: boolean, lower: boolean): USD;
+    getPrice(asset: boolean, lower: boolean, formatted: true): USD;
+    getPrice(asset: boolean, lower: boolean, formatted: false): USD_WAD;
+    getPrice(asset: boolean = false, lower: boolean = false, formatted = true): USD | USD_WAD { 
         let price = asset ? this.cache.assetPrice : this.cache.sharePrice;
         if(lower) {
             price = asset ? this.cache.assetPriceLower : this.cache.sharePriceLower;
         }
 
-        return Decimal(price).div(WAD) as USD;
+        return formatted ? Decimal(price).div(WAD) as USD : price as USD_WAD;
     }
 
     getApy(): Percentage;
@@ -702,8 +707,14 @@ export class CToken extends Calldata<ICToken> {
         return this.convertTokensToUsd(tokenAmount, asset);
     }
 
+    convertUsdToTokens(usdAmount: USD, asset = true, lower = false) {
+        const price = this.getPrice(asset, lower);
+        return usdAmount.div(price) as TokenInput;
+    }
+
     convertTokensToUsd(tokenAmount: bigint, asset = true) {
-        const tokenAmountDecimal = toDecimal(tokenAmount, asset ? this.asset.decimals : this.decimals);
+        const raw_amount = asset ? tokenAmount : (tokenAmount * this.exchangeRate) / WAD ;
+        const tokenAmountDecimal = toDecimal(raw_amount, asset ? this.asset.decimals : this.decimals);
         return this.getPrice(asset).mul(tokenAmountDecimal);
     }
 
