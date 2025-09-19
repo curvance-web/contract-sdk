@@ -240,14 +240,14 @@ export class CToken extends Calldata<ICToken> {
     getUserCollateral(inUSD: true): USD;
     getUserCollateral(inUSD: false): TokenInput;
     getUserCollateral(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral) : this.convertBigInt(this.cache.userCollateral, true);
+        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral, false) : this.convertBigInt(this.cache.userCollateral, true);
     }
 
     /** @returns User Debt in USD or USD WAD */
     getUserDebt(inUSD: true): USD;
     getUserDebt(inUSD: false): USD_WAD;
     getUserDebt(inUSD: boolean): USD | USD_WAD {
-        return inUSD ? this.convertTokensToUsd(this.cache.userDebt) : this.cache.userDebt;
+        return inUSD ? this.convertTokensToUsd(this.cache.userDebt, false) : this.cache.userDebt;
     }
 
     earnChange(amount: USD, rateType: ChangeRate) {
