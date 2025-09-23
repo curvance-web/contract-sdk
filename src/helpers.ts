@@ -141,7 +141,7 @@ async function tryAddGasBuffer(method: any, args: any[], bufferPercent: number):
  * 5. Calls the original method with the buffered gas limit
  * 
  * @param contract The ethers contract instance to wrap
- * @param bufferPercent The percentage buffer to add (default 20%)
+ * @param bufferPercent The percentage buffer to add (default 10%)
  * @returns The same contract but with automatic gas buffering
  */
 export function contractWithGasBuffer<T extends object>(contract: T, bufferPercent = 10): T {

@@ -257,6 +257,17 @@ export class CToken extends Calldata<ICToken> {
         return inUSD ? this.convertTokensToUsd(this.cache.userCollateral, false) : this.convertBigInt(this.cache.userCollateral, true);
     }
 
+    fetchUserCollateral(): Promise<bigint>;
+    fetchUserCollateral(formatted: true): Promise<TokenInput>;
+    fetchUserCollateral(formatted: false): Promise<bigint>;
+    async fetchUserCollateral(formatted: boolean = false): Promise<bigint | TokenInput> {
+        const signer = validateProviderAsSigner(this.provider);
+        const collateral = await this.contract.collateralPosted(signer.address as address);
+        this.cache.userCollateral = collateral;
+
+        return formatted ? toDecimal(collateral, this.decimals) : collateral;
+    }
+
     /** @returns User Debt in USD or USD WAD */
     getUserDebt(inUSD: true): USD;
     getUserDebt(inUSD: false): USD_WAD;
@@ -500,14 +511,30 @@ export class CToken extends Calldata<ICToken> {
 
     async postCollateral(amount: TokenInput) {
         const shares = this.convertTokenInput(amount, true);
-        const calldata = this.getCallData("postCollateral", [shares]);
-        return this.oracleRoute(calldata);
+        const current_shares = await this.fetchUserCollateral();
+        const max_shares = current_shares < shares ? current_shares : shares;
+
+        const calldata = this.getCallData("postCollateral", [max_shares]);
+        const tx = this.oracleRoute(calldata);
+
+        // Reload collateral state after execution
+        await this.fetchUserCollateral();
+        
+        return tx;
     }
 
     async removeCollateral(amount: TokenInput) {
         const shares = this.convertTokenInput(amount, true);
-        const calldata = this.getCallData("removeCollateral", [shares]);
-        return this.oracleRoute(calldata);
+        const current_shares = await this.fetchUserCollateral();
+        const max_shares = current_shares < shares ? current_shares : shares;
+
+        const calldata = this.getCallData("removeCollateral", [max_shares]);
+        const tx = this.oracleRoute(calldata);
+
+        // Reload collateral state after execution
+        await this.fetchUserCollateral();
+        
+        return tx;
     }
 
     async convertToAssets(shares: bigint) { 

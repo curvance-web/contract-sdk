@@ -466,7 +466,33 @@ export class Market {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
 
-        console.log(data);
+        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+    }
+
+    /**
+     * Grabs the new position health when doing a repay
+     * @param token - Token you are expecting to repay on
+     * @param amount - Amount of assets being repayed
+     * @returns The new position health
+     */
+    async previewPositionHealthRepay(token: BorrowableCToken, amount: TokenInput) {
+        const provider = validateProviderAsSigner(this.provider);
+        const user = provider.address as address;
+        const data = await this.reader.getPositionHealth(
+            this.address, 
+            user, 
+            EMPTY_ADDRESS, 
+            token.address, 
+            false, 
+            0n, 
+            true,
+            toBigInt(amount, token.decimals), 
+            0n
+        );
+        
+        if(data.errorCodeHit) {
+            throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
+        }
 
         return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
     }
