@@ -510,9 +510,12 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async postCollateral(amount: TokenInput) {
+        const signer = validateProviderAsSigner(this.provider);
         const shares = this.convertTokenInput(amount, true);
-        const current_shares = await this.fetchUserCollateral();
-        const max_shares = current_shares < shares ? current_shares : shares;
+        const balance = await this.balanceOf(signer.address as address);
+        const collateral = await this.fetchUserCollateral();
+        const available_shares = balance - collateral;
+        const max_shares = available_shares < shares ? available_shares : shares;
 
         const calldata = this.getCallData("postCollateral", [max_shares]);
         const tx = this.oracleRoute(calldata);
