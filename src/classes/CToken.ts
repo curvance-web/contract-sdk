@@ -90,8 +90,12 @@ export class CToken extends Calldata<ICToken> {
         
         const chain_config = getChainConfig();
         const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
+        const isWrappedNative = NATIVE_ADDRESS == this.asset.address;
+
         if(isVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
+
+        if(isWrappedNative) this.zapTypes.push('native-simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -350,7 +354,11 @@ export class CToken extends Calldata<ICToken> {
     getPositionManager(type: PositionManagerTypes) {
         const signer = validateProviderAsSigner(this.provider);
 
-        let manager_contract: address = this.getPluginAddress(type, 'positionManager');
+        let manager_contract = this.getPluginAddress(type, 'positionManager');
+
+        if(manager_contract == null) {
+            throw new Error("Plugin does not have an associated contract");
+        }
 
         return new PositionManager(manager_contract, signer, type);
     }
@@ -359,23 +367,38 @@ export class CToken extends Calldata<ICToken> {
         const signer = validateProviderAsSigner(this.provider);
         const zap_contract = this.getPluginAddress(type, 'zapper');
 
+        if(zap_contract == null) {
+            return null;
+        }
+
         return new Zapper(zap_contract, signer, type);
     }
 
     async isPluginApproved(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes) {
         const signer = validateProviderAsSigner(this.provider);
         const plugin_address = this.getPluginAddress(plugin, type);
+
+        if(plugin_address == null) {
+            throw new Error("Plugin does not have an associated contract");
+        }
+
         return this.contract.isDelegate(signer.address as address, plugin_address);
     }
 
     async approvePlugin(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes) {
         const plugin_address = this.getPluginAddress(plugin, type);
+
+        if(plugin_address == null) {
+            throw new Error("Plugin does not have an associated contract");
+        }
+
         return this.contract.setDelegateApproval(plugin_address, true);
     }
 
-    getPluginAddress(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes): address {
+    getPluginAddress(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes): address | null {
         switch(type) {
             case 'zapper': {
+                if(plugin == 'none') return null;
                 if(!zapperTypeToName.has(plugin)) {
                     throw new Error("Plugin does not have a contract to map too");
                 }
@@ -595,6 +618,13 @@ export class CToken extends Calldata<ICToken> {
             });
         }
 
+        if(this.zapTypes.includes('native-simple')) {
+            tokens.push({
+                interface: new NativeToken(setup_config.chain, this.provider),
+                type: 'native-simple'
+            });
+        }
+
         // @NOTE: You are probably wondering... why the hell is this an async function,
         // The future plan for other zappers will be to query an API for a token list which will require this to be async 
         return tokens;
@@ -665,26 +695,42 @@ export class CToken extends Calldata<ICToken> {
         });
     }
 
+    zap(assets: bigint, zap: ZapperTypes, collateralize = false, default_calldata : bytes) {
+        let calldata: bytes;
+        let calldata_overrides = {};
+        let zapper = this.getZapper(zap);
+
+        if(zapper == null) {
+            if(zap != 'none') {
+                throw new Error("Zapper type selected but no zapper contract found");
+            }
+
+            return { calldata: default_calldata, calldata_overrides, zapper: null };
+        }
+
+        switch(zap) {
+            case 'native-vault':
+                calldata = zapper.getNativeZapCalldata(this, assets, collateralize);
+                calldata_overrides = { value: assets, to: zapper.address };
+                break;
+            case 'native-simple':
+                calldata = zapper.getNativeZapCalldata(this, assets, collateralize, true);
+                calldata_overrides = { value: assets, to: zapper.address };
+                break;
+            default:
+                throw new Error("This zap type is not supported: " + zap);
+        }
+        
+        return { calldata, calldata_overrides, zapper };
+    }
+
     async deposit(amount: TokenInput, zap: ZapperTypes = 'none',  receiver: address | null = null) {
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
 
-        let calldata: bytes;
-        let calldata_overrides = {};
-        let zapper: Zapper | null = null;
-
-        if(zap == 'native-vault') {
-            zapper = this.getZapper(zap);
-            calldata = zapper.getNativeZapCalldata(this, assets, false);
-            calldata_overrides = { value: assets, to: zapper.address };
-        } else if(zap != 'none') {
-            // TODO: implement vault zap
-            // TODO: implement simple zap
-            throw new Error("This zap type is not supported");
-        } else {
-            calldata = this.getCallData("deposit", [assets, receiver]);
-        }
+        const default_calldata = this.getCallData("deposit", [assets, receiver]);
+        const { calldata, calldata_overrides } = this.zap(assets, zap, false, default_calldata);
 
         await this._checkAssetApproval(this.address, assets);
         return this.oracleRoute(calldata, calldata_overrides);
@@ -705,21 +751,11 @@ export class CToken extends Calldata<ICToken> {
             }
         }
         
-        let calldata: bytes;
-        let call_overrides: any = {};
-        let zapper: Zapper | null = null;
-        if(zap == 'native-vault') {
-            zapper = this.getZapper(zap);
-            calldata = zapper.getNativeZapCalldata(this, assets, true);
-            call_overrides = { value: assets, to: zapper.address }
-        } else if(zap != 'none') {
-            throw new Error("This zap type is not supported");
-        } else {
-            calldata = this.getCallData("depositAsCollateral", [assets, receiver]);
-        }
+        const default_calldata = this.getCallData("depositAsCollateral", [assets, receiver]);
+        const { calldata, calldata_overrides, zapper } = this.zap(assets, zap, true, default_calldata);
 
         await this._checkDepositApprovals(zapper, assets);
-        return this.oracleRoute(calldata, call_overrides);
+        return this.oracleRoute(calldata, calldata_overrides);
     }
 
     async redeem(amount: TokenInput) {

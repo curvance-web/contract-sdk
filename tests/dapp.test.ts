@@ -6,7 +6,7 @@ import { JsonRpcProvider, Wallet } from 'ethers';
 import { address, curvance_signer } from '../src/types';
 import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock, setNativeBalance } from './utils/helper';
 import { chain_config, setupChain } from '../src/setup';
-import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX, UINT256_MAX_DECIMAL } from '../src/helpers';
+import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX, UINT256_MAX_DECIMAL, WAD } from '../src/helpers';
 import { CToken } from '../src/classes/CToken';
 import Decimal from 'decimal.js';
 import { BorrowableCToken } from '../src/classes/BorrowableCToken';
@@ -88,6 +88,10 @@ describe('Market Tests', () => {
             }
         }
     })
+
+    test('[Explore] Zapping wMON', async() => {
+        await cWMON.deposit(Decimal(1), 'native-simple');
+    });
 
     test('[Explore] Deposit token list', async() => {
         const deposit_tokens = await cAprMON.getDepositTokens();
@@ -470,13 +474,33 @@ describe('Market Tests', () => {
     });
 
     test('Conversions', async () => {
-        const token_amount = await cAprMON.balanceOf(account);
-        const dollars = cAprMON.convertTokensToUsd(token_amount, false);
-        const dollars_to_token = cAprMON.convertUsdToTokens(dollars, false, false);
-        const formatted_tokens = cAprMON.convertBigInt(token_amount, true);
-        const diff = formatted_tokens.sub(dollars_to_token);
-        assert(diff.equals(0), `Difference between formatted tokens & dollars_to_token should be zero but is: ${diff.toFixed(18)}`);
-        assert(formatted_tokens.equals(dollars_to_token), "When converted from Token -> USD -> Token. Token amount before & after should match.");
+        
+        {
+            // Checks that shares can be passed into conversion & back out to be the exact same amount
+            const token_amount = await cAprMON.balanceOf(account);
+            const tokens_to_dollars = cAprMON.convertTokensToUsd(token_amount, false);
+            const dollars_to_token = cAprMON.convertUsdToTokens(tokens_to_dollars, false, false);
+            const formatted_tokens = cAprMON.convertBigInt(token_amount, false);
+            const diff = formatted_tokens.sub(dollars_to_token);
+            assert(diff.equals(0), `Difference between formatted tokens & dollars_to_token should be zero but is: ${diff.toFixed(18)}`);
+            assert(formatted_tokens.equals(dollars_to_token), "When converted from Token -> USD -> Token. Token amount before & after should match.");
+        }
+
+        {
+            // Check that this same thing works when using shares balance
+            const share_amount = cAprMON.getUserShareBalance(false);
+            const dollars_in_shares = cAprMON.getUserShareBalance(true);
+            const dollars_to_shares = cAprMON.convertUsdToTokens(dollars_in_shares, false);
+            assert(share_amount.equals(dollars_to_shares), "When converted from Shares -> USD -> Shares. Share amount before & after should match.");
+        }
+
+        {
+            // Check that this same thing works when using asset balance
+            const asset_amount = cAprMON.getUserAssetBalance(false);
+            const dollars_in_assets = cAprMON.getUserAssetBalance(true);
+            const dollars_to_assets = cAprMON.convertUsdToTokens(dollars_in_assets, true);
+            assert(asset_amount.equals(dollars_to_assets), "When converted from Assets -> USD -> Assets. Asset amount before & after should match.");
+        }
     });
 
     test('[Dashboard] Max withdraw', async() => {

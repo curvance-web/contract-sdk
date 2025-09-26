@@ -1,10 +1,11 @@
 import { Contract, N, TransactionResponse } from "ethers";
 import { address, bytes, curvance_signer } from "../types";
-import { contractSetup, EMPTY_ADDRESS, EMPTY_BYTES, NATIVE_ADDRESS } from "../helpers";
+import { contractSetup, EMPTY_ADDRESS, EMPTY_BYTES, getChainConfig, NATIVE_ADDRESS } from "../helpers";
 import { CToken } from "./CToken";
 import { Calldata } from "./Calldata";
 import abi from '../abis/SimpleZapper.json';
 import { Zappers } from "./Market";
+import { chain_config } from "../setup";
 
 export interface Swap {
     inputToken: address,
@@ -15,11 +16,12 @@ export interface Swap {
     call: bytes
 };
 
-export type ZapperTypes = 'none' | 'native-vault' | 'vault' | 'simple';
+export type ZapperTypes = 'none' | 'native-vault' | 'vault' | 'simple' | 'native-simple';
 export const zapperTypeToName = new Map<ZapperTypes, keyof Zappers>([
     ['native-vault', 'nativeVaultZapper'],
     ['vault', 'vaultZapper'],
-    ['simple', 'simpleZapper']
+    ['simple', 'simpleZapper'],
+    ['native-simple', 'simpleZapper'],
 ]);
 
 export interface IZapper {
@@ -52,11 +54,13 @@ export class Zapper extends Calldata<IZapper> {
         return this.executeCallData(calldata, { value: amount });
     }
 
-    getNativeZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean) {
+    getNativeZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean, wrapped: boolean = false) {
+        const config = getChainConfig();
+
         const swap: Swap = {
             inputToken: NATIVE_ADDRESS,
             inputAmount: amount,
-            outputToken: NATIVE_ADDRESS,
+            outputToken: wrapped ? config.wrapped_native : NATIVE_ADDRESS,
             target: EMPTY_ADDRESS,
             slippage: 0n,
             call: EMPTY_BYTES
@@ -64,7 +68,7 @@ export class Zapper extends Calldata<IZapper> {
         
         return this.getCallData("swapAndDeposit", [
             ctoken.address,
-            false,
+            wrapped,
             swap,
             0n,
             collateralize,
