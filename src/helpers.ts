@@ -4,6 +4,9 @@ import { address, bytes, curvance_provider, curvance_signer } from "./types";
 import { chains } from "./chains";
 import { chain_config, setup_config } from "./setup";
 
+// Set Decimal.js precision to handle large numbers
+Decimal.set({ precision: 50 });
+
 export type ChangeRate = "year" | "month" | "week" | "day";
 export type ChainRpcPrefix = keyof typeof chains;
 
@@ -48,7 +51,9 @@ export function toDecimal(value: bigint, decimals: bigint): Decimal {
 
 export function toBigInt(value: number | Decimal, decimals: bigint): bigint {
     if(Decimal.isDecimal(value)) {
-        return BigInt(value.mul(Decimal(10).pow(decimals)).toFixed(0));
+        const scaled = value.mul(Decimal(10).pow(decimals));
+        // Use floor() to truncate, then toFixed() to avoid scientific notation
+        return BigInt(scaled.floor().toFixed(0));
     }
 
     return parseUnits(value.toString(), decimals);

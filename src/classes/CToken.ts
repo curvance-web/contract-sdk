@@ -212,7 +212,7 @@ export class CToken extends Calldata<ICToken> {
     getUserAssetBalance(inUSD: true): USD;
     getUserAssetBalance(inUSD: false): TokenInput;
     getUserAssetBalance(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance, true) : toDecimal(this.cache.userAssetBalance, this.asset.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : toDecimal(this.cache.userAssetBalance, this.asset.decimals);
     }
 
     /** @returns User underlying assets in USD or token */
@@ -272,7 +272,7 @@ export class CToken extends Calldata<ICToken> {
     getUserDebt(inUSD: true): USD;
     getUserDebt(inUSD: false): USD_WAD;
     getUserDebt(inUSD: boolean): USD | USD_WAD {
-        return inUSD ? this.convertTokensToUsd(this.cache.userDebt, false) : this.cache.userDebt;
+        return inUSD ? toDecimal(this.cache.userDebt, 18n) : this.cache.userDebt;
     }
 
     earnChange(amount: USD, rateType: ChangeRate) {
@@ -329,7 +329,8 @@ export class CToken extends Calldata<ICToken> {
     async fetchTvl(inUSD: false): Promise<bigint>;
     async fetchTvl(inUSD = true): Promise<USD | bigint> {
         const tvl = await this.totalSupply();
-        return inUSD ? this.fetchConvertTokensToUsd(tvl) : tvl;
+        this.cache.totalSupply = tvl;
+        return inUSD ? this.getTvl(true) : this.getTvl(false);
     }
 
     getTotalCollateral(inUSD: true): USD;
@@ -495,7 +496,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async transfer(receiver: address, amount: TokenInput) {
-        const shares = this.convertTokenInput(amount, true);
+        const shares = this.convertTokenInput(amount, true, true);
         return this.contract.transfer(receiver, shares);
     }
 
@@ -504,14 +505,14 @@ export class CToken extends Calldata<ICToken> {
         if(receiver == null) receiver = signer.address as address;
         if(owner == null) owner = signer.address as address;
 
-        const shares = this.convertTokenInput(amount, true);
+        const shares = this.convertTokenInput(amount, true, true);
         const calldata = this.getCallData("redeemCollateral", [shares, receiver, owner]);
         return this.oracleRoute(calldata);
     }
 
     async postCollateral(amount: TokenInput) {
         const signer = validateProviderAsSigner(this.provider);
-        const shares = this.convertTokenInput(amount, true);
+        const shares = this.convertTokenInput(amount, true, true);
         const balance = await this.balanceOf(signer.address as address);
         const collateral = await this.fetchUserCollateral();
         const available_shares = balance - collateral;
@@ -527,7 +528,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async removeCollateral(amount: TokenInput) {
-        const shares = this.convertTokenInput(amount, true);
+        const shares = this.convertTokenInput(amount, true, true);
         const current_shares = await this.fetchUserCollateral();
         const max_shares = current_shares < shares ? current_shares : shares;
 
@@ -564,20 +565,20 @@ export class CToken extends Calldata<ICToken> {
         if(in_shares) return all_shares;
 
         const all_assets = await this.convertToAssets(all_shares);
-        return this.convertBigInt(all_assets, false) as TokenInput;
+        return this.convertBigInt(all_assets, true) as TokenInput;
     }
 
-    convertBigInt(amount: bigint, inShares = false) {
+    convertBigInt(amount: bigint, inShares = false, use_exchange_rate = false) {
         const decimals = inShares ? this.decimals : this.asset.decimals;
-        const raw_amount = inShares ? (amount * this.exchangeRate) / WAD : amount;
+        const raw_amount = use_exchange_rate ? (amount * this.exchangeRate) / WAD : amount;
         return toDecimal(raw_amount, decimals);
     }
 
-    convertTokenInput(amount: TokenInput, inShares = false) {
+    convertTokenInput(amount: TokenInput, inShares = false, use_exchange_rate = false) {
         const decimals = inShares ? this.decimals : this.asset.decimals;
         const newAmount = toBigInt(amount, decimals);
 
-        return inShares ? (newAmount * this.exchangeRate) / WAD : newAmount;
+        return use_exchange_rate ? (newAmount * this.exchangeRate) / WAD : newAmount;
     }
 
     /** @returns A list of tokens mapped to their respective zap options */
@@ -608,7 +609,7 @@ export class CToken extends Calldata<ICToken> {
 
     async hypotheticalRedemptionOf(amount: TokenInput) {
         const signer = validateProviderAsSigner(this.provider);
-        const shares = this.convertTokenInput(amount, true);
+        const shares = this.convertTokenInput(amount, true, true);
         return this.market.reader.hypotheticalRedemptionOf(
             signer.address as address,
             this,
@@ -727,7 +728,7 @@ export class CToken extends Calldata<ICToken> {
         const owner    = signer.address as address;
         
         const max_shares = await this.maxRedemption(true);
-        const converted_shares = this.convertTokenInput(amount, true);
+        const converted_shares = this.convertTokenInput(amount, true, true);
         const shares = max_shares < converted_shares ? max_shares : converted_shares;
 
         const calldata = this.getCallData("redeem", [shares, receiver, owner]);
@@ -776,8 +777,8 @@ export class CToken extends Calldata<ICToken> {
         return usdAmount.div(price) as TokenInput;
     }
 
-    convertTokensToUsd(tokenAmount: bigint, asset = true) {
-        const raw_amount = asset ? tokenAmount : (tokenAmount * this.exchangeRate) / WAD ;
+    convertTokensToUsd(tokenAmount: bigint, asset = true, use_exchange_rate = false) {
+        const raw_amount = use_exchange_rate ? (tokenAmount * this.exchangeRate) / WAD : tokenAmount;
         const tokenAmountDecimal = toDecimal(raw_amount, asset ? this.asset.decimals : this.decimals);
         return this.getPrice(asset).mul(tokenAmountDecimal);
     }
