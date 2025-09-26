@@ -630,13 +630,6 @@ export class CToken extends Calldata<ICToken> {
         return tokens;
     }
 
-    async maxRemainingLeverage(ctoken: BorrowableCToken, type: PositionManagerTypes) {
-        const manager = this.getPositionManager(type);
-        const amount = manager.maxRemainingLeverage(ctoken);
-
-        return amount;
-    }
-
     async hypotheticalRedemptionOf(amount: TokenInput) {
         const signer = validateProviderAsSigner(this.provider);
         const shares = this.convertTokenInput(amount, true, true);

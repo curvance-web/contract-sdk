@@ -4,7 +4,6 @@ import { Calldata } from "./Calldata";
 import { Swap } from "./Zapper";
 import { contractSetup } from "../helpers";
 import abi from '../abis/SimplePositionManager.json';
-import { BorrowableCToken } from "./BorrowableCToken";
 
 export type PositionManagerTypes = 'native-vault';
 export interface LeverageAction {
@@ -16,7 +15,6 @@ export interface LeverageAction {
 }
 
 export interface IPositionManager {
-    maxRemainingLeverageOf(account: address, borrowableCToken: address): Promise<bigint>;
     leverage(action: LeverageAction, slippage: bigint): Promise<TransactionResponse>;
     depositAndLeverage(assets: bigint, action: LeverageAction, slippage: bigint): Promise<TransactionResponse>;
 }
@@ -33,11 +31,6 @@ export class PositionManager extends Calldata<IPositionManager> {
         this.provider = provider;
         this.type = type;
         this.contract = contractSetup<IPositionManager>(provider, address, abi);
-    }
-
-    async maxRemainingLeverage(ctoken: BorrowableCToken, account: address | null = null) {
-        if(account == null) account = this.provider.address as address;
-        return this.contract.maxRemainingLeverageOf(account, ctoken.address);
     }
 
     getLeverageCalldata(action: LeverageAction, slippage: bigint) {

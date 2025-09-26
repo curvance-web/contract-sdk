@@ -196,12 +196,9 @@ describe('Market Tests', () => {
         }
 
         // NOTE: This doesnt seem to actually return a good leverage amount
-        // const leverage_info = await shMON_market.reader.hypotheticalLeverageOf(account, cshMON, cwMON, Decimal(100));
-        // console.log(leverage_info);
+        const leverage_info = await market.reader.hypotheticalLeverageOf(account, cAprMON, cWMON, Decimal(100));
+        console.log(leverage_info);
 
-        // NOTE: This caused a MulDivFailed error
-        // const max_leverage = await cwMON.maxRemainingLeverage(cwMON as BorrowableCToken, 'native-vault');
-        // console.log(await cwMON.totalAssets());
 
         const before = await cAprMON.balanceOf(account);
         const asset = cAprMON.getAsset(true); 
