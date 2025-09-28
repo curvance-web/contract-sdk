@@ -90,7 +90,7 @@ export class CToken extends Calldata<ICToken> {
         
         const chain_config = getChainConfig();
         const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
-        const isWrappedNative = NATIVE_ADDRESS == this.asset.address;
+        const isWrappedNative = chain_config.wrapped_native == this.asset.address;
 
         if(isVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
