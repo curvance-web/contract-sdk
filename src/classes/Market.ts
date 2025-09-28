@@ -590,19 +590,23 @@ export class Market {
             }
 
             if(deploy_data == undefined) {
-                throw new Error(`Could not find deploy data for market: ${market_address}`);
+                console.warn(`Could not find deploy data for market: ${market_address}, skipping...`);
+                continue;
             }
 
             if(staticData == undefined) {
-                throw new Error(`Could not find static market data for index: ${i}`);
+                console.warn(`Could not find static market data for index: ${i}`);
+                continue;
             }
 
             if(dynamicData == undefined) {
-                throw new Error(`Could not find dynamic market data for index: ${i}`);
+                console.warn(`Could not find dynamic market data for index: ${i}`);
+                continue;
             }
 
             if(userData == undefined) {
-                throw new Error(`Could not find user market data for index: ${i}`);
+                console.warn(`Could not find user market data for index: ${i}`);
+                continue;
             }
 
             const market = new Market(provider, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
