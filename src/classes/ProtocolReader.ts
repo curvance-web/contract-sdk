@@ -117,11 +117,11 @@ export interface IProtocolReader {
     getStaticMarketData(): Promise<StaticMarketData[]>;
     marketMultiCooldown(markets: address[], account: address): Promise<bigint[]>;
     previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, new_collateral: bigint, new_debt: bigint): Promise<[bigint, bigint]>;
-    hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint): [ bigint, bigint, bigint, bigint ];
+    hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint, bufferTime: bigint): [ bigint, bigint, bigint, bigint ];
     getPositionHealth(market: address, account: address, ctoken: address, borrowableCToken: address, isDeposit: boolean, collateralAssets: bigint, isRepayment: boolean, debtAssets: bigint, bufferTime: bigint): Promise<[bigint, boolean]>;
-    hypotheticalRedemptionOf(account: address, ctoken: address, redeemShares: bigint): Promise<[bigint, bigint, boolean, boolean]>;
-    hypotheticalBorrowOf(account: address, borrowableCToken: address, borrowAssets: bigint): Promise<[bigint, bigint, boolean, boolean]>;
-    maxRedemptionOf(account: address, ctoken: address): Promise<[bigint, bigint, boolean]>;
+    hypotheticalRedemptionOf(account: address, ctoken: address, redeemShares: bigint, bufferTime: bigint): Promise<[bigint, bigint, boolean, boolean]>;
+    hypotheticalBorrowOf(account: address, borrowableCToken: address, borrowAssets: bigint, bufferTime: bigint): Promise<[bigint, bigint, boolean, boolean]>;
+    maxRedemptionOf(account: address, ctoken: address, bufferTime: bigint): Promise<[bigint, bigint, boolean]>;
 }
 
 export class ProtocolReader {
@@ -150,7 +150,7 @@ export class ProtocolReader {
     }
 
     async maxRedemptionOf(account: address, ctoken: CToken) {
-        const data = await this.contract.maxRedemptionOf(account, ctoken.address);
+        const data = await this.contract.maxRedemptionOf(account, ctoken.address, 0n);
         return {
             maxCollateralizedShares: BigInt(data[0]),
             maxUncollateralizedShares: BigInt(data[1]),
@@ -159,7 +159,7 @@ export class ProtocolReader {
     }
 
     async hypotheticalRedemptionOf(account: address, ctoken: CToken, shares: bigint) {
-        const data = await this.contract.hypotheticalRedemptionOf(account, ctoken.address, shares);
+        const data = await this.contract.hypotheticalRedemptionOf(account, ctoken.address, shares, 0n);
         return {
             excess: BigInt(data[0]),
             deficit: BigInt(data[1]),
@@ -169,7 +169,7 @@ export class ProtocolReader {
     }
 
     async hypotheticalBorrowOf(account: address, ctoken: BorrowableCToken, assets: bigint) {
-        const data = await this.contract.hypotheticalBorrowOf(account, ctoken.address, assets);
+        const data = await this.contract.hypotheticalBorrowOf(account, ctoken.address, assets, 0n);
         return {
             excess: BigInt(data[0]),
             deficit: BigInt(data[1]),
@@ -269,7 +269,7 @@ export class ProtocolReader {
             adjustMaxLeverage,
             maxLeverage,
             maxDebtBorrowable 
-        ] = await this.contract.hypotheticalLeverageOf(account, depositCToken.address, borrowableCToken.address, assets);
+        ] = await this.contract.hypotheticalLeverageOf(account, depositCToken.address, borrowableCToken.address, assets, 0n);
 
         return { 
             currentLeverage: Decimal(currentLeverage).div(WAD),

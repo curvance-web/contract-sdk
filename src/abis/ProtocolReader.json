@@ -868,6 +868,11 @@
         "name": "borrowAssets",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "bufferTime",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -922,6 +927,11 @@
         "name": "assets",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "bufferTime",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -951,7 +961,7 @@
         "internalType": "bool"
       },
       {
-        "name": "errorCodeHit",
+        "name": "oracleError",
         "type": "bool",
         "internalType": "bool"
       }
@@ -974,6 +984,11 @@
       },
       {
         "name": "redemptionShares",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "bufferTime",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1039,6 +1054,11 @@
         "name": "cTokenRedeemed",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "bufferTime",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -1053,7 +1073,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "errorHit",
+        "name": "oracleError",
         "type": "bool",
         "internalType": "bool"
       }

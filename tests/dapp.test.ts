@@ -196,7 +196,7 @@ describe('Market Tests', () => {
         }
 
         // NOTE: This doesnt seem to actually return a good leverage amount
-        const leverage_info = await market.reader.hypotheticalLeverageOf(account, cAprMON, cWMON, Decimal(100));
+        const leverage_info = await market.reader.hypotheticalLeverageOf(account, cAprMON, cWMON, Decimal(1));
         console.log(leverage_info);
 
 
