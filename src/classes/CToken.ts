@@ -272,11 +272,11 @@ export class CToken extends Calldata<ICToken> {
         return formatted ? toDecimal(collateral, this.decimals) : collateral;
     }
 
-    /** @returns User Debt in USD or USD WAD */
+    /** @returns User Debt in USD or Tokens owed */
     getUserDebt(inUSD: true): USD;
-    getUserDebt(inUSD: false): USD_WAD;
-    getUserDebt(inUSD: boolean): USD | USD_WAD {
-        return inUSD ? toDecimal(this.cache.userDebt, 18n) : this.cache.userDebt;
+    getUserDebt(inUSD: false): bigint;
+    getUserDebt(inUSD: boolean): USD | bigint {
+        return inUSD ? this.convertTokensToUsd(this.cache.userDebt) : this.cache.userDebt;
     }
 
     earnChange(amount: USD, rateType: ChangeRate) {
