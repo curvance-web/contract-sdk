@@ -14,9 +14,19 @@ export interface LeverageAction {
     auxData?: bytes;
 }
 
+export interface DeleverageAction {
+    cToken: address;
+    collateralAssets: bigint;
+    borrowableCToken: address;
+    repayAssets: bigint;
+    swapActions?: Swap[];
+    auxData?: bytes;
+}
+
 export interface IPositionManager {
     leverage(action: LeverageAction, slippage: bigint): Promise<TransactionResponse>;
     depositAndLeverage(assets: bigint, action: LeverageAction, slippage: bigint): Promise<TransactionResponse>;
+    deleverage(action: DeleverageAction, account: address): Promise<TransactionResponse>;
 }
 
 export class PositionManager extends Calldata<IPositionManager> {
@@ -31,6 +41,10 @@ export class PositionManager extends Calldata<IPositionManager> {
         this.provider = provider;
         this.type = type;
         this.contract = contractSetup<IPositionManager>(provider, address, abi);
+    }
+
+    getDeleverageCalldata(action: DeleverageAction, account: address) {
+        return this.getCallData("deleverage", [action, account]);
     }
 
     getLeverageCalldata(action: LeverageAction, slippage: bigint) {
