@@ -195,21 +195,42 @@ describe('Market Tests', () => {
             assert(balance > cAprMON.convertTokenInput(Decimal(2), false), "shMON balance cannot cover leverage");
         }
 
-        // NOTE: This doesnt seem to actually return a good leverage amount
         const leverage_info = await market.reader.hypotheticalLeverageOf(account, cAprMON, cWMON, Decimal(1));
         console.log(leverage_info);
 
 
-        const before = await cAprMON.balanceOf(account);
-        const asset = cAprMON.getAsset(true); 
-        await asset.approve(cAprMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
-        await cAprMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
-        const tx = await cAprMON.depositAndLeverage(Decimal(2), cWMON, Decimal(1), 'native-vault');
-        await tx.wait();
-        const after = await cAprMON.balanceOf(account);
-        assert(before + cAprMON.convertTokenInput(Decimal(3), false) >= after, "Balance should of increased by 3 (leveraging 2 deposit + 1 borrow)");
+        // Deposit and leverage
+        {
+            const before = await cAprMON.balanceOf(account);
+            const asset = cAprMON.getAsset(true); 
+            await asset.approve(cAprMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
+            await cAprMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
+            const tx = await cAprMON.depositAndLeverage(Decimal(2), cWMON, Decimal(1), 'native-vault');
+            await tx.wait();
+            const after = await cAprMON.balanceOf(account);
+            assert(before + cAprMON.convertTokenInput(Decimal(3), false) >= after, "Balance should of increased by 3 (leveraging 2 deposit + 1 borrow)");
+            await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
+        }
+        
+        // Leverage up a bit more
+        {
+            const before = await cAprMON.balanceOf(account);
+            const tx = await cAprMON.leverageUp(cWMON, Decimal(0.5), 'native-vault');
+            await tx.wait();
+            const after = await cAprMON.balanceOf(account);
+            assert(before < after, "Balance should of increased by 0.5 (leveraging 0.5 borrow)");
+        }
 
-        await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
+        // Leverage down
+        {
+            // TODO: Need help understanding the flow of leverage down / deleverage
+
+            // const before = await cAprMON.balanceOf(account);
+            // const tx = await cAprMON.leverageDown(cWMON, Decimal(0.5), 'native-vault');
+            // await tx.wait();
+            // const after = await cAprMON.balanceOf(account);
+            // assert(before > after, "Balance should of decreased by 0.5 (leveraging 0.5 repay)");
+        }
     });
 
     test(`[Explore] Check allowances`, async() => {

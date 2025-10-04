@@ -640,6 +640,56 @@ export class CToken extends Calldata<ICToken> {
         )
     }
 
+    async leverageUp(
+        borrow: BorrowableCToken, 
+        borrowAmount: TokenInput, 
+        type: PositionManagerTypes, 
+        slippage_: TokenInput = Decimal(0.5)
+    ) {
+        const slippage = toBigInt(slippage_.toNumber(), 18n);
+        const manager = this.getPositionManager(type);
+        
+        let calldata: bytes;
+
+        switch(type) {
+            case 'native-vault': {
+                calldata = manager.getLeverageCalldata(
+                    {
+                        borrowableCToken: borrow.address,
+                        borrowAssets: borrow.convertTokenInput(borrowAmount),
+                        cToken: this.address,
+                        swapAction: {
+                            inputToken: EMPTY_ADDRESS,
+                            inputAmount: 0n,
+                            outputToken: EMPTY_ADDRESS,
+                            target: EMPTY_ADDRESS,
+                            slippage: 0n,
+                            call: "0x"
+                        },
+                        auxData: "0x",
+                    }, 
+                    slippage);
+                break;
+            }
+
+            default: throw new Error("Unsupported position manager type");
+        }
+
+        await this._checkPositionManagerApproval(manager);
+        return this.oracleRoute(calldata, {
+            to: manager.address
+        });
+    }
+
+    // async leverageDown(
+    //     borrow: BorrowableCToken, 
+    //     borrowAmount: TokenInput, 
+    //     type: PositionManagerTypes, 
+    //     slippage_: TokenInput = Decimal(0.5)
+    // ) {
+    //     const manager = this.getPositionManager(type);
+    // }
+
     async depositAndLeverage(
         depositAmount: TokenInput, 
         borrow: BorrowableCToken, 
@@ -651,7 +701,6 @@ export class CToken extends Calldata<ICToken> {
         const manager = this.getPositionManager(type);
         
         let calldata: bytes;
-        // TODO: Implement vault & simple position manager
 
         switch(type) {
             case 'native-vault': {
