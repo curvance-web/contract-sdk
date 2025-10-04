@@ -195,7 +195,7 @@ describe('Market Tests', () => {
             assert(balance > cAprMON.convertTokenInput(Decimal(2), false), "shMON balance cannot cover leverage");
         }
 
-        const leverage_info = await market.reader.hypotheticalLeverageOf(account, cAprMON, cWMON, Decimal(1));
+        const leverage_info = await market.reader.hypotheticalLeverageOf(account, cAprMON, cWMON, Decimal(2));
         console.log(leverage_info);
 
 
