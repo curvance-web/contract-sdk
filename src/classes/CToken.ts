@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS, toDecimal } from "../helpers";
+import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS, toDecimal, SECONDS_PER_YEAR } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market, MarketToken, Plugins, PluginTypes } from "./Market";
@@ -315,11 +315,11 @@ export class CToken extends Calldata<ICToken> {
     }
 
     getApy(): Percentage;
-    getApy(asTokenInput: false): bigint;
-    getApy(asTokenInput: true): Percentage
-    getApy(asTokenInput = true): Percentage | bigint {
+    getApy(asPercentage: false): bigint;
+    getApy(asPercentage: true): Percentage
+    getApy(asPercentage = true): Percentage | bigint {
         // TODO: add underlying yield rate
-        return asTokenInput ? Decimal(this.cache.supplyRate).div(WAD) : this.cache.supplyRate;
+        return asPercentage ? Decimal(this.cache.supplyRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.supplyRate;
     }
     
     getTvl(inUSD: true): USD;
