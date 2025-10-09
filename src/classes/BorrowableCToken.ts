@@ -3,7 +3,7 @@ import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from
 import { CToken, ICToken } from "./CToken";
 import { DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { Market } from "./Market";
-import { BPS, ChangeRate, contractSetup, getRateSeconds, validateProviderAsSigner, WAD } from "../helpers";
+import { BPS, ChangeRate, contractSetup, getRateSeconds, SECONDS_PER_YEAR, validateProviderAsSigner, WAD } from "../helpers";
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
 import Decimal from "decimal.js";
@@ -61,13 +61,13 @@ export class BorrowableCToken extends CToken {
     getBorrowRate(inPercentage: true): Percentage;
     getBorrowRate(inPercentage: false): bigint;
     getBorrowRate(inPercentage: boolean) { 
-        return inPercentage ? Decimal(this.cache.borrowRate).div(WAD) : this.cache.borrowRate;
+        return inPercentage ? Decimal(this.cache.borrowRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.borrowRate;
     }
 
     getPredictedBorrowRate(inPercentage: true): Percentage;
     getPredictedBorrowRate(inPercentage: false): bigint;
     getPredictedBorrowRate(inPercentage: boolean) { 
-        return inPercentage ? Decimal(this.cache.predictedBorrowRate).div(WAD) : this.cache.predictedBorrowRate;
+        return inPercentage ? Decimal(this.cache.predictedBorrowRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.predictedBorrowRate;
     }
     
     getUtilizationRate(inPercentage: true): Percentage;
@@ -79,7 +79,7 @@ export class BorrowableCToken extends CToken {
     getSupplyRate(inPercentage: true): Percentage;
     getSupplyRate(inPercentage: false): bigint;
     getSupplyRate(inPercentage: boolean) {
-        return inPercentage ? Decimal(this.cache.supplyRate).div(WAD) : this.cache.supplyRate;
+        return inPercentage ? Decimal(this.cache.supplyRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.supplyRate;
     }
 
     borrowChange(amount: USD, rateType: ChangeRate) {
