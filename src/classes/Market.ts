@@ -378,6 +378,39 @@ export class Market {
         }
     }
 
+    /**
+     * Grabs the new position health when doing a redeem
+     * @param ctoken - Token you are expecting to redeem on
+     * @param amount - Amount of assets being redeemed
+     * @returns The new position health
+     */
+    async previewPositionHealthLeverageDeposit(
+        deposit_ctoken: CToken,
+        deposit_amount: TokenInput,
+        borrow_ctoken: BorrowableCToken,
+        borrow_amount: TokenInput
+    ) {
+        const provider = validateProviderAsSigner(this.provider);
+        const user = provider.address as address;
+
+        const data = await this.reader.getPositionHealth(
+            this.address,
+            user,
+            deposit_ctoken.address,
+            borrow_ctoken.address,
+            true,
+            deposit_ctoken.convertTokenInput(deposit_amount, true),
+            false,
+            borrow_ctoken.convertTokenInput(borrow_amount, true),
+            0n
+        );
+
+        if(data.errorCodeHit) {
+            throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
+        }
+
+        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+    }
 
     /**
      * Grabs the new position health when doing a redeem
@@ -425,14 +458,14 @@ export class Market {
         const provider = validateProviderAsSigner(this.provider);
         const user = provider.address as address;
         const data = await this.reader.getPositionHealth(
-            this.address, 
-            user, 
-            ctoken.address, 
-            EMPTY_ADDRESS, 
-            true, 
-            toBigInt(amount, ctoken.decimals), 
-            false, 
-            0n, 
+            this.address,
+            user,
+            ctoken.address,
+            EMPTY_ADDRESS,
+            true,
+            toBigInt(amount, ctoken.decimals),
+            false,
+            0n,
             0n
         );
 
