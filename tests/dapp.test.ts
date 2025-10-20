@@ -30,7 +30,7 @@ describe('Market Tests', () => {
         account = signer.address as address;
 
         await setNativeBalance(provider, account, BigInt(1_000e18)); // 1,000 MON
-        
+
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer, true);
 
         // Grab the test market & tokens we wanna use
@@ -49,10 +49,10 @@ describe('Market Tests', () => {
                 const guy_with_a_ton_of_wmon = "0xFA735CcA8424e4eF30980653bf9015331d9929dB";
                 await provider.send("anvil_impersonateAccount", [guy_with_a_ton_of_wmon]);
                 const impersonatedSigner = await provider.getSigner(guy_with_a_ton_of_wmon);
-    
+
                 const wmon = new ERC20(impersonatedSigner, chain_config['monad-testnet'].wrapped_native);
                 await wmon.transfer(account, Decimal(1000)); // 1000 wMON to our test account
-    
+
                 const impCurvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, impersonatedSigner, true);
                 for(const market of impCurvance.markets) {
                     for(const token of market.tokens) {
@@ -64,17 +64,17 @@ describe('Market Tests', () => {
                         }
                     }
                 }
-    
+
                 await provider.send("anvil_stopImpersonatingAccount", [guy_with_a_ton_of_wmon]);
             }
-    
+
             // Deploy a lot of LST tokens into market
             {
                 const random_wallet = Wallet.createRandom();
                 const wallet = await getTestSetup(random_wallet.privateKey);
                 const ranCurvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, wallet.signer, true);
                 await setNativeBalance(provider, wallet.signer.address, BigInt(10_000e18)); // 10,000 MON
-    
+
                 for(const market of ranCurvance.markets) {
                     for(const token of market.tokens) {
                         if(token.canZap) {
@@ -101,7 +101,7 @@ describe('Market Tests', () => {
     });
 
     test('[Explore] Borrowable token & check state', async () => {
-        
+
         // Ensure market datas been updated
         // Note: this one doesnt really work unless its fresh, existing deployment will break this
         // const borrowable_before = market.getBorrowableCTokens();
@@ -135,7 +135,7 @@ describe('Market Tests', () => {
         assert(market.userRemainingCredit.greaterThan(0), "User remaining credit should be greater than 0");
         assert(market.getBorrowableCTokens().eligible.length > 0, "Should have eligible borrowable tokens");
         assert(market.getUserDebtChange('year').greaterThan(0), "Debt change should be greater than 0");
-        
+
         // Ensure some token datas been updated
         assert(cWMON.liquidationPrice!.greaterThan(0), "Liquidation price should be greater than 0");
         assert(cWMON.getLiquidity(true).greaterThan(0), "Liquidity should be greater than 0");
@@ -154,7 +154,7 @@ describe('Market Tests', () => {
         const assets_as_bigint = toBigInt(assets, cAprMON.asset.decimals);
         const shares_as_bigint = toBigInt(shares, cAprMON.decimals);
         const conversion = await cAprMON.convertToShares(assets_as_bigint);
-        
+
         // Allow for 1 wei difference due to rounding
         const diff = conversion > shares_as_bigint ? conversion - shares_as_bigint : shares_as_bigint - conversion;
         assert(diff <= 1n, `Convert to shares should match within 1 wei. Difference: ${diff} wei (${conversion} vs ${shares_as_bigint})`);
@@ -182,7 +182,7 @@ describe('Market Tests', () => {
         const balance_after = await cAprMON.balanceOf(account);
         assert(balance_after > balance_before, "Balance should increase after zap deposit");
     });
-        
+
     test('[Explore] Monad, Leverage', async() => {
         // Deposit with zapper then withdraw so we have some shMON to use in the leverage test
         // NOTE: You can't zap & leverage in the same action so this needs to be minted first
@@ -202,7 +202,7 @@ describe('Market Tests', () => {
         // Deposit and leverage
         {
             const before = await cAprMON.balanceOf(account);
-            const asset = cAprMON.getAsset(true); 
+            const asset = cAprMON.getAsset(true);
             await asset.approve(cAprMON.getPositionManager('native-vault').address, null); // Approved shMON to be transfered by PositionManager
             await cAprMON.approvePlugin('native-vault', 'positionManager'); // Approved Position Manager Plugin
             const tx = await cAprMON.depositAndLeverage(Decimal(2), cWMON, Decimal(1), 'native-vault');
@@ -211,7 +211,7 @@ describe('Market Tests', () => {
             assert(before + cAprMON.convertTokenInput(Decimal(3), false) >= after, "Balance should of increased by 3 (leveraging 2 deposit + 1 borrow)");
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
         }
-        
+
         // Leverage up a bit more
         {
             const before = await cAprMON.balanceOf(account);
@@ -268,14 +268,14 @@ describe('Market Tests', () => {
             await cWMON.borrow(Decimal(1));
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
         }
-        
+
         const tx = await cWMON.repay(Decimal(1));
         await tx.wait();
     });
 
     test('[Dashboard] Modify collateral', async () => {
         const amount = Decimal(0.1);
-        
+
         await cAprMON.deposit(amount);
         let before_coll = cAprMON.getUserCollateral(false);
         await cAprMON.postCollateral(amount);
@@ -363,7 +363,7 @@ describe('Market Tests', () => {
     test('[info][Explore] List markets without wallet connected', async () => {
         const readonly_provider = new JsonRpcProvider(process.env.TEST_RPC);
         const test = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, readonly_provider);
-        
+
         const signed_market = curvance.markets[1]!;
         const unsigned_market = test.markets[1]!; // All tests are using this market
         assert(unsigned_market.ltv == signed_market.ltv, 'LTV should be the same');
@@ -394,12 +394,12 @@ describe('Market Tests', () => {
             // Confirm position health calc is working correctly
             const borrow = await market.previewPositionHealthBorrow(debt_token, Decimal(0));
             assert(
-                market.positionHealth == null ? market.positionHealth == borrow : borrow?.equals(market.positionHealth), 
+                market.positionHealth == null ? market.positionHealth == borrow : borrow?.equals(market.positionHealth),
                 `Position health should match with 0 change. Compared ${borrow} to ${market.positionHealth}`
             );
             const deposit = await market.previewPositionHealthDeposit(coll_token, Decimal(0));
             assert(
-                market.positionHealth == null ? market.positionHealth == deposit : deposit?.equals(market.positionHealth!), 
+                market.positionHealth == null ? market.positionHealth == deposit : deposit?.equals(market.positionHealth!),
                 `Position health should match with 0 change. Compared ${deposit} to ${market.positionHealth}`
             );
         }
@@ -492,7 +492,7 @@ describe('Market Tests', () => {
     });
 
     test('Conversions', async () => {
-        
+
         {
             // Checks that shares can be passed into conversion & back out to be the exact same amount
             const token_amount = await cAprMON.balanceOf(account);

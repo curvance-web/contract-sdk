@@ -31,9 +31,9 @@ export interface IDynamicIRM {
 
 export class BorrowableCToken extends CToken {
     override contract: Contract & IBorrowableCToken;
-    
+
     constructor(
-        provider: curvance_provider, 
+        provider: curvance_provider,
         address: address,
         cache: StaticMarketToken & DynamicMarketToken & UserMarketToken,
         market: Market
@@ -44,14 +44,14 @@ export class BorrowableCToken extends CToken {
 
     get liquidationPrice(): USD {
         const coll_usd = this.cache.sharePrice * (this.market.cache.user.collateral / this.cache.collReqSoft);
-        
+
         if(coll_usd == 0n || this.market.cache.user.debt == 0n) {
             return Decimal(0);
         }
 
         return Decimal(coll_usd / this.market.cache.user.debt).div(WAD);
     }
-    
+
     getLiquidity(inUSD: true): USD;
     getLiquidity(inUSD: false): USD_WAD;
     getLiquidity(inUSD: boolean): USD | USD_WAD {
@@ -60,16 +60,16 @@ export class BorrowableCToken extends CToken {
 
     getBorrowRate(inPercentage: true): Percentage;
     getBorrowRate(inPercentage: false): bigint;
-    getBorrowRate(inPercentage: boolean) { 
+    getBorrowRate(inPercentage: boolean) {
         return inPercentage ? Decimal(this.cache.borrowRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.borrowRate;
     }
 
     getPredictedBorrowRate(inPercentage: true): Percentage;
     getPredictedBorrowRate(inPercentage: false): bigint;
-    getPredictedBorrowRate(inPercentage: boolean) { 
+    getPredictedBorrowRate(inPercentage: boolean) {
         return inPercentage ? Decimal(this.cache.predictedBorrowRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.predictedBorrowRate;
     }
-    
+
     getUtilizationRate(inPercentage: true): Percentage;
     getUtilizationRate(inPercentage: false): bigint;
     getUtilizationRate(inPercentage: boolean) {

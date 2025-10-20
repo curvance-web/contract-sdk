@@ -14,12 +14,12 @@ export default class Kuru {
     api = "https://ws.staging.kuru.io/api"
     jwt: string | null = null;
     rps = 1;
-    
+
     async loadJWT(wallet: string) {
         if(cached_jwt.has(wallet)) {
             const cached = cached_jwt.get(wallet)!;
             const currentTime = Kuru.getCurrentTime();
-            
+
             if(cached.expires_at > currentTime) {
                 this.jwt = cached.token;
                 this.rps = cached.rate_limit.rps;
@@ -49,7 +49,7 @@ export default class Kuru {
         const now = Kuru.getCurrentTime();
         const requests = cached_requests.get(wallet) || [];
         const windowStart = now - 1;
-        
+
         const recentRequests = requests.filter(timestamp => timestamp > windowStart);
         if(recentRequests.length >= this.rps) {
             const earliestRequest = Math.min(...recentRequests);

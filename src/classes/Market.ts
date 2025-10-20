@@ -39,7 +39,7 @@ export interface HypotheticalLiquidityOf {
     collateralSurplus: bigint,
     liquidityDeficit: bigint,
     positionsToClose: boolean[]
-} 
+}
 
 export interface IMarket {
     accountAssets(account: address): Promise<bigint>;
@@ -118,7 +118,7 @@ export class Market {
      * Get the user's position health.
      * @returns {USD | null} - The user's position health Percentage or null if infinity
      */
-    get positionHealth() { 
+    get positionHealth() {
         return this.cache.user.positionHealth == UINT256_MAX ? null : Decimal(this.cache.user.positionHealth).div(WAD_DECIMAL);
     }
 
@@ -142,7 +142,7 @@ export class Market {
     get userNet() {
         return this.userDeposits.sub(this.userDebt);
     }
-    
+
     /** @returns Market LTV */
     // TODO: This is probably wrong
     get ltv() {
@@ -236,7 +236,7 @@ export class Market {
         let total_change = Decimal(0);
         for(const token of this.tokens) {
             const amount = token.getUserAssetBalance(true);
-            total_change = total_change.add(token.earnChange(amount, rate)); 
+            total_change = total_change.add(token.earnChange(amount, rate));
         }
 
         return total_change;
@@ -256,7 +256,7 @@ export class Market {
             }
 
             const amount = token.getUserDebt(true);
-            total_change = total_change.add((token as BorrowableCToken).borrowChange(amount, rate)); 
+            total_change = total_change.add((token as BorrowableCToken).borrowChange(amount, rate));
         }
 
         return total_change;
@@ -486,17 +486,17 @@ export class Market {
         const provider = validateProviderAsSigner(this.provider);
         const user = provider.address as address;
         const data = await this.reader.getPositionHealth(
-            this.address, 
-            user, 
-            EMPTY_ADDRESS, 
-            token.address, 
-            false, 
-            0n, 
-            false, 
-            toBigInt(amount, token.decimals), 
+            this.address,
+            user,
+            EMPTY_ADDRESS,
+            token.address,
+            false,
+            0n,
+            false,
+            toBigInt(amount, token.decimals),
             0n
         );
-        
+
         if(data.errorCodeHit) {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
@@ -514,17 +514,17 @@ export class Market {
         const provider = validateProviderAsSigner(this.provider);
         const user = provider.address as address;
         const data = await this.reader.getPositionHealth(
-            this.address, 
-            user, 
-            EMPTY_ADDRESS, 
-            token.address, 
-            false, 
-            0n, 
+            this.address,
+            user,
+            EMPTY_ADDRESS,
+            token.address,
+            false,
+            0n,
             true,
-            toBigInt(amount, token.decimals), 
+            toBigInt(amount, token.decimals),
             0n
         );
-        
+
         if(data.errorCodeHit) {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
@@ -610,7 +610,7 @@ export class Market {
             let deploy_data: DeployData | undefined;
             for(const obj_key of deploy_keys) {
                 const data = setup_config.contracts.markets[obj_key]!;
-                
+
                 if(typeof data != 'object') {
                     continue;
                 }

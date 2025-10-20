@@ -76,9 +76,9 @@ export class CToken extends Calldata<ICToken> {
     leverageTypes: string[] = [];
 
     constructor(
-        provider: curvance_provider, 
+        provider: curvance_provider,
         address: address,
-        cache: StaticMarketToken & DynamicMarketToken & UserMarketToken, 
+        cache: StaticMarketToken & DynamicMarketToken & UserMarketToken,
         market: Market
     ) {
         super();
@@ -87,7 +87,7 @@ export class CToken extends Calldata<ICToken> {
         this.contract = contractSetup<ICToken>(provider, address, base_ctoken_abi);
         this.cache = cache;
         this.market = market;
-        
+
         const chain_config = getChainConfig();
         const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
         const isWrappedNative = chain_config.wrapped_native == this.asset.address;
@@ -111,19 +111,19 @@ export class CToken extends Calldata<ICToken> {
     get exchangeRate() { return this.cache.exchangeRate; }
     get canZap() { return this.zapTypes.length > 0; }
     get canLeverage() { return this.leverageTypes.length > 0; }
-    
+
     /** @returns Remaining Collateral cap */
     getRemainingCollateral(formatted: true): USD;
     getRemainingCollateral(formatted: false): USD_WAD;
-    getRemainingCollateral(formatted: boolean = true): USD | USD_WAD { 
+    getRemainingCollateral(formatted: boolean = true): USD | USD_WAD {
         const inUsdWad = this.cache.collateralCap - this.cache.collateral;
         return formatted ? Decimal(inUsdWad).div(WAD) as USD : inUsdWad as USD_WAD;
     }
-        
+
     /** @returns Remaining Debt cap */
     getRemainingDebt(formatted: true): USD;
     getRemainingDebt(formatted: false): USD_WAD;
-    getRemainingDebt(formatted:boolean = true): USD | USD_WAD { 
+    getRemainingDebt(formatted:boolean = true): USD | USD_WAD {
         const inUsdWad = this.cache.debtCap - this.cache.debt;
         return formatted ? Decimal(inUsdWad).div(WAD) as USD : inUsdWad as USD_WAD;
     }
@@ -194,21 +194,21 @@ export class CToken extends Calldata<ICToken> {
     /** @returns Close Factor Min in BPS or bigint */
     getCloseFactorMin(inBPS: true): Percentage;
     getCloseFactorMin(inBPS: false): bigint;
-    getCloseFactorMin(inBPS: boolean) { 
+    getCloseFactorMin(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.closeFactorMin).div(BPS) : this.cache.closeFactorMin;
     }
 
     /** @returns Close Factor Max in Percentage or bigint */
     getCloseFactorMax(inBPS: true): Percentage;
     getCloseFactorMax(inBPS: false): bigint;
-    getCloseFactorMax(inBPS: boolean) { 
+    getCloseFactorMax(inBPS: boolean) {
         return inBPS ? Decimal(this.cache.closeFactorMax).div(BPS)  : this.cache.closeFactorMax;
     }
 
     /** @returns User shares in USD (native balance amount) or token */
     getUserShareBalance(inUSD: true): USD;
     getUserShareBalance(inUSD: false): TokenInput;
-    getUserShareBalance(inUSD: boolean): USD | TokenInput { 
+    getUserShareBalance(inUSD: boolean): USD | TokenInput {
         return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, false) : toDecimal(this.cache.userShareBalance, this.decimals);
     }
 
@@ -236,14 +236,14 @@ export class CToken extends Calldata<ICToken> {
     /** @returns Token Debt Cap in USD or USD WAD */
     getDebtCap(inUSD: true): USD;
     getDebtCap(inUSD: false): bigint;
-    getDebtCap(inUSD: boolean): USD | bigint { 
+    getDebtCap(inUSD: boolean): USD | bigint {
         return inUSD ? this.convertTokensToUsd(this.cache.debtCap) : this.cache.debtCap;
     }
 
     /** @returns Token Collateral in USD or USD WAD*/
     getCollateral(inUSD: true): USD;
     getCollateral(inUSD: false): USD_WAD;
-    getCollateral(inUSD: boolean): USD | USD_WAD { 
+    getCollateral(inUSD: boolean): USD | USD_WAD {
         return inUSD ? this.convertTokensToUsd(this.cache.collateral) : this.cache.collateral;
     }
 
@@ -291,21 +291,21 @@ export class CToken extends Calldata<ICToken> {
      * @returns Percentage representation of the LTV (e.g. 0.75 for 75% LTV)
      */
     ltv() {
-        return Decimal(this.cache.collRatio).div(BPS) as Percentage; 
+        return Decimal(this.cache.collRatio).div(BPS) as Percentage;
     }
-    
+
     getAsset(asErc20: true): ERC20;
     getAsset(asErc20: false): address;
-    getAsset(asErc20: boolean) { 
-        return asErc20 ? new ERC20(this.provider, this.cache.asset.address, this.cache.asset) : this.cache.asset.address 
+    getAsset(asErc20: boolean) {
+        return asErc20 ? new ERC20(this.provider, this.cache.asset.address, this.cache.asset) : this.cache.asset.address
     }
-    
+
     getPrice(): USD;
     getPrice(asset: boolean): USD;
     getPrice(asset: boolean, lower: boolean): USD;
     getPrice(asset: boolean, lower: boolean, formatted: true): USD;
     getPrice(asset: boolean, lower: boolean, formatted: false): USD_WAD;
-    getPrice(asset: boolean = false, lower: boolean = false, formatted = true): USD | USD_WAD { 
+    getPrice(asset: boolean = false, lower: boolean = false, formatted = true): USD | USD_WAD {
         let price = asset ? this.cache.assetPrice : this.cache.sharePrice;
         if(lower) {
             price = asset ? this.cache.assetPriceLower : this.cache.sharePriceLower;
@@ -321,7 +321,7 @@ export class CToken extends Calldata<ICToken> {
         // TODO: add underlying yield rate
         return asPercentage ? Decimal(this.cache.supplyRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.supplyRate;
     }
-    
+
     getTvl(inUSD: true): USD;
     getTvl(inUSD: false): bigint;
     getTvl(inUSD = true): USD | bigint {
@@ -402,12 +402,12 @@ export class CToken extends Calldata<ICToken> {
                 if(!zapperTypeToName.has(plugin)) {
                     throw new Error("Plugin does not have a contract to map too");
                 }
-    
+
                 const plugin_name = zapperTypeToName.get(plugin);
                 if(!plugin_name || !setup_config.contracts.zappers || !(plugin_name in setup_config.contracts.zappers)) {
                     throw new Error(`Plugin ${plugin_name} not found in zappers`);
                 }
-        
+
                 return setup_config.contracts.zappers[plugin_name] as address;
             }
 
@@ -428,7 +428,7 @@ export class CToken extends Calldata<ICToken> {
         const allowance = await erc20.allowance(signer.address as address, check_contract);
         return allowance;
     }
-    
+
     /**
      * Approves the underlying asset to be used with the ctoken contract.
      * @param amount - if null it will approve the max uint256, otherwise the amount specified
@@ -493,25 +493,25 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async totalSupply() {
-        return this.contract.totalSupply(); 
+        return this.contract.totalSupply();
     }
 
-    async totalAssets() { 
-        return this.contract.totalAssets(); 
+    async totalAssets() {
+        return this.contract.totalAssets();
     }
 
-    async getExchangeRate() { 
-        const rate = await this.contract.exchangeRate(); 
+    async getExchangeRate() {
+        const rate = await this.contract.exchangeRate();
         this.cache.exchangeRate = rate;
         return rate;
     }
 
-    async marketCollateralPosted() { 
-        return this.contract.marketCollateralPosted(); 
+    async marketCollateralPosted() {
+        return this.contract.marketCollateralPosted();
     }
 
-    async balanceOf(account: address) { 
-        return this.contract.balanceOf(account); 
+    async balanceOf(account: address) {
+        return this.contract.balanceOf(account);
     }
 
     async maxDeposit(receiver: address) {
@@ -546,7 +546,7 @@ export class CToken extends Calldata<ICToken> {
 
         // Reload collateral state after execution
         await this.fetchUserCollateral();
-        
+
         return tx;
     }
 
@@ -560,12 +560,12 @@ export class CToken extends Calldata<ICToken> {
 
         // Reload collateral state after execution
         await this.fetchUserCollateral();
-        
+
         return tx;
     }
 
-    async convertToAssets(shares: bigint) { 
-        return this.contract.convertToAssets(shares); 
+    async convertToAssets(shares: bigint) {
+        return this.contract.convertToAssets(shares);
     }
 
     async convertToShares(assets: bigint) {
@@ -626,7 +626,7 @@ export class CToken extends Calldata<ICToken> {
         }
 
         // @NOTE: You are probably wondering... why the hell is this an async function,
-        // The future plan for other zappers will be to query an API for a token list which will require this to be async 
+        // The future plan for other zappers will be to query an API for a token list which will require this to be async
         return tokens;
     }
 
@@ -641,14 +641,14 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async leverageUp(
-        borrow: BorrowableCToken, 
-        borrowAmount: TokenInput, 
-        type: PositionManagerTypes, 
+        borrow: BorrowableCToken,
+        borrowAmount: TokenInput,
+        type: PositionManagerTypes,
         slippage_: TokenInput = Decimal(0.5)
     ) {
         const slippage = toBigInt(slippage_.toNumber(), 18n);
         const manager = this.getPositionManager(type);
-        
+
         let calldata: bytes;
 
         switch(type) {
@@ -667,7 +667,7 @@ export class CToken extends Calldata<ICToken> {
                             call: "0x"
                         },
                         auxData: "0x",
-                    }, 
+                    },
                     slippage);
                 break;
             }
@@ -682,24 +682,24 @@ export class CToken extends Calldata<ICToken> {
     }
 
     // async leverageDown(
-    //     borrow: BorrowableCToken, 
-    //     borrowAmount: TokenInput, 
-    //     type: PositionManagerTypes, 
+    //     borrow: BorrowableCToken,
+    //     borrowAmount: TokenInput,
+    //     type: PositionManagerTypes,
     //     slippage_: TokenInput = Decimal(0.5)
     // ) {
     //     const manager = this.getPositionManager(type);
     // }
 
     async depositAndLeverage(
-        depositAmount: TokenInput, 
-        borrow: BorrowableCToken, 
-        borrowAmount: TokenInput, 
-        type: PositionManagerTypes, 
+        depositAmount: TokenInput,
+        borrow: BorrowableCToken,
+        borrowAmount: TokenInput,
+        type: PositionManagerTypes,
         slippage_: TokenInput = Decimal(0.5)
     ) {
         const slippage = toBigInt(slippage_.toNumber(), 18n);
         const manager = this.getPositionManager(type);
-        
+
         let calldata: bytes;
 
         switch(type) {
@@ -719,7 +719,7 @@ export class CToken extends Calldata<ICToken> {
                             call: "0x"
                         },
                         auxData: "0x",
-                    }, 
+                    },
                     slippage);
                 break;
             }
@@ -762,7 +762,7 @@ export class CToken extends Calldata<ICToken> {
             default:
                 throw new Error("This zap type is not supported: " + zap);
         }
-        
+
         return { calldata, calldata_overrides, zapper };
     }
 
@@ -792,7 +792,7 @@ export class CToken extends Calldata<ICToken> {
                 throw new Error(collateralCapError);
             }
         }
-        
+
         const default_calldata = this.getCallData("depositAsCollateral", [assets, receiver]);
         const { calldata, calldata_overrides, zapper } = this.zap(assets, zap, true, default_calldata);
 
@@ -804,7 +804,7 @@ export class CToken extends Calldata<ICToken> {
         const signer   = validateProviderAsSigner(this.provider);
         const receiver = signer.address as address;
         const owner    = signer.address as address;
-        
+
         const max_shares = await this.maxRedemption(true);
         const converted_shares = this.convertTokenInput(amount, true, true);
         const shares = max_shares < converted_shares ? max_shares : converted_shares;
@@ -827,8 +827,8 @@ export class CToken extends Calldata<ICToken> {
         return this.contract.collateralPosted(account);
     }
 
-    async multicall(calls: MulticallAction[]) { 
-        return this.contract.multicall(calls); 
+    async multicall(calls: MulticallAction[]) {
+        return this.contract.multicall(calls);
     }
 
     async getSnapshot(account: address) {
@@ -910,7 +910,7 @@ export class CToken extends Calldata<ICToken> {
         if(zapper) {
             await this._checkZapperApproval(zapper);
         }
-        
+
         await this._checkAssetApproval(this.address, assets);
     }
 
