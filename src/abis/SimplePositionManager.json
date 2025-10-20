@@ -820,11 +820,6 @@
   },
   {
     "type": "error",
-    "name": "BasePositionManager__ExceedsMaximumBorrowAllowed",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "BasePositionManager__InsufficientAssetsForRepayment",
     "inputs": []
   },

@@ -70,12 +70,12 @@
     "inputs": [],
     "outputs": [
       {
-        "name": "",
+        "name": "result",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -165,8 +165,8 @@
       },
       {
         "name": "heartbeat",
-        "type": "uint16",
-        "internalType": "uint16"
+        "type": "uint8",
+        "internalType": "uint8"
       },
       {
         "name": "redstoneTimestamp",
@@ -175,8 +175,8 @@
       },
       {
         "name": "price",
-        "type": "uint184",
-        "internalType": "uint184"
+        "type": "uint192",
+        "internalType": "uint192"
       },
       {
         "name": "symbolHash",
@@ -344,7 +344,7 @@
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "result",
         "type": "tuple",
         "internalType": "struct IOracleAdaptor.PriceGuard",
         "components": [
@@ -572,8 +572,8 @@
           },
           {
             "name": "heartbeat",
-            "type": "uint16",
-            "internalType": "uint16"
+            "type": "uint8",
+            "internalType": "uint8"
           },
           {
             "name": "redstoneTimestamp",
@@ -582,8 +582,8 @@
           },
           {
             "name": "price",
-            "type": "uint184",
-            "internalType": "uint184"
+            "type": "uint192",
+            "internalType": "uint192"
           },
           {
             "name": "symbolHash",

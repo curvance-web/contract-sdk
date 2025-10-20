@@ -73,7 +73,7 @@
     "inputs": [],
     "outputs": [
       {
-        "name": "",
+        "name": "result",
         "type": "address",
         "internalType": "address"
       }
@@ -426,7 +426,7 @@
     "inputs": [],
     "outputs": [
       {
-        "name": "",
+        "name": "result",
         "type": "bool",
         "internalType": "bool"
       }
@@ -950,24 +950,6 @@
   },
   {
     "type": "function",
-    "name": "rescueToken",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "seize",
     "inputs": [
       {
@@ -1045,7 +1027,7 @@
     "inputs": [],
     "outputs": [
       {
-        "name": "",
+        "name": "result",
         "type": "uint256",
         "internalType": "uint256"
       }
