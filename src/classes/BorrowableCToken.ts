@@ -1,6 +1,6 @@
 import { Contract, TransactionResponse } from "ethers";
 import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
-import { CToken, ICToken } from "./CToken";
+import { CToken, ICToken, ZapperInstructions } from "./CToken";
 import { DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { Market } from "./Market";
 import { BPS, ChangeRate, contractSetup, getRateSeconds, SECONDS_PER_YEAR, validateProviderAsSigner, WAD } from "../helpers";
@@ -90,7 +90,7 @@ export class BorrowableCToken extends CToken {
         return amount.mul(rate_percent);
     }
 
-    override async depositAsCollateral(amount: TokenInput, zap: ZapperTypes = 'none',  receiver: address | null = null) {
+    override async depositAsCollateral(amount: TokenInput, zap: ZapperInstructions = 'none',  receiver: address | null = null) {
         if(this.cache.userDebt > 0) {
             throw new Error("Cannot deposit as collateral when there is outstanding debt");
         }

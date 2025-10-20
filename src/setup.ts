@@ -5,6 +5,7 @@ import { address, curvance_provider } from './types';
 import { ProtocolReader } from "./classes/ProtocolReader";
 import { Faucet } from "./classes/Faucet";
 import { OracleManager } from "./classes/OracleManager";
+import Kuru from "./classes/Kuru";
 
 export let setup_config: {
     chain: ChainRpcPrefix;
@@ -15,6 +16,7 @@ export let setup_config: {
 
 export const chain_config = {
     'monad-testnet': {
+        dexAgg: Kuru,
         provider: new JsonRpcProvider("https://rpc.ankr.com/monad_testnet"),
         native_symbol: 'MON',
         wrapped_native: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" as address,

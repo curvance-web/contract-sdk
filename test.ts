@@ -13,5 +13,5 @@ async function main() {
     const quote = await Kuru.quote(wallet, wmon, gmon, "1000000000000000000");
     console.log("Quote:", quote);
     const quote2 = await Kuru.quote(wallet, wmon, gmon, "2000000000000000000");
-    console.log("Quote2:", quote);
+    console.log("Quote2:", quote2);
 }

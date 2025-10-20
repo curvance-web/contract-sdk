@@ -24,6 +24,8 @@ export const SECONDS_PER_MONTH = 2_592_000n; // 30 days
 export const SECONDS_PER_WEEK = 604_800n; // 7 days
 export const SECONDS_PER_DAY = 86_400n // 1 day
 
+export const DEFAULT_SLIPPAGE_BPS = 50n; // 0.5%
+
 export const UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
 export const UINT256_MAX_DECIMAL = Decimal(UINT256_MAX);
 export const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000" as address;
@@ -129,7 +131,7 @@ async function tryAddGasBuffer(method: any, args: any[], bufferPercent: number):
 
     const estimatedGas = await method.estimateGas(...args);
     const gasLimit = calculateGasWithBuffer(estimatedGas, bufferPercent);
-    
+
     // Add the gas limit as transaction overrides
     args.push({ gasLimit });
     return true;
@@ -137,14 +139,14 @@ async function tryAddGasBuffer(method: any, args: any[], bufferPercent: number):
 
 /**
  * Wraps a contract instance so all write actions automatically add a gas buffer.
- * 
+ *
  * How it works:
  * 1. Creates a proxy around the contract
  * 2. Intercepts all function calls
  * 3. For contract methods that support it, estimates gas usage
  * 4. Adds the specified buffer percentage to the gas limit
  * 5. Calls the original method with the buffered gas limit
- * 
+ *
  * @param contract The ethers contract instance to wrap
  * @param bufferPercent The percentage buffer to add (default 10%)
  * @returns The same contract but with automatic gas buffering
@@ -153,18 +155,18 @@ export function contractWithGasBuffer<T extends object>(contract: T, bufferPerce
     return new Proxy(contract, {
         get(target, methodName, receiver) {
             const originalMethod = Reflect.get(target, methodName, receiver);
-            
+
             // Only wrap functions, skip special properties like populateTransaction
             if (typeof originalMethod !== 'function' || methodName === 'populateTransaction') {
                 return originalMethod;
             }
-            
+
             // Return a wrapped version of the method
             return async (...args: any[]) => {
                 try {
                     // Try to add gas buffer before calling the method
                     await tryAddGasBuffer(originalMethod, args, bufferPercent);
-                    
+
                     // Call the original method with potentially modified args
                     return await originalMethod.apply(target, args);
                 } catch (error: any) {

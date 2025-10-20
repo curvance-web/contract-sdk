@@ -1,3 +1,5 @@
+import { address } from "../types";
+
 interface KuruJWTResponse {
     token: string;
     expires_at: number;
@@ -7,11 +9,31 @@ interface KuruJWTResponse {
     }
 }
 
+interface KuruQuoteResponse {
+    type: string;
+    status: string;
+    output: string;
+    minOut: string;
+    transaction: {
+        calldata: string;
+        value: string;
+        to: string;
+    };
+    gasPrices: {
+        slow: string;
+        standard: string;
+        fast: string;
+        rapid: string;
+        extreme: string;
+    };
+}
+
 const cached_jwt = new Map<string, KuruJWTResponse>();
 const cached_requests = new Map<string, number[]>();
 
 export default class Kuru {
-    api = "https://ws.staging.kuru.io/api"
+    static api = "https://ws.staging.kuru.io/api"
+    static router = "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6" as address;
     jwt: string | null = null;
     rps = 1;
 
@@ -29,7 +51,7 @@ export default class Kuru {
             }
         }
 
-        const resp = await fetch(`${this.api}/generate-token`, {
+        const resp = await fetch(`${Kuru.api}/generate-token`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -37,7 +59,13 @@ export default class Kuru {
             body: JSON.stringify({
                 user_address: wallet,
             }),
+            keepalive: true
         });
+
+        if(!resp.ok) {
+            throw new Error(`Failed to fetch JWT: ${resp.status} ${resp.statusText}`);
+        }
+
         const data = await resp.json() as KuruJWTResponse;
 
         this.jwt = data.token;
@@ -63,7 +91,7 @@ export default class Kuru {
         return Math.floor(Date.now() / 1000);
     }
 
-    static async quote(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: number | null = null) {
+    static async quote(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
         const kuru = new Kuru();
         await kuru.loadJWT(wallet);
         await kuru.rateLimitSleep(wallet);
@@ -87,10 +115,10 @@ export default class Kuru {
         if(!slippageTolerance) {
             payload.autoSlippage = true;
         } else {
-            payload.slippage_tolerance = slippageTolerance;
+            payload.slippage_tolerance = Number(slippageTolerance);
         }
 
-        const resp = await fetch(`${kuru.api}/quote`, {
+        const resp = await fetch(`${Kuru.api}/quote`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -99,8 +127,12 @@ export default class Kuru {
             body: JSON.stringify(payload),
         });
 
+        if(!resp.ok) {
+            throw new Error(`Failed to fetch quote: ${resp.status} ${resp.statusText}`);
+        }
+
         cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(Kuru.getCurrentTime()));
-        const data = await resp.json();
+        const data = await resp.json() as KuruQuoteResponse;
         return data;
     }
 }

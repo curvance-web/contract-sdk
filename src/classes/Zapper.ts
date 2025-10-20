@@ -1,6 +1,6 @@
 import { Contract, N, TransactionResponse } from "ethers";
 import { address, bytes, curvance_signer } from "../types";
-import { contractSetup, EMPTY_ADDRESS, EMPTY_BYTES, getChainConfig, NATIVE_ADDRESS } from "../helpers";
+import { contractSetup, DEFAULT_SLIPPAGE_BPS, EMPTY_ADDRESS, EMPTY_BYTES, getChainConfig, NATIVE_ADDRESS } from "../helpers";
 import { CToken } from "./CToken";
 import { Calldata } from "./Calldata";
 import abi from '../abis/SimpleZapper.json';
@@ -54,6 +54,34 @@ export class Zapper extends Calldata<IZapper> {
         return this.executeCallData(calldata, { value: amount });
     }
 
+    async simpleZap(inputToken: address, outputToken: address,  amount: bigint, collateralize: boolean, slippage: bigint) {
+        const calldata = await this.getSimpleZapCalldata(inputToken, outputToken, amount, collateralize, slippage);
+        return this.executeCallData(calldata);
+    }
+
+    async getSimpleZapCalldata(inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint = DEFAULT_SLIPPAGE_BPS) {
+        const config = getChainConfig();
+        const quote = await config.dexAgg.quote(this.provider.address, inputToken, outputToken, amount.toString(), slippage)
+
+        const swap: Swap = {
+            inputToken: inputToken,
+            inputAmount: amount,
+            outputToken: outputToken,
+            target: config.dexAgg.router,
+            slippage: slippage,
+            call: `0x${quote.transaction.calldata}` as bytes
+        };
+
+        return this.getCallData("swapAndDeposit", [
+            inputToken,
+            false,
+            swap,
+            0n, // TODO: Implement a real expectedShares calculation
+            collateralize,
+            this.provider.address as address
+        ]);
+    }
+
     getNativeZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean, wrapped: boolean = false) {
         const config = getChainConfig();
 
@@ -65,7 +93,7 @@ export class Zapper extends Calldata<IZapper> {
             slippage: 0n,
             call: EMPTY_BYTES
         };
-        
+
         return this.getCallData("swapAndDeposit", [
             ctoken.address,
             wrapped,

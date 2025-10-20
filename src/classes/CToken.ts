@@ -33,6 +33,12 @@ export interface ZapToken {
     type: ZapperTypes;
 }
 
+export type ZapperInstructions =  'none' | 'native-vault' | 'vault' | 'native-simple' | {
+    type: ZapperTypes;
+    slippage: bigint;
+    inputToken: address;
+}
+
 export interface ICToken {
     decimals(): Promise<bigint>;
     isBorrowable(): Promise<boolean>;
@@ -96,6 +102,8 @@ export class CToken extends Calldata<ICToken> {
         if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
 
         if(isWrappedNative) this.zapTypes.push('native-simple');
+
+        this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -375,6 +383,10 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async isPluginApproved(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes) {
+        if(plugin == 'none') {
+            return true;
+        }
+
         const signer = validateProviderAsSigner(this.provider);
         const plugin_address = this.getPluginAddress(plugin, type);
 
@@ -737,20 +749,36 @@ export class CToken extends Calldata<ICToken> {
         });
     }
 
-    zap(assets: bigint, zap: ZapperTypes, collateralize = false, default_calldata : bytes) {
+    async zap(assets: bigint, zap: ZapperInstructions, collateralize = false, default_calldata : bytes) {
         let calldata: bytes;
         let calldata_overrides = {};
-        let zapper = this.getZapper(zap);
+        let slippage: bigint = 0n;
+        let inputToken: address | null = null;
+        let type_of_zap: ZapperTypes;
 
+        if(typeof zap == 'object') {
+            slippage = zap.slippage;
+            inputToken = zap.inputToken;
+            type_of_zap = zap.type;
+        } else {
+            type_of_zap = zap;
+        }
+
+
+        let zapper = this.getZapper(type_of_zap);
         if(zapper == null) {
-            if(zap != 'none') {
+            if(type_of_zap != 'none') {
                 throw new Error("Zapper type selected but no zapper contract found");
             }
 
             return { calldata: default_calldata, calldata_overrides, zapper: null };
         }
 
-        switch(zap) {
+        switch(type_of_zap) {
+            case 'simple':
+                if(inputToken == null) throw new Error("Input token must be provided for simple zap");
+                calldata = await zapper.getSimpleZapCalldata(inputToken, this.asset.address, assets, collateralize, slippage);
+                break;
             case 'native-vault':
                 calldata = zapper.getNativeZapCalldata(this, assets, collateralize);
                 calldata_overrides = { value: assets, to: zapper.address };
@@ -766,19 +794,20 @@ export class CToken extends Calldata<ICToken> {
         return { calldata, calldata_overrides, zapper };
     }
 
-    async deposit(amount: TokenInput, zap: ZapperTypes = 'none',  receiver: address | null = null) {
+    async deposit(amount: TokenInput, zap: ZapperInstructions = 'none', receiver: address | null = null) {
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
 
         const default_calldata = this.getCallData("deposit", [assets, receiver]);
-        const { calldata, calldata_overrides } = this.zap(assets, zap, false, default_calldata);
+        const { calldata, calldata_overrides } = await this.zap(assets, zap, false, default_calldata);
 
+        await this.isPluginApproved(typeof zap == 'object' ? zap.type : zap, 'zapper');
         await this._checkAssetApproval(this.address, assets);
         return this.oracleRoute(calldata, calldata_overrides);
     }
 
-    async depositAsCollateral(amount: Decimal, zap: ZapperTypes = 'none',  receiver: address | null = null) {
+    async depositAsCollateral(amount: Decimal, zap: ZapperInstructions = 'none',  receiver: address | null = null) {
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
@@ -794,7 +823,7 @@ export class CToken extends Calldata<ICToken> {
         }
 
         const default_calldata = this.getCallData("depositAsCollateral", [assets, receiver]);
-        const { calldata, calldata_overrides, zapper } = this.zap(assets, zap, true, default_calldata);
+        const { calldata, calldata_overrides, zapper } = await this.zap(assets, zap, true, default_calldata);
 
         await this._checkDepositApprovals(zapper, assets);
         return this.oracleRoute(calldata, calldata_overrides);

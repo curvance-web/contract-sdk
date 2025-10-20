@@ -91,6 +91,11 @@ describe('Market Tests', () => {
 
     test('[Explore] Zapping wMON', async() => {
         await cWMON.deposit(Decimal(1), 'native-simple');
+        await cWMON.deposit(Decimal(1), {
+            type: 'simple',
+            inputToken: cAprMON.asset.address,
+            slippage: 50n
+        });
     });
 
     test('[Explore] Deposit token list', async() => {
