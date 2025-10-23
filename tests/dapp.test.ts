@@ -91,8 +91,6 @@ describe('Market Tests', () => {
 
     test('[Explore] Zapping wMON', async() => {
         // await cWMON.deposit(Decimal(1), 'native-simple');
-
-
         {
             // Zap cAprMon then withdraw it for raw aprMON
             await cAprMON.deposit(Decimal(2), 'native-vault');
@@ -102,15 +100,26 @@ describe('Market Tests', () => {
             // Test simple zapper
             const zapInstructions: ZapperInstructions = {
                 type: 'simple',
-                inputToken: cAprMON.asset.address,
-                slippage: 50n
+                inputToken: cAprMON.asset.address
             };
             await cWMON.approveZapAsset(zapInstructions, Decimal(1));
             await cWMON.approvePlugin('simple', 'zapper');
             await cWMON.deposit(Decimal(1), zapInstructions);
         }
 
-        console.log(await cWMON.getDepositTokens());
+        const list = await cWMON.getDepositTokens();
+        for(const item of list) {
+            if(item.type === 'simple') {
+                console.log(`Testing simple zap quote for ${item.interface.symbol}`);
+                try {
+                    console.log(await item.quote!(item.interface.address, cWMON.asset.address, Decimal(1)));
+                } catch(e) {
+                    console.error(`Failed to get quote for ${item.interface.symbol} - Address: ${item.interface.address}:`, e);
+                }
+
+                break;
+            }
+        }
     });
 
     // test('[Explore] Deposit token list', async() => {

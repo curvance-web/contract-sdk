@@ -1,8 +1,7 @@
 import Decimal from "decimal.js";
-import { address, curvance_provider, curvance_signer } from "../types";
+import { address, curvance_provider, TokenInput } from "../types";
 import { ERC20 } from "./ERC20";
-import { chain_config, setup_config } from "../setup";
-import { validateProviderAsSigner, WAD } from "../helpers";
+import { toBigInt, toDecimal, validateProviderAsSigner, WAD } from "../helpers";
 import { ZapToken } from "./CToken";
 
 interface KuruJWTResponse {
@@ -81,13 +80,13 @@ export default class Kuru {
     async rateLimitSleep(wallet: string) {
         const now = Kuru.getCurrentTime();
         const requests = cached_requests.get(wallet) || [];
-        const windowStart = now - 1;
+        const windowStart = now - 2;
 
         const recentRequests = requests.filter(timestamp => timestamp > windowStart);
         if(recentRequests.length >= this.rps) {
             const earliestRequest = Math.min(...recentRequests);
-            const sleepTime = (earliestRequest + 1) - now;
-            await new Promise(resolve => setTimeout(resolve, sleepTime * 1000));
+            const sleepTime = (earliestRequest + 2) - now;
+            await new Promise(resolve => setTimeout(resolve, sleepTime * 2000));
         }
     }
 
@@ -141,22 +140,32 @@ export default class Kuru {
         
         let tokens: ZapToken[] = [];
         for(const token of list.data.data) {
+            const erc20 = new ERC20(
+                provider, 
+                token.address as address,
+                {
+                    address: token.address as address,
+                    name: token.name,
+                    symbol: token.ticker,
+                    decimals: BigInt(token.decimals ?? 18),
+                    totalSupply: BigInt(token.total_supply ?? 0),
+                    balance: BigInt(token.balance ?? 0),
+                    image: token.imageurl,
+                    price: Decimal(token.last_price).div(WAD)
+                },
+            );
+
             tokens.push({
-                interface: new ERC20(
-                    provider, 
-                    token.address as address,
-                    {
-                        address: token.address as address,
-                        name: token.name,
-                        symbol: token.ticker,
-                        decimals: BigInt(token.decimals ?? 18),
-                        totalSupply: BigInt(token.total_supply ?? 0),
-                        balance: BigInt(token.balance ?? 0),
-                        image: token.imageurl,
-                        price: Decimal(token.last_price).div(WAD)
-                    },
-                ),
-                type: 'simple'
+                interface: erc20,
+                type: 'simple',
+                quote: async(tokenIn: string, tokenOut: string, amount: TokenInput) => {
+                    const raw_amount = toBigInt(amount, 18n);
+                    const data = await Kuru.quote(signer.address, tokenIn, tokenOut, raw_amount.toString());
+                    return {
+                        output: toDecimal(BigInt(data.output ?? 0), BigInt(token.decimals ?? 18)),
+                        minOut: toDecimal(BigInt(data.minOut ?? 0), BigInt(token.decimals ?? 18))
+                    };
+                }
             });
         }
 
@@ -197,6 +206,7 @@ export default class Kuru {
         //     payload.slippage_tolerance = Number(slippageTolerance);
         // }
 
+        cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(Kuru.getCurrentTime()));
         const resp = await fetch(`${Kuru.api}/quote`, {
             method: "POST",
             headers: {
@@ -210,12 +220,11 @@ export default class Kuru {
             throw new Error(`Failed to fetch quote: ${resp.status} ${resp.statusText}`);
         }
 
-        cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(Kuru.getCurrentTime()));
         const data = await resp.json() as KuruQuoteResponse;
 
         return {
             ...data,
-            max_slippage: Kuru.getSlippage(BigInt(data.output), BigInt(data.minOut))
+            max_slippage: Kuru.getSlippage(BigInt(data.output ?? 0), BigInt(data.minOut ?? 0))
         };
     }
 

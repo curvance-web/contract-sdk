@@ -54,12 +54,12 @@ export class Zapper extends Calldata<IZapper> {
         return this.executeCallData(calldata, { value: amount });
     }
 
-    async simpleZap(ctoken: address, inputToken: address, outputToken: address,  amount: bigint, collateralize: boolean, slippage: bigint) {
+    async simpleZap(ctoken: address, inputToken: address, outputToken: address,  amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
         const calldata = await this.getSimpleZapCalldata(ctoken, inputToken, outputToken, amount, collateralize, slippage);
         return this.executeCallData(calldata);
     }
 
-    async getSimpleZapCalldata(ctoken: address, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint) {
+    async getSimpleZapCalldata(ctoken: address, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
         const config = getChainConfig();
         const quote = await config.dexAgg.quote(this.provider.address, inputToken, outputToken, amount.toString(), slippage);
 

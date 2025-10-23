@@ -31,12 +31,16 @@ export interface MulticallAction {
 export interface ZapToken {
     interface: NativeToken | ERC20;
     type: ZapperTypes;
+    quote?: (tokenIn: string, tokenOut: string, amount: TokenInput) => Promise<{
+        output: TokenInput,
+        minOut: TokenInput
+    }>;
 }
 
 export type ZapperInstructions =  'none' | 'native-vault' | 'vault' | 'native-simple' | {
     type: ZapperTypes;
-    slippage: bigint;
     inputToken: address;
+    slippage?: bigint;
 }
 
 export interface ICToken {
@@ -788,12 +792,12 @@ export class CToken extends Calldata<ICToken> {
     async zap(assets: bigint, zap: ZapperInstructions, collateralize = false, default_calldata : bytes) {
         let calldata: bytes;
         let calldata_overrides = {};
-        let slippage: bigint = 0n;
+        let slippage: bigint | null = null;
         let inputToken: address | null = null;
         let type_of_zap: ZapperTypes;
 
         if(typeof zap == 'object') {
-            slippage = zap.slippage;
+            slippage = zap.slippage ?? null;
             inputToken = zap.inputToken;
             type_of_zap = zap.type;
         } else {
