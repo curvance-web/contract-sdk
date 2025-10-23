@@ -1,5 +1,5 @@
 import { TransactionResponse } from "ethers";
-import { contractSetup, toBigInt, UINT256_MAX, WAD } from "../helpers";
+import { contractSetup, toBigInt, toDecimal, UINT256_MAX, WAD } from "../helpers";
 import { Contract } from "ethers";
 import { StaticMarketAsset } from "./ProtocolReader";
 import { address, curvance_provider, TokenInput, USD } from "../types";
@@ -47,9 +47,10 @@ export class ERC20 {
     get symbol() { return this.cache?.symbol; }
     get decimals() { return this.cache?.decimals; }
     get totalSupply() { return this.cache?.totalSupply; }
+    get image() { return this.cache?.image; }
+    get balance() { return this.cache?.balance ? toDecimal(this.cache.balance, this.cache.decimals) : undefined; }
+    get price() { return this.cache?.price; }
 
-
-    
     async balanceOf(account: address): Promise<bigint>
     async balanceOf(account: address, in_token_input: true): Promise<TokenInput>
     async balanceOf(account: address, in_token_input: false): Promise<bigint>

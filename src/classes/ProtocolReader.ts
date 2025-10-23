@@ -22,6 +22,9 @@ export interface StaticMarketAsset {
     symbol: string;
     decimals: bigint;
     totalSupply: bigint;
+    balance?: bigint;
+    image?: string;
+    price?: Decimal;
 }
 
 export interface StaticMarketToken {

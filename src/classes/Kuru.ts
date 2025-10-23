@@ -1,4 +1,9 @@
-import { address } from "../types";
+import Decimal from "decimal.js";
+import { address, curvance_provider, curvance_signer } from "../types";
+import { ERC20 } from "./ERC20";
+import { chain_config, setup_config } from "../setup";
+import { validateProviderAsSigner, WAD } from "../helpers";
+import { ZapToken } from "./CToken";
 
 interface KuruJWTResponse {
     token: string;
@@ -33,7 +38,7 @@ const cached_requests = new Map<string, number[]>();
 
 export default class Kuru {
     static api = "https://ws.staging.kuru.io/api"
-    static router = "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6" as address;
+    static router = "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6" as address; // KuruFlowEntrypoint
     jwt: string | null = null;
     rps = 1;
 
@@ -86,6 +91,78 @@ export default class Kuru {
         }
     }
 
+    static async getAvailableTokens(provider: curvance_provider, query: string | null = null) {
+        const signer = validateProviderAsSigner(provider);
+
+        const userAddress = signer.address;
+        let endpoint = `https://api.kuru.io/api/v2/tokens/search?limit=20&userAddress=${userAddress}`;
+        if(query) {
+            endpoint += `&q=${encodeURIComponent(query)}`;
+        }
+
+        const resp = await fetch(endpoint, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        });
+
+        if(!resp.ok) {
+            throw new Error(`Failed to fetch available tokens: ${resp.status} ${resp.statusText}`);
+        }
+
+        const list = await resp.json() as {
+            success: boolean;
+            code: number;
+            timestamp: number;
+            data: {
+                data: Array<{
+                    address: string;
+                    decimals: number;
+                    name: string;
+                    ticker: string;
+                    imageurl: string,
+                    twitter: string,
+                    website: string,
+                    is_verified: boolean,
+                    contract_renounced: boolean,
+                    is_erc20: boolean,
+                    is_mintable: boolean,
+                    is_strict: boolean,
+                    balance: string,
+                    last_price: string,
+                    quote_asset: string,
+                    market_address: string,
+                    total_supply: string,
+                    burned_supply: string
+                }>
+            }
+        };
+        
+        let tokens: ZapToken[] = [];
+        for(const token of list.data.data) {
+            tokens.push({
+                interface: new ERC20(
+                    provider, 
+                    token.address as address,
+                    {
+                        address: token.address as address,
+                        name: token.name,
+                        symbol: token.ticker,
+                        decimals: BigInt(token.decimals ?? 18),
+                        totalSupply: BigInt(token.total_supply ?? 0),
+                        balance: BigInt(token.balance ?? 0),
+                        image: token.imageurl,
+                        price: Decimal(token.last_price).div(WAD)
+                    },
+                ),
+                type: 'simple'
+            });
+        }
+
+        return tokens;
+    }
+
     // Get current time in seconds
     static getCurrentTime() {
         return Math.floor(Date.now() / 1000);
@@ -101,8 +178,8 @@ export default class Kuru {
             tokenIn: string;
             tokenOut: string;
             amount: string;
-            referrer_address?: string;
-            referrer_fee_bps?: number;
+            referrerAddress?: string;
+            referrerFeeBps?: number;
             slippage_tolerance?: number;
             autoSlippage?: boolean;
         } = {
@@ -110,19 +187,21 @@ export default class Kuru {
             tokenIn: tokenIn,
             tokenOut: tokenOut,
             amount: amount,
+            referrerAddress: "0xBAaf22d2Bc4Ac001BBDDA7De73d3ae1bA71dfDDB",
+            referrerFeeBps: 10,
         };
 
-        if(!slippageTolerance) {
+        // if(!slippageTolerance) {
             payload.autoSlippage = true;
-        } else {
-            payload.slippage_tolerance = Number(slippageTolerance);
-        }
+        // } else {
+        //     payload.slippage_tolerance = Number(slippageTolerance);
+        // }
 
         const resp = await fetch(`${Kuru.api}/quote`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${kuru.jwt}`,
+                "Authorization": `Bearer ${kuru.jwt}`
             },
             body: JSON.stringify(payload),
         });
@@ -133,6 +212,16 @@ export default class Kuru {
 
         cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(Kuru.getCurrentTime()));
         const data = await resp.json() as KuruQuoteResponse;
-        return data;
+
+        return {
+            ...data,
+            max_slippage: Kuru.getSlippage(BigInt(data.output), BigInt(data.minOut))
+        };
+    }
+
+    static getSlippage(output: bigint, min_output: bigint) {
+        const diff = output - min_output;
+        const decimal = Decimal(diff).div(output).mul(100);
+        return decimal;
     }
 }

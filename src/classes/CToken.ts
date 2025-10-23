@@ -9,7 +9,7 @@ import base_ctoken_abi from '../abis/BaseCToken.json';
 import { address, bytes, curvance_provider, curvance_signer, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { Redstone } from "./Redstone";
 import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
-import { setup_config } from "../setup";
+import { chain_config, setup_config } from "../setup";
 import { PositionManager, PositionManagerTypes } from "./PositionManager";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { NativeToken } from "./NativeToken";
@@ -382,6 +382,37 @@ export class CToken extends Calldata<ICToken> {
         return new Zapper(zap_contract, signer, type);
     }
 
+    async isZapAssetApproved(instructions: ZapperInstructions, amount: bigint) {
+        if(instructions == 'none' || typeof instructions != 'object') {
+            return true;
+        }
+        
+        const signer = validateProviderAsSigner(this.provider);
+        const asset =  new ERC20(signer, instructions.inputToken);
+        const plugin = this.getPluginAddress(instructions.type, 'zapper');
+
+        const allowance = await asset.allowance(signer.address as address, plugin!);
+        const isApproved = allowance >= amount;
+
+        if(!isApproved) {
+            const symbol = await asset.fetchSymbol();
+            throw new Error(`Plugin needs to be approved for the asset: ${symbol}`);
+        }
+
+        return isApproved;
+    }
+
+    async approveZapAsset(instructions: ZapperInstructions, amount: TokenInput | null) {
+        if(instructions == 'none' || typeof instructions != 'object') {
+            throw new Error("Plugin does not have an associated contract");
+        }
+        const signer = validateProviderAsSigner(this.provider);
+        const asset =  new ERC20(signer, instructions.inputToken);
+        const plugin = this.getPluginAddress(instructions.type, 'zapper');
+
+        return asset.approve(plugin!, amount);
+    }
+
     async isPluginApproved(plugin: ZapperTypes | PositionManagerTypes, type: PluginTypes) {
         if(plugin == 'none') {
             return true;
@@ -617,7 +648,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     /** @returns A list of tokens mapped to their respective zap options */
-    async getDepositTokens() {
+    async getDepositTokens(search: string | null = null) {
         let tokens: ZapToken[] = [{
             interface: this.getAsset(true),
             type: 'none'
@@ -635,6 +666,11 @@ export class CToken extends Calldata<ICToken> {
                 interface: new NativeToken(setup_config.chain, this.provider),
                 type: 'native-simple'
             });
+        }
+
+        if(this.zapTypes.includes('simple')) {
+            const dexAggSearch = await chain_config[setup_config.chain].dexAgg.getAvailableTokens(this.provider, search);
+            tokens = tokens.concat(dexAggSearch);
         }
 
         // @NOTE: You are probably wondering... why the hell is this an async function,
@@ -777,7 +813,8 @@ export class CToken extends Calldata<ICToken> {
         switch(type_of_zap) {
             case 'simple':
                 if(inputToken == null) throw new Error("Input token must be provided for simple zap");
-                calldata = await zapper.getSimpleZapCalldata(inputToken, this.asset.address, assets, collateralize, slippage);
+                calldata = await zapper.getSimpleZapCalldata(this.address, inputToken, this.asset.address, assets, collateralize, slippage);
+                calldata_overrides = { to: zapper.address };
                 break;
             case 'native-vault':
                 calldata = zapper.getNativeZapCalldata(this, assets, collateralize);
@@ -798,12 +835,19 @@ export class CToken extends Calldata<ICToken> {
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
+        const zapType = typeof zap == 'object' ? zap.type : zap;
+        const isNative = zapType == 'native-simple' || zapType == 'native-vault' || zapType == 'none'; 
 
         const default_calldata = this.getCallData("deposit", [assets, receiver]);
         const { calldata, calldata_overrides } = await this.zap(assets, zap, false, default_calldata);
 
-        await this.isPluginApproved(typeof zap == 'object' ? zap.type : zap, 'zapper');
-        await this._checkAssetApproval(this.address, assets);
+        if(isNative) {
+            await this._checkAssetApproval(this.address, assets);
+        } else {
+            await this.isZapAssetApproved(zap, assets);
+            await this._checkZapperApproval(this.getZapper(zapType)!);
+        }
+
         return this.oracleRoute(calldata, calldata_overrides);
     }
 
@@ -923,10 +967,11 @@ export class CToken extends Calldata<ICToken> {
             return;
         }
 
-        const asset = this.getAsset(true);
+        const asset = target == this.address ? this.getAsset(true) : new ERC20(this.provider, target);
         const owner = validateProviderAsSigner(this.provider).address as address;
         const allowance = await asset.allowance(owner, target);
         if(allowance < assets) {
+            if(target != this.address) await asset.fetchSymbol();
             throw new Error(`Please approve the ${asset.symbol} token for ${this.symbol}.`);
         }
     }
