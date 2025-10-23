@@ -57,5 +57,6 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
     return {
         markets: await Market.getAll(reader, oracle_manager),
         reader,
+        dexAgg: chain_config[chain].dexAgg,
     };
 }
