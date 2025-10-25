@@ -11,6 +11,11 @@
         "name": "minLoanSize",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "isCorrelatedMarket",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "nonpayable"
@@ -30,7 +35,7 @@
   },
   {
     "type": "function",
-    "name": "MAX_BASE_CFACTOR",
+    "name": "AUCTION_BUFFER_CORRELATED",
     "inputs": [],
     "outputs": [
       {
@@ -43,7 +48,46 @@
   },
   {
     "type": "function",
-    "name": "MAX_COLLATERALIZATION_RATIO",
+    "name": "AUCTION_BUFFER_UNCORRELATED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "EXTRA_BUFFER_BEFORE_LIQUIDATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "IS_CORRELATED_ASSET_MARKET",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_BASE_CFACTOR",
     "inputs": [],
     "outputs": [
       {
@@ -69,7 +113,7 @@
   },
   {
     "type": "function",
-    "name": "MAX_LIQUIDATION_INCENTIVE",
+    "name": "MAX_COLL_RATIO",
     "inputs": [],
     "outputs": [
       {
@@ -82,7 +126,33 @@
   },
   {
     "type": "function",
-    "name": "MIN_ACTIVE_LOAN_SIZE",
+    "name": "MAX_COLL_RATIO_CORRELATED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_COLL_RATIO_UNCORRELATED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_LIQUIDATION_INCENTIVE",
     "inputs": [],
     "outputs": [
       {
@@ -122,6 +192,19 @@
   {
     "type": "function",
     "name": "MIN_HOLD_PERIOD",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_INITIAL_LOAN_SIZE",
     "inputs": [],
     "outputs": [
       {

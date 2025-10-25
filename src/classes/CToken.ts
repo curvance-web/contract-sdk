@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS, toDecimal, SECONDS_PER_YEAR } from "../helpers";
+import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market, MarketToken, Plugins, PluginTypes } from "./Market";
@@ -10,7 +10,7 @@ import { address, bytes, curvance_provider, curvance_signer, Percentage, TokenIn
 import { Redstone } from "./Redstone";
 import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
 import { chain_config, setup_config } from "../setup";
-import { PositionManager, PositionManagerTypes } from "./PositionManager";
+import { DeleverageAction, PositionManager, PositionManagerTypes } from "./PositionManager";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { NativeToken } from "./NativeToken";
 
@@ -461,6 +461,7 @@ export class CToken extends Calldata<ICToken> {
             case 'positionManager': {
                 switch(plugin) {
                     case 'native-vault': return this.market.plugins.nativeVaultPositionManager as address;
+                    case 'simple': return this.market.plugins.simplePositionManager as address;
                     default: throw new Error("Unknown position manager type");
                 }
             }
@@ -696,9 +697,9 @@ export class CToken extends Calldata<ICToken> {
         borrow: BorrowableCToken,
         borrowAmount: TokenInput,
         type: PositionManagerTypes,
-        slippage_: TokenInput = Decimal(0.5)
+        slippage_: TokenInput = Decimal(0.05)
     ) {
-        const slippage = toBigInt(slippage_.toNumber(), 18n);
+        const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
 
         let calldata: bytes;
@@ -710,17 +711,10 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets: borrow.convertTokenInput(borrowAmount),
                         cToken: this.address,
-                        swapAction: {
-                            inputToken: EMPTY_ADDRESS,
-                            inputAmount: 0n,
-                            outputToken: EMPTY_ADDRESS,
-                            target: EMPTY_ADDRESS,
-                            slippage: 0n,
-                            call: "0x"
-                        },
+                        swapAction: PositionManager.emptySwapAction(),
                         auxData: "0x",
                     },
-                    slippage);
+                    slippage * WAD);
                 break;
             }
 
@@ -733,23 +727,59 @@ export class CToken extends Calldata<ICToken> {
         });
     }
 
-    // async leverageDown(
-    //     borrow: BorrowableCToken,
-    //     borrowAmount: TokenInput,
-    //     type: PositionManagerTypes,
-    //     slippage_: TokenInput = Decimal(0.5)
-    // ) {
-    //     const manager = this.getPositionManager(type);
-    // }
+    async leverageDown(
+        borrowToken: BorrowableCToken, 
+        repayAmount: TokenInput,
+        collateralAmount: TokenInput,
+        type: PositionManagerTypes,
+        slippage_: Percentage = Decimal(0.05)
+    ) {
+        const config = getChainConfig();
+        const signer = validateProviderAsSigner(this.provider);
+        const slippage = toBps(slippage_);
+        const manager = this.getPositionManager(type);
+        let calldata: bytes;
+
+        switch(type) {
+            case 'simple': {
+                const { action } = await config.dexAgg.quoteAction(
+                    signer.address,
+                    this.asset.address,
+                    borrowToken.asset.address,
+                    this.convertTokenInput(collateralAmount).toString(),
+                    slippage
+                );
+
+                calldata = manager.getDeleverageCalldata({
+                    cToken: this.address,
+                    collateralAssets: this.convertTokenInput(collateralAmount),
+                    borrowableCToken: borrowToken.address,
+                    repayAssets: borrowToken.convertTokenInput(repayAmount),
+                    swapActions: [ action ],
+                    auxData: "0x",
+                }, slippage * WAD);
+
+                break;
+            }
+
+            default: throw new Error("Unsupported position manager type");
+        }
+
+
+        await this._checkPositionManagerApproval(manager);
+        return this.oracleRoute(calldata, {
+            to: manager.address
+        });
+    }
 
     async depositAndLeverage(
         depositAmount: TokenInput,
         borrow: BorrowableCToken,
         borrowAmount: TokenInput,
         type: PositionManagerTypes,
-        slippage_: TokenInput = Decimal(0.5)
+        slippage_: TokenInput = Decimal(0.05)
     ) {
-        const slippage = toBigInt(slippage_.toNumber(), 18n);
+        const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
 
         let calldata: bytes;
@@ -772,7 +802,7 @@ export class CToken extends Calldata<ICToken> {
                         },
                         auxData: "0x",
                     },
-                    slippage);
+                    slippage * WAD);
                 break;
             }
 
@@ -780,8 +810,9 @@ export class CToken extends Calldata<ICToken> {
         }
 
         await this._checkAssetApproval(
-            manager.address,
-            this.convertTokenInput(depositAmount)
+            this.address,
+            this.convertTokenInput(depositAmount),
+            manager.address
         )
         await this._checkPositionManagerApproval(manager);
         return this.oracleRoute(calldata, {
@@ -966,16 +997,20 @@ export class CToken extends Calldata<ICToken> {
         }
     }
 
-    private async _checkAssetApproval(target: address, assets: bigint) {
+    private async _checkAssetApproval(approvalFrom: address, assets: bigint, approvalTo: address | null = null) {
         if(!setup_config.approval_protection) {
             return;
         }
 
-        const asset = target == this.address ? this.getAsset(true) : new ERC20(this.provider, target);
+        if(approvalTo == null) {
+            approvalTo = approvalFrom;
+        }
+
+        const asset = approvalFrom == this.address ? this.getAsset(true) : new ERC20(this.provider, approvalFrom);
         const owner = validateProviderAsSigner(this.provider).address as address;
-        const allowance = await asset.allowance(owner, target);
+        const allowance = await asset.allowance(owner, approvalTo);
         if(allowance < assets) {
-            if(target != this.address) await asset.fetchSymbol();
+            if(approvalTo != this.address) await asset.fetchSymbol();
             throw new Error(`Please approve the ${asset.symbol} token for ${this.symbol}.`);
         }
     }

@@ -1,6 +1,6 @@
 import { Contract, parseUnits } from "ethers";
 import { Decimal } from "decimal.js";
-import { address, bytes, curvance_provider, curvance_signer } from "./types";
+import { address, bytes, curvance_provider, curvance_signer, Percentage } from "./types";
 import { chains } from "./chains";
 import { chain_config, setup_config } from "./setup";
 
@@ -49,6 +49,10 @@ export function getRateSeconds(rate: ChangeRate): bigint {
 
 export function toDecimal(value: bigint, decimals: bigint): Decimal {
     return new Decimal(value).div(new Decimal(10).pow(decimals));
+}
+
+export function toBps(value: Percentage): bigint {
+    return BigInt(value.mul(Decimal(10_000)).toFixed(0));
 }
 
 export function toBigInt(value: number | Decimal, decimals: bigint): bigint {

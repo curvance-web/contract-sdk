@@ -3,6 +3,7 @@ import { address, curvance_provider, TokenInput } from "../types";
 import { ERC20 } from "./ERC20";
 import { toBigInt, toDecimal, validateProviderAsSigner, WAD } from "../helpers";
 import { ZapToken } from "./CToken";
+import { Swap } from "./Zapper";
 
 interface KuruJWTResponse {
     token: string;
@@ -175,6 +176,20 @@ export default class Kuru {
     // Get current time in seconds
     static getCurrentTime() {
         return Math.floor(Date.now() / 1000);
+    }
+
+    static async quoteAction(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
+        const quote = await Kuru.quote(wallet, tokenIn, tokenOut, amount, slippageTolerance);
+        const action = {
+            inputToken: tokenIn,
+            inputAmount: BigInt(amount),
+            outputToken: tokenOut,
+            target: quote.transaction.to,
+            slippage: slippageTolerance ?? 0n,
+            call: `0x${quote.transaction.calldata}`
+        } as Swap;
+
+        return { action, quote };
     }
 
     static async quote(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {

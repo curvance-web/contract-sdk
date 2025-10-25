@@ -2,10 +2,10 @@ import { Contract, TransactionResponse } from "ethers";
 import { address, bytes, curvance_signer } from "../types";
 import { Calldata } from "./Calldata";
 import { Swap } from "./Zapper";
-import { contractSetup } from "../helpers";
+import { contractSetup, EMPTY_ADDRESS } from "../helpers";
 import abi from '../abis/SimplePositionManager.json';
 
-export type PositionManagerTypes = 'native-vault';
+export type PositionManagerTypes = 'native-vault' | 'simple';
 export interface LeverageAction {
     borrowableCToken: address;
     borrowAssets: bigint;
@@ -26,7 +26,7 @@ export interface DeleverageAction {
 export interface IPositionManager {
     leverage(action: LeverageAction, slippage: bigint): Promise<TransactionResponse>;
     depositAndLeverage(assets: bigint, action: LeverageAction, slippage: bigint): Promise<TransactionResponse>;
-    deleverage(action: DeleverageAction, account: address): Promise<TransactionResponse>;
+    deleverage(action: DeleverageAction, slippage: bigint): Promise<TransactionResponse>;
 }
 
 export class PositionManager extends Calldata<IPositionManager> {
@@ -43,8 +43,19 @@ export class PositionManager extends Calldata<IPositionManager> {
         this.contract = contractSetup<IPositionManager>(provider, address, abi);
     }
 
-    getDeleverageCalldata(action: DeleverageAction, account: address) {
-        return this.getCallData("deleverage", [action, account]);
+    static emptySwapAction(): Swap {
+        return {
+            inputToken: EMPTY_ADDRESS,
+            inputAmount: 0n,
+            outputToken: EMPTY_ADDRESS,
+            target: EMPTY_ADDRESS,
+            slippage: 0n,
+            call: "0x"
+        }
+    }
+
+    getDeleverageCalldata(action: DeleverageAction, slippage: bigint) {
+        return this.getCallData("deleverage", [action, slippage]);
     }
 
     getLeverageCalldata(action: LeverageAction, slippage: bigint) {

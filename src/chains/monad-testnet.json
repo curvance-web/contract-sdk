@@ -29,7 +29,8 @@
     "aprMON & WMON": {
       "address": "0x3285e346b76770c69721904672d6F9aC2cc42769",
       "plugins": {
-        "nativeVaultPositionManager": "0x64D2C5B76dEdc6ee8034bd609ce7339821718f19"
+        "nativeVaultPositionManager": "0x64D2C5B76dEdc6ee8034bd609ce7339821718f19",
+        "simplePositionManager": "0xFe3b9e04784e76c4fBf19bac67E21C0668211f86"
       },
       "aprMON-DynamicIRM": "0xC893eCB0211028D64E3a7071cB50026a0539641f",
       "tokens": {
@@ -41,7 +42,8 @@
     "shMON & WMON": {
       "address": "0x268Fce348C7573A736e5B673de45585ba237F104",
       "plugins": {
-        "nativeVaultPositionManager": "0x848B7019a4FDBF43Ab62df8EA105064B7D7a12F2"
+        "nativeVaultPositionManager": "0x848B7019a4FDBF43Ab62df8EA105064B7D7a12F2",
+        "simplePositionManager": "0x4a069C80E9f7f323461Eb6aEbddC81c35a0a51aF"
       },
       "shMON-DynamicIRM": "0x30B0fAeE48D9B5978a604407032878710d960Fde",
       "tokens": {
@@ -53,7 +55,8 @@
     "sMON & WMON": {
       "address": "0x870C7a4506f1C520CF2f504564b8D18d08d55D9b",
       "plugins": {
-        "nativeVaultPositionManager": "0xd4679ddB5F7138F8f158A5a5868fD03AF0bffC6d"
+        "nativeVaultPositionManager": "0xd4679ddB5F7138F8f158A5a5868fD03AF0bffC6d",
+        "simplePositionManager": "0xCf0c0A542Ac973E7B9d7Eb9A53B22857b3587fD0"
       },
       "sMON-DynamicIRM": "0xC86ae1350587B13994c850fadd9820a1DfbAcA17",
       "tokens": {
@@ -65,7 +68,8 @@
     "gMON & WMON": {
       "address": "0xF7c081D32936CDef112E629316CfEA326787ee52",
       "plugins": {
-        "nativeVaultPositionManager": "0x3f69e84c12E9DcB89DC324D02822697222fCc866"
+        "nativeVaultPositionManager": "0x3f69e84c12E9DcB89DC324D02822697222fCc866",
+        "simplePositionManager": "0x9c840a908304E4D0393CBe6CC44bC3C357726969"
       },
       "gMON-DynamicIRM": "0x786A968C7dCB02a0D4A44798e485d7b5728Cc10e",
       "tokens": {

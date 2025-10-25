@@ -21,6 +21,11 @@
         "name": "nativeSymbol",
         "type": "string",
         "internalType": "string"
+      },
+      {
+        "name": "defaultHeartbeat",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
@@ -95,11 +100,6 @@
         "name": "decimals",
         "type": "uint8",
         "internalType": "uint8"
-      },
-      {
-        "name": "heartbeat",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -164,19 +164,14 @@
         "internalType": "uint8"
       },
       {
-        "name": "heartbeat",
-        "type": "uint8",
-        "internalType": "uint8"
-      },
-      {
         "name": "redstoneTimestamp",
         "type": "uint48",
         "internalType": "uint48"
       },
       {
         "name": "price",
-        "type": "uint192",
-        "internalType": "uint192"
+        "type": "uint200",
+        "internalType": "uint200"
       },
       {
         "name": "symbolHash",
@@ -571,19 +566,14 @@
             "internalType": "uint8"
           },
           {
-            "name": "heartbeat",
-            "type": "uint8",
-            "internalType": "uint8"
-          },
-          {
             "name": "redstoneTimestamp",
             "type": "uint48",
             "internalType": "uint48"
           },
           {
             "name": "price",
-            "type": "uint192",
-            "internalType": "uint192"
+            "type": "uint200",
+            "internalType": "uint200"
           },
           {
             "name": "symbolHash",
