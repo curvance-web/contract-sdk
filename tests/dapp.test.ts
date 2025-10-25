@@ -1,12 +1,12 @@
 import { config } from 'dotenv';
 config({ quiet: true });
-import { test, describe, before, after } from 'node:test';
+import { test, describe, before } from 'node:test';
 import assert from 'node:assert';
 import { JsonRpcProvider, Wallet } from 'ethers';
 import { address, curvance_signer } from '../src/types';
-import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, mineBlock, setNativeBalance } from './utils/helper';
+import { fastForwardTime, getTestSetup, MARKET_HOLD_PERIOD_SECS, setNativeBalance } from './utils/helper';
 import { chain_config, setupChain } from '../src/setup';
-import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal, UINT256_MAX, UINT256_MAX_DECIMAL, WAD } from '../src/helpers';
+import { ChainRpcPrefix, SECONDS_PER_DAY, toBigInt, toDecimal } from '../src/helpers';
 import { CToken, ZapperInstructions } from '../src/classes/CToken';
 import Decimal from 'decimal.js';
 import { BorrowableCToken } from '../src/classes/BorrowableCToken';
@@ -101,7 +101,6 @@ describe('Market Tests', () => {
     })
 
     test('[Explore] Zapping wMON', async() => {
-        // await cWMON.deposit(Decimal(1), 'native-simple');
         {
             // Zap cAprMon then withdraw it for raw aprMON
             await cAprMON.deposit(Decimal(2), 'native-vault');

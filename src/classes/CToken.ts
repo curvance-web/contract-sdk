@@ -809,11 +809,11 @@ export class CToken extends Calldata<ICToken> {
             default: throw new Error("Unsupported position manager type");
         }
 
-        await this._checkAssetApproval(
-            this.address,
+        await this._checkErc20Approval(
+            this.asset.address,
             this.convertTokenInput(depositAmount),
             manager.address
-        )
+        );
         await this._checkPositionManagerApproval(manager);
         return this.oracleRoute(calldata, {
             to: manager.address
@@ -877,7 +877,7 @@ export class CToken extends Calldata<ICToken> {
         const { calldata, calldata_overrides } = await this.zap(assets, zap, false, default_calldata);
 
         if(isNative) {
-            await this._checkAssetApproval(this.address, assets);
+            await this._checkAssetApproval(assets);
         } else {
             await this.isZapAssetApproved(zap, assets);
             await this._checkZapperApproval(this.getZapper(zapType)!);
@@ -997,21 +997,26 @@ export class CToken extends Calldata<ICToken> {
         }
     }
 
-    private async _checkAssetApproval(approvalFrom: address, assets: bigint, approvalTo: address | null = null) {
+    private async _checkErc20Approval(erc20_address: address, amount: bigint, spender: address) {
+        const signer = validateProviderAsSigner(this.provider);
+        const erc20 = new ERC20(signer, erc20_address);
+        const allowance = await erc20.allowance(signer.address as address, spender);
+        if(allowance < amount) {
+            const symbol = await erc20.fetchSymbol();
+            throw new Error(`Please approve ${symbol} for ${spender}: ${amount}`);
+        }
+    }
+
+    private async _checkAssetApproval(assets: bigint) {
         if(!setup_config.approval_protection) {
             return;
         }
 
-        if(approvalTo == null) {
-            approvalTo = approvalFrom;
-        }
-
-        const asset = approvalFrom == this.address ? this.getAsset(true) : new ERC20(this.provider, approvalFrom);
+        const asset = this.getAsset(true);
         const owner = validateProviderAsSigner(this.provider).address as address;
-        const allowance = await asset.allowance(owner, approvalTo);
+        const allowance = await asset.allowance(owner, this.address);
         if(allowance < assets) {
-            if(approvalTo != this.address) await asset.fetchSymbol();
-            throw new Error(`Please approve the ${asset.symbol} token for ${this.symbol}.`);
+            throw new Error(`Please approve the ${asset.symbol} token for ${this.symbol}`);
         }
     }
 
@@ -1024,7 +1029,7 @@ export class CToken extends Calldata<ICToken> {
             await this._checkZapperApproval(zapper);
         }
 
-        await this._checkAssetApproval(this.address, assets);
+        await this._checkAssetApproval(assets);
     }
 
     async oracleRoute(calldata: bytes, override: { [key: string]: any } = {}): Promise<TransactionResponse> {
