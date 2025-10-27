@@ -56,6 +56,7 @@ export class Market {
     oracle_manager: OracleManager;
     reader: ProtocolReader;
     cache: { static: StaticMarketData, dynamic: DynamicMarketData, user: UserMarket, deploy: DeployData };
+    milestone: number | null = null;
 
     constructor(
         provider: curvance_provider,
@@ -600,6 +601,14 @@ export class Market {
         const all_data = await reader.getAllMarketData(user as address);
         const deploy_keys = Object.keys(setup_config.contracts.markets) as (keyof typeof setup_config.contracts.markets)[];
 
+        let milestones: { [key: address]: number } = {};
+        if(setup_config.api_url != null) {
+            const milestone_lookup = await fetch(`${setup_config.api_url}/v1/milestones`).then(res => res.json()) as { data: Array<{ market: address, tvl: number }> };
+            for(const milestone of milestone_lookup.data) {
+                milestones[milestone.market] = milestone.tvl;
+            }
+        }
+
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
             const staticData  = all_data.staticMarket[i]!;
@@ -645,6 +654,10 @@ export class Market {
             }
 
             const market = new Market(provider, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
+            if(milestones[market.address] != undefined) {
+                market.milestone = milestones[market.address] as number;
+            }
+
             markets.push(market);
         }
 

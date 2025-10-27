@@ -12,6 +12,7 @@ export let setup_config: {
     contracts: ReturnType<typeof getContractAddresses>;
     provider: curvance_provider;
     approval_protection: boolean;
+    api_url: string | null;
 };
 
 export const chain_config = {
@@ -29,7 +30,7 @@ export const chain_config = {
     }
 };
 
-export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provider | null, approval_protection: boolean = false) {
+export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provider | null, approval_protection: boolean = false, api_url: string | null = null) {
     if(!(chain in chain_config)) {
         throw new Error("Chain does not have a corresponding config");
     }
@@ -40,9 +41,10 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
 
     setup_config = {
         chain,
+        contracts: getContractAddresses(chain),
         provider,
         approval_protection,
-        contracts: getContractAddresses(chain),
+        api_url,
     }
 
     if(!("ProtocolReader" in setup_config.contracts)) {
