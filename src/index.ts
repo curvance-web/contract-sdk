@@ -11,6 +11,7 @@ export * from './classes/BorrowableCToken';
 export * from './classes/NativeToken';
 export * from './classes/PositionManager';
 export * from './classes/CVE';
+export * from './classes/Kuru';
 export * from './helpers';
 export * from './setup';
 export * from './types';
