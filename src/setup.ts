@@ -7,6 +7,17 @@ import { Faucet } from "./classes/Faucet";
 import { OracleManager } from "./classes/OracleManager";
 import Kuru from "./classes/Kuru";
 
+export type IncentiveResponse = {
+    market: address,
+    type: string,
+    rate: number,
+    description: string,
+    image: string
+};
+
+export type Milestones = { [key: string]: number };
+export type Incentives = { [key: address]: Array<IncentiveResponse> };
+
 export let setup_config: {
     chain: ChainRpcPrefix;
     contracts: ReturnType<typeof getContractAddresses>;
@@ -41,9 +52,9 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
 
     setup_config = {
         chain,
-        contracts: getContractAddresses(chain),
         provider,
         approval_protection,
+        contracts: getContractAddresses(chain),
         api_url,
     }
 
@@ -56,9 +67,33 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
     const reader = new ProtocolReader(setup_config.contracts.ProtocolReader as address)
     const oracle_manager = new OracleManager(setup_config.contracts.OracleManager as address);
 
+
+    let milestones: Milestones = {};
+    let incentives: Incentives = {};
+    if(setup_config.api_url != null) {
+        const rewards = await fetch(`${setup_config.api_url}/v1/rewards/active/${chain}`).then(res => res.json()) as { 
+            milestones: Array<{ market: address, tvl: number }>
+            incentives: Array<IncentiveResponse>
+        };
+
+        for(const milestone of rewards.milestones) {
+            milestones[milestone.market] = milestone.tvl;
+        }
+
+        for(const incentive of rewards.incentives) {
+            const market = incentive.market as address;
+            if(!(market in incentives)) {
+                incentives[market] = [];
+            }
+
+            incentives[market]!.push(incentive);
+        }
+    }
+    
     return {
-        markets: await Market.getAll(reader, oracle_manager),
+        markets: await Market.getAll(reader, oracle_manager, setup_config.provider, milestones, incentives),
         reader,
         dexAgg: chain_config[chain].dexAgg,
+        global_milestone: milestones['global'] ?? null
     };
 }

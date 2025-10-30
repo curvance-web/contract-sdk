@@ -6,7 +6,7 @@ import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
 import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { OracleManager } from "./OracleManager";
-import { setup_config } from "../setup";
+import { IncentiveResponse, Incentives, Milestones, setup_config } from "../setup";
 import { BorrowableCToken } from "./BorrowableCToken";
 
 export type MarketToken = CToken | BorrowableCToken;
@@ -57,6 +57,7 @@ export class Market {
     reader: ProtocolReader;
     cache: { static: StaticMarketData, dynamic: DynamicMarketData, user: UserMarket, deploy: DeployData };
     milestone: number | null = null;
+    incentives: Array<IncentiveResponse> = [];
 
     constructor(
         provider: curvance_provider,
@@ -596,18 +597,10 @@ export class Market {
      * @param provider - The RPC provider
      * @returns An array of Market instances setup with protocol reader data
      */
-    static async getAll(reader: ProtocolReader, oracle_manager: OracleManager, provider: curvance_provider = setup_config.provider) {
+    static async getAll(reader: ProtocolReader, oracle_manager: OracleManager, provider: curvance_provider = setup_config.provider, milestones: Milestones = {}, incentives: Incentives = {}) {
         const user = "address" in provider ? provider.address : EMPTY_ADDRESS;
         const all_data = await reader.getAllMarketData(user as address);
         const deploy_keys = Object.keys(setup_config.contracts.markets) as (keyof typeof setup_config.contracts.markets)[];
-
-        let milestones: { [key: address]: number } = {};
-        if(setup_config.api_url != null) {
-            const milestone_lookup = await fetch(`${setup_config.api_url}/v1/milestones`).then(res => res.json()) as { data: Array<{ market: address, tvl: number }> };
-            for(const milestone of milestone_lookup.data) {
-                milestones[milestone.market] = milestone.tvl;
-            }
-        }
 
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
@@ -656,6 +649,9 @@ export class Market {
             const market = new Market(provider, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
             if(milestones[market.address] != undefined) {
                 market.milestone = milestones[market.address] as number;
+            }
+            if(incentives[market.address] != undefined) {
+                market.incentives = incentives[market.address]!;
             }
 
             markets.push(market);
