@@ -22,7 +22,7 @@ describe('Market Tests', () => {
     let market: Market;
     let cWMON: BorrowableCToken;
     let cAprMON: CToken;
-    let backup : { shMON: BorrowableCToken; cWMON: BorrowableCToken };
+    let backup : { shMON: BorrowableCToken; cWMON: BorrowableCToken, backup_market: Market };
 
     before(async () => {
         const setup = await getTestSetup(process.env.DEPLOYER_PRIVATE_KEY as string);
@@ -45,7 +45,8 @@ describe('Market Tests', () => {
         const other_tokens = other_market.tokens as [ MarketToken, BorrowableCToken ];
         backup = {
             shMON: other_tokens[0]! as BorrowableCToken,
-            cWMON: other_tokens[1]! as BorrowableCToken
+            cWMON: other_tokens[1]! as BorrowableCToken,
+            backup_market: other_market
         };
 
         await cAprMON.approveUnderlying();
@@ -228,7 +229,7 @@ describe('Market Tests', () => {
     });
 
     test('[Explore] Monad, Leverage', async() => {
-        const { shMON, cWMON } = backup;
+        const { shMON, cWMON, backup_market } = backup;
         // Deposit with zapper then withdraw so we have some shMON to use in the leverage test
         // NOTE: You can't zap & leverage in the same action so this needs to be minted first
         {
@@ -238,10 +239,6 @@ describe('Market Tests', () => {
             const balance = await shMON.getAsset(true).balanceOf(account);
             assert(balance > shMON.convertTokenInput(Decimal(2), false), "shMON balance cannot cover leverage");
         }
-
-        const leverage_info = await market.reader.hypotheticalLeverageOf(account, shMON, cWMON, Decimal(2));
-        console.log(leverage_info);
-
 
         // Deposit and leverage
         {
@@ -267,14 +264,17 @@ describe('Market Tests', () => {
 
         // Leverage down
         {
-            // TODO: Need help understanding the flow of leverage down / deleverage
+            // Simulate user dragging down current leverage by 25%
+            const leverageInfo = await market.reader.hypotheticalLeverageOf(account, shMON, cWMON, Decimal(0));
+            const newMultiplier = leverageInfo.currentLeverage.sub(1).mul(0.25).add(1); // Reduce leverage by 25%
+
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
-            const before = await shMON.balanceOf(account);
             await shMON.approvePlugin('simple', 'positionManager');
-            const tx = await shMON.leverageDown(cWMON, Decimal(0.0001), Decimal(0.0001), 'simple');
+            const tx = await shMON.leverageDown(cWMON, leverageInfo.currentLeverage, newMultiplier, 'simple', Decimal(0.1));
             await tx.wait();
-            const after = await shMON.balanceOf(account);
-            assert(before > after, "Balance should of decreased by 0.5 (leveraging 0.5 repay)");
+
+            const newLeverageInfo = await market.reader.hypotheticalLeverageOf(account, shMON, cWMON, Decimal(0));
+            assert(newLeverageInfo.currentLeverage < leverageInfo.currentLeverage, "Leverage should be lower after leverage down");
         }
     });
 

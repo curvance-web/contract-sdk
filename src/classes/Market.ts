@@ -1,7 +1,7 @@
 import { BPS, ChangeRate, contractSetup, EMPTY_ADDRESS, getRateSeconds, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD, WAD_DECIMAL } from "../helpers";
 import { Contract } from "ethers";
 import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from "./ProtocolReader";
-import { CToken } from "./CToken";
+import { AccountSnapshot, CToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
 import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
@@ -310,13 +310,13 @@ export class Market {
      * @param account - Wallet address
      * @returns collateral, max debt, debt for the market
      */
-    async statusOf(account: address) {
-        const data = await this.contract.statusOf(account);
-        return {
-            collateral: BigInt(data.collateral),
-            maxDebt: BigInt(data.maxDebt),
-            debt: BigInt(data.debt)
+    async getSnapshots(account: address) {
+        let snapshots: Array<AccountSnapshot> = [];
+        for(const token of this.tokens) {
+            const snapshot = await token.getSnapshot(account);
+            snapshots.push(snapshot);
         }
+        return snapshots;
     }
 
     async reloadMarketData() {

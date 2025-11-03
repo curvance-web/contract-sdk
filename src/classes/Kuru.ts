@@ -192,6 +192,11 @@ export default class Kuru {
         return { action, quote };
     }
 
+    static async quoteMin(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
+        const quote = await Kuru.quote(wallet, tokenIn, tokenOut, amount, slippageTolerance);
+        return quote.minOut;
+    }
+
     static async quote(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
         const kuru = new Kuru();
         await kuru.loadJWT(wallet);

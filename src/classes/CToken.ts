@@ -1,16 +1,16 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, WAD_DECIMAL, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, NATIVE_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps } from "../helpers";
+import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
-import { Market, MarketToken, Plugins, PluginTypes } from "./Market";
+import { Market, PluginTypes } from "./Market";
 import { Calldata } from "./Calldata";
 import Decimal from "decimal.js";
 import base_ctoken_abi from '../abis/BaseCToken.json';
-import { address, bytes, curvance_provider, curvance_signer, Percentage, TokenInput, USD, USD_WAD } from "../types";
+import { address, bytes, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { Redstone } from "./Redstone";
 import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
 import { chain_config, setup_config } from "../setup";
-import { DeleverageAction, PositionManager, PositionManagerTypes } from "./PositionManager";
+import { PositionManager, PositionManagerTypes } from "./PositionManager";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { NativeToken } from "./NativeToken";
 
@@ -728,33 +728,43 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async leverageDown(
-        borrowToken: BorrowableCToken, 
-        repayAmount: TokenInput,
-        collateralAmount: TokenInput,
+        borrowToken: BorrowableCToken,
+        currentLeverage: Decimal,
+        newLeverage: Decimal,
         type: PositionManagerTypes,
         slippage_: Percentage = Decimal(0.05)
     ) {
+        if(newLeverage.gte(currentLeverage)) {
+            throw new Error("New leverage must be less than current leverage");
+        }
+
         const config = getChainConfig();
         const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
         let calldata: bytes;
 
+        const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
+        const collateralAvail = await this.collateralPosted(signer.address as address);
+        const collateralAssetsAvail = collateralAvail * this.exchangeRate / WAD;
+        const collateralReduction = leverageDiff.mul(collateralAssetsAvail).toFixed(0);
+
         switch(type) {
             case 'simple': {
-                const { action } = await config.dexAgg.quoteAction(
+                const { action, quote } = await config.dexAgg.quoteAction(
                     signer.address,
                     this.asset.address,
                     borrowToken.asset.address,
-                    this.convertTokenInput(collateralAmount).toString(),
+                    collateralReduction,
                     slippage
                 );
+                const minRepay = leverageDiff.equals(1) ? 0 : quote.minOut;
 
                 calldata = manager.getDeleverageCalldata({
                     cToken: this.address,
-                    collateralAssets: this.convertTokenInput(collateralAmount),
+                    collateralAssets: BigInt(collateralReduction),
                     borrowableCToken: borrowToken.address,
-                    repayAssets: borrowToken.convertTokenInput(repayAmount),
+                    repayAssets: BigInt(minRepay),
                     swapActions: [ action ],
                     auxData: "0x",
                 }, slippage * WAD);
