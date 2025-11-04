@@ -146,7 +146,6 @@ export class Market {
     }
 
     /** @returns Market LTV */
-    // TODO: This is probably wrong
     get ltv() {
         if (this.tokens.length === 0) {
             return { min: new Decimal(0), max: new Decimal(0) };

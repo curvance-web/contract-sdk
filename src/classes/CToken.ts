@@ -858,7 +858,7 @@ export class CToken extends Calldata<ICToken> {
         switch(type_of_zap) {
             case 'simple':
                 if(inputToken == null) throw new Error("Input token must be provided for simple zap");
-                calldata = await zapper.getSimpleZapCalldata(this.address, inputToken, this.asset.address, assets, collateralize, slippage);
+                calldata = await zapper.getSimpleZapCalldata(this, inputToken, this.asset.address, assets, collateralize, slippage);
                 calldata_overrides = { to: zapper.address };
                 break;
             case 'native-vault':

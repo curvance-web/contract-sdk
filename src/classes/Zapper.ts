@@ -1,11 +1,10 @@
 import { Contract, N, TransactionResponse } from "ethers";
 import { address, bytes, curvance_signer } from "../types";
-import { contractSetup, DEFAULT_SLIPPAGE_BPS, EMPTY_ADDRESS, EMPTY_BYTES, getChainConfig, NATIVE_ADDRESS } from "../helpers";
+import { contractSetup, EMPTY_ADDRESS, EMPTY_BYTES, getChainConfig, NATIVE_ADDRESS } from "../helpers";
 import { CToken } from "./CToken";
 import { Calldata } from "./Calldata";
 import abi from '../abis/SimpleZapper.json';
 import { Zappers } from "./Market";
-import { chain_config } from "../setup";
 
 export interface Swap {
     inputToken: address,
@@ -54,12 +53,12 @@ export class Zapper extends Calldata<IZapper> {
         return this.executeCallData(calldata, { value: amount });
     }
 
-    async simpleZap(ctoken: address, inputToken: address, outputToken: address,  amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
+    async simpleZap(ctoken: CToken, inputToken: address, outputToken: address,  amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
         const calldata = await this.getSimpleZapCalldata(ctoken, inputToken, outputToken, amount, collateralize, slippage);
         return this.executeCallData(calldata);
     }
 
-    async getSimpleZapCalldata(ctoken: address, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
+    async getSimpleZapCalldata(ctoken: CToken, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
         const config = getChainConfig();
         const quote = await config.dexAgg.quote(this.provider.address, inputToken, outputToken, amount.toString(), slippage);
 
@@ -72,11 +71,13 @@ export class Zapper extends Calldata<IZapper> {
             call: `0x${quote.transaction.calldata}` as bytes
         };
 
+        const expected_shares = await ctoken.convertToShares(BigInt(quote.minOut));
+
         return this.getCallData("swapAndDeposit", [
-            ctoken,
+            ctoken.address,
             false,
             swap,
-            0n, // TODO: Implement a real expectedShares calculation
+            expected_shares,
             collateralize,
             this.provider.address as address
         ]);
