@@ -251,6 +251,6 @@ export default class Kuru {
     static getSlippage(output: bigint, min_output: bigint) {
         const diff = output - min_output;
         const decimal = Decimal(diff).div(output).mul(100);
-        return decimal;
+        return decimal ?? Decimal(100);
     }
 }
