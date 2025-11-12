@@ -164,7 +164,8 @@ export default class Kuru {
                     const data = await Kuru.quote(signer.address, tokenIn, tokenOut, raw_amount.toString());
                     return {
                         output: toDecimal(BigInt(data.output ?? 0), BigInt(token.decimals ?? 18)),
-                        minOut: toDecimal(BigInt(data.minOut ?? 0), BigInt(token.decimals ?? 18))
+                        minOut: toDecimal(BigInt(data.minOut ?? 0), BigInt(token.decimals ?? 18)),
+                        max_slippage: data.max_slippage
                     };
                 }
             });
