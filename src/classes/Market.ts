@@ -36,9 +36,13 @@ export interface DeployData {
 }
 
 export interface HypotheticalLiquidityOf {
-    collateralSurplus: bigint,
-    liquidityDeficit: bigint,
-    positionsToClose: boolean[]
+    collateral: bigint;
+    maxDebt: bigint;
+    debt: bigint;
+    collateralSurplus: bigint;
+    liquidityDeficit: bigint;
+    loanSizeError: boolean;
+    oracleError: boolean;
 }
 
 export interface IMarket {
@@ -391,19 +395,81 @@ export class Market {
         borrow_ctoken: BorrowableCToken,
         borrow_amount: TokenInput
     ) {
+        return this.previewPositionHealth(deposit_ctoken, borrow_ctoken, true, deposit_amount, false, borrow_amount);
+    }
+
+    async previewPositionHealthLeverageDown(
+        deposit_ctoken: CToken,
+        borrow_ctoken: BorrowableCToken,
+        newLeverage: Decimal,
+        currentLeverage: Decimal
+    ) {
+        const { collateralAssetReduction } = deposit_ctoken.previewLeverageDown(newLeverage, currentLeverage);
+        const repayUsd = deposit_ctoken.convertTokensToUsd(collateralAssetReduction, true);
+        const repayTokens = borrow_ctoken.convertUsdToTokens(repayUsd, false);
+
+        return this.previewPositionHealth(
+            deposit_ctoken,
+            borrow_ctoken,
+            false,
+            deposit_ctoken.convertBigInt(collateralAssetReduction, false, true), 
+            true,
+            repayTokens
+        );
+    }
+
+    async previewPositionHealthLeverageUp(
+        deposit_ctoken: CToken,
+        borrow_ctoken: BorrowableCToken,
+        newLeverage: Decimal
+    ) {
+        const { borrowAmount } = deposit_ctoken.previewLeverageUp(newLeverage, borrow_ctoken);
+        return this.previewPositionHealth(
+            deposit_ctoken,
+            borrow_ctoken,
+            false,
+            Decimal(0), 
+            false,
+            borrowAmount
+        );
+    }
+
+    /**
+     * A dynamic position health previewer for any action
+     * @param deposit_ctoken - Deposit side ctoken
+     * @param borrow_ctoken - Borrow side ctoken
+     * @param isDeposit - Is this a deposit your previewing?
+     * @param collateral_amount - Amount of collateral being deposited, or redeemed if isDeposit is false
+     * @param isRepay - Is this a repay your previewing?
+     * @param debt_amount - Amount of debt being repayed, or borrowed if isRepay is false
+     * @param bufferTime - Buffer time to add onto the price oracle timestamps
+     * @returns a position health decimal or null if infinity
+     */
+    async previewPositionHealth(
+        deposit_ctoken: CToken | null = null, 
+        borrow_ctoken: BorrowableCToken | null = null, 
+        isDeposit: boolean = false, 
+        collateral_amount: TokenInput = Decimal(0), 
+        isRepay: boolean = false, 
+        debt_amount: TokenInput = Decimal(0), 
+        bufferTime: bigint = 0n
+    ) {
         const provider = validateProviderAsSigner(this.provider);
         const user = provider.address as address;
+
+        const onchain_collateral_amount = deposit_ctoken ? deposit_ctoken.convertTokenInput(collateral_amount, true) : 0n;
+        const onchain_debt_amount = borrow_ctoken ? borrow_ctoken.convertTokenInput(debt_amount, true) : 0n;
 
         const data = await this.reader.getPositionHealth(
             this.address,
             user,
-            deposit_ctoken.address,
-            borrow_ctoken.address,
-            true,
-            deposit_ctoken.convertTokenInput(deposit_amount, true),
-            false,
-            borrow_ctoken.convertTokenInput(borrow_amount, true),
-            0n
+            deposit_ctoken ? deposit_ctoken.address : EMPTY_ADDRESS,
+            borrow_ctoken ? borrow_ctoken.address : EMPTY_ADDRESS,
+            isDeposit,
+            onchain_collateral_amount,
+            isRepay,
+            onchain_debt_amount,
+            bufferTime
         );
 
         if(data.errorCodeHit) {
@@ -456,25 +522,7 @@ export class Market {
      * @returns The new position health
      */
     async previewPositionHealthDeposit(ctoken: CToken, amount: TokenInput) {
-        const provider = validateProviderAsSigner(this.provider);
-        const user = provider.address as address;
-        const data = await this.reader.getPositionHealth(
-            this.address,
-            user,
-            ctoken.address,
-            EMPTY_ADDRESS,
-            true,
-            toBigInt(amount, ctoken.decimals),
-            false,
-            0n,
-            0n
-        );
-
-        if(data.errorCodeHit) {
-            throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
-        }
-
-        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+        return this.previewPositionHealth(ctoken, null, true, amount);
     }
 
     /**
@@ -541,13 +589,8 @@ export class Market {
      * @param borrowAssets - Amount of assets being borrowed
      * @returns An object containing the hypothetical liquidity values
      */
-    async hypotheticalLiquidityOf(account: address, cTokenModified: address, redemptionShares: bigint, borrowAssets: bigint) {
-        const data = await this.contract.hypotheticalLiquidityOf(account, cTokenModified, redemptionShares, borrowAssets);
-        return {
-            collateralSurplus: BigInt(data.collateralSurplus),
-            liquidityDeficit: BigInt(data.liquidityDeficit),
-            positionsToClose: data.positionsToClose
-        }
+    async hypotheticalLiquidityOf(account: address, cTokenModified: address = EMPTY_ADDRESS, redemptionShares: bigint = 0n, borrowAssets: bigint = 0n) {
+        return this.contract.hypotheticalLiquidityOf(account, cTokenModified, redemptionShares, borrowAssets);
     }
 
     /**

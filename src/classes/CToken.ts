@@ -33,7 +33,8 @@ export interface ZapToken {
     type: ZapperTypes;
     quote?: (tokenIn: string, tokenOut: string, amount: TokenInput) => Promise<{
         output: TokenInput,
-        minOut: TokenInput
+        minOut: TokenInput,
+        max_slippage: Decimal;
     }>;
 }
 
@@ -123,6 +124,10 @@ export class CToken extends Calldata<ICToken> {
     get exchangeRate() { return this.cache.exchangeRate; }
     get canZap() { return this.zapTypes.length > 0; }
     get canLeverage() { return this.leverageTypes.length > 0; }
+
+    getLeverage() {
+        return (this.getUserCollateral(true).add(this.market.userDebt)).div(this.getUserCollateral(true));
+    }
 
     /** @returns Remaining Collateral cap */
     getRemainingCollateral(formatted: true): USD;
@@ -693,9 +698,36 @@ export class CToken extends Calldata<ICToken> {
         )
     }
 
+    previewLeverageUp(newLeverage: Decimal, borrow: BorrowableCToken) {
+        if(newLeverage.lte(this.getLeverage())) {
+            throw new Error("New leverage must be more than current leverage");
+        }
+
+        const collateralAvail = this.cache.userCollateral;
+        const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
+        const newPosition = collateralInUsd.mul(newLeverage);
+        const newDebt = newPosition.sub(this.market.userDebt).sub(collateralInUsd);
+        const borrowPrice = borrow.getPrice(true);
+        const borrowAmount = newDebt.div(borrowPrice);
+        return { borrowAmount, newDebt, newPosition };
+    }
+
+    previewLeverageDown(newLeverage: Decimal, currentLeverage: Decimal) {
+        if(newLeverage.gte(currentLeverage)) {
+            throw new Error("New leverage must be less than current leverage");
+        }
+
+        const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
+        const collateralAvail = this.cache.userCollateral;
+        const collateralAssetsAvail = collateralAvail * this.exchangeRate / WAD;
+        const collateralAssetReduction = BigInt(leverageDiff.mul(collateralAssetsAvail).toFixed(0));
+
+        return { collateralAssetReduction, leverageDiff };
+    }
+
     async leverageUp(
         borrow: BorrowableCToken,
-        borrowAmount: TokenInput,
+        newLeverage: Decimal,
         type: PositionManagerTypes,
         slippage_: TokenInput = Decimal(0.05)
     ) {
@@ -703,16 +735,17 @@ export class CToken extends Calldata<ICToken> {
         const manager = this.getPositionManager(type);
 
         let calldata: bytes;
+        const { borrowAmount } = this.previewLeverageUp(newLeverage, borrow);
 
         switch(type) {
             case 'native-vault': {
                 calldata = manager.getLeverageCalldata(
                     {
                         borrowableCToken: borrow.address,
-                        borrowAssets: borrow.convertTokenInput(borrowAmount),
-                        cToken: this.address,
-                        swapAction: PositionManager.emptySwapAction(),
-                        auxData: "0x",
+                        borrowAssets    : borrow.convertTokenInput(borrowAmount),
+                        cToken          : this.address,
+                        swapAction      : PositionManager.emptySwapAction(),
+                        auxData         : "0x",
                     },
                     slippage * WAD);
                 break;
@@ -744,10 +777,7 @@ export class CToken extends Calldata<ICToken> {
         const manager = this.getPositionManager(type);
         let calldata: bytes;
 
-        const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
-        const collateralAvail = await this.collateralPosted(signer.address as address);
-        const collateralAssetsAvail = collateralAvail * this.exchangeRate / WAD;
-        const collateralReduction = leverageDiff.mul(collateralAssetsAvail).toFixed(0);
+        const { collateralAssetReduction, leverageDiff } = this.previewLeverageDown(newLeverage, currentLeverage);
 
         switch(type) {
             case 'simple': {
@@ -755,14 +785,14 @@ export class CToken extends Calldata<ICToken> {
                     signer.address,
                     this.asset.address,
                     borrowToken.asset.address,
-                    collateralReduction,
+                    collateralAssetReduction.toString(),
                     slippage
                 );
                 const minRepay = leverageDiff.equals(1) ? 0 : quote.minOut;
 
                 calldata = manager.getDeleverageCalldata({
                     cToken: this.address,
-                    collateralAssets: BigInt(collateralReduction),
+                    collateralAssets: collateralAssetReduction,
                     borrowableCToken: borrowToken.address,
                     repayAssets: BigInt(minRepay),
                     swapActions: [ action ],
