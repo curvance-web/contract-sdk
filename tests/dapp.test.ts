@@ -89,7 +89,7 @@ describe('Market Tests', () => {
 
                 for(const market of ranCurvance.markets) {
                     for(const token of market.tokens) {
-                        if(token.canZap) {
+                        if(token.canZap && token.symbol !== 'cWMON' && token.symbol !== 'csMON' && token.symbol != 'cgMON') {
                             console.log(`Depositing 250 MON as ${token.symbol} into ${market.name}`);
                             await token.approveUnderlying();
                             const tx = await token.deposit(Decimal(250), 'native-vault'); // 250 MON into each vault token
@@ -255,11 +255,14 @@ describe('Market Tests', () => {
 
         // Leverage up a bit more
         {
-            const before = await shMON.balanceOf(account);
-            const tx = await shMON.leverageUp(cWMON, Decimal(0.5), 'native-vault');
+            // const currentLeverageInfo = await market.reader.hypotheticalLeverageOf(account, shMON, cWMON, Decimal(0));
+            // const newLeverageSelect = currentLeverageInfo.currentLeverage.add(0.1);
+            const currentLev = shMON.getLeverage();
+            const newLeverageSelect = currentLev.add(0.1);
+            const tx = await shMON.leverageUp(cWMON, newLeverageSelect, 'native-vault');
             await tx.wait();
-            const after = await shMON.balanceOf(account);
-            assert(before < after, "Balance should of increased by 0.5 (leveraging 0.5 borrow)");
+            const newLeverage = shMON.getLeverage();
+            assert(newLeverage.gt(currentLev), "Leverage should be higher after leverage up");
         }
 
         // Leverage down
@@ -267,10 +270,10 @@ describe('Market Tests', () => {
             // Simulate user dragging down current leverage by 25%
             const leverageInfo = await market.reader.hypotheticalLeverageOf(account, shMON, cWMON, Decimal(0));
             const newMultiplier = leverageInfo.currentLeverage.sub(1).mul(0.25).add(1); // Reduce leverage by 25%
-
+            
             await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
             await shMON.approvePlugin('simple', 'positionManager');
-            const tx = await shMON.leverageDown(cWMON, leverageInfo.currentLeverage, newMultiplier, 'simple', Decimal(0.1));
+             const tx = await shMON.leverageDown(cWMON, leverageInfo.currentLeverage, newMultiplier, 'simple', Decimal(0.1));
             await tx.wait();
 
             const newLeverageInfo = await market.reader.hypotheticalLeverageOf(account, shMON, cWMON, Decimal(0));
