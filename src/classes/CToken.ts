@@ -105,10 +105,10 @@ export class CToken extends Calldata<ICToken> {
 
         if(isVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
-
         if(isWrappedNative) this.zapTypes.push('native-simple');
 
         this.zapTypes.push('simple');
+        this.leverageTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -731,6 +731,7 @@ export class CToken extends Calldata<ICToken> {
         type: PositionManagerTypes,
         slippage_: TokenInput = Decimal(0.05)
     ) {
+        const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
 
@@ -738,6 +739,27 @@ export class CToken extends Calldata<ICToken> {
         const { borrowAmount } = this.previewLeverageUp(newLeverage, borrow);
 
         switch(type) {
+            case 'simple': {
+                const { action } = await chain_config[setup_config.chain].dexAgg.quoteAction(
+                    signer.address as address,
+                    borrow.asset.address,
+                    this.asset.address,
+                    borrow.convertTokenInput(borrowAmount, false).toString(),
+                    slippage
+                );
+
+                calldata = manager.getLeverageCalldata(
+                    {
+                        borrowableCToken: borrow.address,
+                        borrowAssets    : borrow.convertTokenInput(borrowAmount),
+                        cToken          : this.address,
+                        swapAction      : action,
+                        auxData         : "0x",
+                    },
+                    slippage * WAD);
+                break;
+            }
+
             case 'native-vault': {
                 calldata = manager.getLeverageCalldata(
                     {
@@ -817,14 +839,37 @@ export class CToken extends Calldata<ICToken> {
         borrow: BorrowableCToken,
         borrowAmount: TokenInput,
         type: PositionManagerTypes,
-        slippage_: TokenInput = Decimal(0.05)
+        slippage_: TokenInput = Decimal(0.5)
     ) {
+        const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
 
         let calldata: bytes;
 
         switch(type) {
+            case 'simple':
+                const assets = this.convertTokenInput(depositAmount);
+                const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
+                    signer.address as address,
+                    borrow.asset.address,
+                    this.asset.address,
+                    borrow.convertTokenInput(borrowAmount).toString(),
+                    slippage
+                );
+                
+                calldata = manager.getDepositAndLeverageCalldata(
+                    this.convertTokenInput(depositAmount),
+                    {
+                        borrowableCToken: borrow.address,
+                        borrowAssets: borrow.convertTokenInput(borrowAmount),
+                        cToken: this.address,
+                        swapAction: action,
+                        auxData: "0x",
+                    },
+                    slippage * WAD);
+                break;
+                
             case 'native-vault': {
                 calldata = manager.getDepositAndLeverageCalldata(
                     this.convertTokenInput(depositAmount),

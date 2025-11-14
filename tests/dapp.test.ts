@@ -228,6 +228,50 @@ describe('Market Tests', () => {
         assert(balance_after > balance_before, "Balance should increase after zap deposit");
     });
 
+    test('[Explore] Simple leverage', async() => {
+        const test_market = curvance.markets.find(market => {
+            return market.tokens.some(token => token.symbol === 'csMON');
+        });
+        assert(test_market, "Test market with csMON not found");
+
+        const csMON = test_market.tokens[0]! as BorrowableCToken;
+        const cWMON = test_market.tokens[1]! as BorrowableCToken;
+        const guy_with_a_ton_of_smon = "0xF8a7CC1070CbF2EE993A7317B561e72A57C82CA7";
+
+        {
+            await provider.send("anvil_impersonateAccount", [guy_with_a_ton_of_smon]);
+            const impersonatedSigner = await provider.getSigner(guy_with_a_ton_of_smon);
+            const smon = new ERC20(impersonatedSigner, csMON.asset.address);
+            await smon.transfer(account, Decimal(100)); // 100 sMON to our test account
+            await provider.send("anvil_stopImpersonatingAccount", [guy_with_a_ton_of_smon]);
+        }
+        
+        
+        // Deposit and leverage
+        {
+            const before = await csMON.balanceOf(account);
+            const asset = csMON.getAsset(true);
+            await asset.approve(csMON.getPositionManager('simple').address, null);
+            await csMON.approvePlugin('simple', 'positionManager');
+            const tx = await csMON.depositAndLeverage(Decimal(2), cWMON, Decimal(1), 'simple');
+            await tx.wait();
+            const after = await csMON.balanceOf(account);
+            // Slippage makes this kinda wonky to check
+            assert(after > before, "Balance should of increased");
+            await fastForwardTime(provider, MARKET_HOLD_PERIOD_SECS);
+        }
+
+        // Leverage up a bit more
+        {
+            const currentLev = csMON.getLeverage();
+            const newLeverageSelect = currentLev.add(0.1);
+            const tx = await csMON.leverageUp(cWMON, newLeverageSelect, 'simple');
+            await tx.wait();
+            const newLeverage = csMON.getLeverage();
+            assert(newLeverage.gt(currentLev), "Leverage should be higher after leverage up");
+        }
+    });
+
     test('[Explore] Monad, Leverage', async() => {
         const { shMON, cWMON, backup_market } = backup;
         // Deposit with zapper then withdraw so we have some shMON to use in the leverage test
@@ -341,37 +385,41 @@ describe('Market Tests', () => {
         assert(after_coll.lessThan(before_coll), `Collateral not decreased correctly (2), Expected ${after_coll.toFixed(18)} < ${before_coll.toFixed(18)}`);
     });
 
-    // TODO: [Dashboard] Modify leverage
     test('[info][Explore] List markets', async () => {
         // Refresh cached data from previous actions
         curvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, signer);
 
         const markets = curvance.markets;
-        const market = markets[0]!; // All tests are using this market
-        console.log(`Market: ${market.name} (${market.address}):
-            TVL - ${market.tvl.toFixed(18)}
-            LTV - ${market.ltv}
-            Your Deposits: ${market.userDeposits}
-            Available Collateral: ${market.userMaxDebt}
-            Can borrow: ${market.hasBorrowing()}
-            Highest APY: ${market.highestApy()}
-            Collateral: ${market.userCollateral}
-            Debt: ${market.userDebt}
-            Position Health: ${market.positionHealth}
-        `);
+        // const market = markets[0]!; // All tests are using this market
 
-        for(const token of market.tokens) {
-            console.log(`
-                Symbol: ${token.symbol} | Token: ${token.name} (${token.address}):
-                \tUnderlying: ${toDecimal(await (token.getAsset(true)).balanceOf(account), token.decimals)}
-                \tBalance: ${toDecimal(await token.balanceOf(account), token.decimals)}
-                \tCollateral Cap: ${token.getCollateralCap(true)}
-                \tDebt Cap: ${token.getDebtCap(true)}
-                \tIs borrowable: ${token.isBorrowable}
-                \tPrice: ${token.getPrice()}
-                \tDecimal: ${token.decimals}
-                \tAPY: ${token.getApy()}
+        for(const market of markets) {
+            if(market.address != '0x870C7a4506f1C520CF2f504564b8D18d08d55D9b') continue;
+            console.log(`Market: ${market.name} (${market.address}):
+                TVL - ${market.tvl.toFixed(18)}
+                LTV - ${market.ltv}
+                Your Deposits: ${market.userDeposits}
+                Available Collateral: ${market.userMaxDebt}
+                Can borrow: ${market.hasBorrowing()}
+                Highest APY: ${market.highestApy()}
+                Collateral: ${market.userCollateral}
+                Debt: ${market.userDebt}
+                Position Health: ${market.positionHealth}
             `);
+    
+            for(const token of market.tokens) {
+                console.log(`
+                    Symbol: ${token.symbol} | Token: ${token.name} (${token.address}):
+                    \tUnderlying: ${toDecimal(await (token.getAsset(true)).balanceOf(account), token.decimals)}
+                    \tBalance: ${toDecimal(await token.balanceOf(account), token.decimals)}
+                    \tCollateral Cap: ${token.getCollateralCap(true)}
+                    \tDebt Cap: ${token.getDebtCap(true)}
+                    \tIs borrowable: ${token.isBorrowable}
+                    \tPrice: ${token.getPrice()}
+                    \tDecimal: ${token.decimals}
+                    \tAPY: ${token.getApy()}
+                    \tHas leverage: ${token.canLeverage}
+                `);
+            }
         }
     });
 
