@@ -43,13 +43,24 @@ export class BorrowableCToken extends CToken {
     }
 
     get liquidationPrice(): USD {
-        const coll_usd = this.cache.sharePrice * (this.market.cache.user.collateral / this.cache.collReqSoft);
-
-        if(coll_usd == 0n || this.market.cache.user.debt == 0n) {
+        // Use market-level collateral but token-level debt
+        if(this.cache.userCollateral == 0n) {
             return Decimal(0);
         }
 
-        return Decimal(coll_usd / this.market.cache.user.debt).div(WAD);
+        const price = Decimal(this.cache.assetPrice).div(WAD);
+
+        // Find the debt required to have before liquidation starts
+        const debt = Decimal(this.market.cache.user.debt).div(WAD);
+        const collReq = Decimal(this.cache.collReqSoft).div(BPS);
+        const required_debt = debt.mul(collReq);
+        
+        // Find the % difference between collateral & required debt, then reduce the price by that %
+        const collateral = Decimal(this.market.cache.user.collateral).div(WAD);
+        const difference = collateral.minus(required_debt);
+        const difference_percent = difference.div(collateral);
+        const adjustment = price.mul(difference_percent);
+        return price.minus(adjustment);
     }
 
     getLiquidity(inUSD: true): USD;
