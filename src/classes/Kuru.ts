@@ -159,9 +159,9 @@ export default class Kuru {
             tokens.push({
                 interface: erc20,
                 type: 'simple',
-                quote: async(tokenIn: string, tokenOut: string, amount: TokenInput) => {
+                quote: async(tokenIn: string, tokenOut: string, amount: TokenInput, slippageTolerance: bigint | null = null) => {
                     const raw_amount = toBigInt(amount, 18n);
-                    const data = await Kuru.quote(signer.address, tokenIn, tokenOut, raw_amount.toString());
+                    const data = await Kuru.quote(signer.address, tokenIn, tokenOut, raw_amount.toString(), slippageTolerance);
                     return {
                         output: toDecimal(BigInt(data.output ?? 0), BigInt(token.decimals ?? 18)),
                         minOut: toDecimal(BigInt(data.minOut ?? 0), BigInt(token.decimals ?? 18)),
@@ -221,11 +221,11 @@ export default class Kuru {
             referrerFeeBps: 10,
         };
 
-        // if(!slippageTolerance) {
+        if(!slippageTolerance) {
             payload.autoSlippage = true;
-        // } else {
-        //     payload.slippage_tolerance = Number(slippageTolerance);
-        // }
+        } else {
+            payload.slippage_tolerance = Number(slippageTolerance);
+        }
 
         cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(Kuru.getCurrentTime()));
         const resp = await fetch(`${Kuru.api}/quote`, {
