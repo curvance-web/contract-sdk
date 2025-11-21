@@ -126,6 +126,9 @@ export class CToken extends Calldata<ICToken> {
     get canLeverage() { return this.leverageTypes.length > 0; }
 
     getLeverage() {
+        if(this.getUserCollateral(true).equals(0)) {
+            return Decimal(0);
+        }
         return (this.getUserCollateral(true).add(this.market.userDebt)).div(this.getUserCollateral(true));
     }
 
