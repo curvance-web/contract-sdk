@@ -114,10 +114,10 @@ export class Market {
     get userDebt() { return toDecimal(this.cache.user.debt, 18n); }
     /** @returns {USD} - The user's maximum debt in USD. */
     get userMaxDebt() { return toDecimal(this.cache.user.maxDebt, 18n); }
-    /** @returns {USD} - The user's remaining credit in USD */
+    /** @returns {USD} - The user's remaining credit with a .1% buffer in USD */
     get userRemainingCredit(): USD {
         const remaining = this.cache.user.maxDebt - this.cache.user.debt;
-        return toDecimal(remaining, 18n);
+        return toDecimal(remaining, 18n).mul(.999);
     }
 
     /**
