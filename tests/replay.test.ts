@@ -32,10 +32,10 @@ describe('Market Tests', () => {
             if(market.name != 'gMON & WMON') continue;
             
             const [ cgMON, cWMON ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
-            const depositAmount = Decimal(0.149);
-            const borrowAmount = depositAmount.mul(1.97 - 1); // Leverage 1.97x
-            const previewLeverage = await cgMON.market.previewAssetImpact(test_wallet, cWMON, cgMON, depositAmount, borrowAmount, 'day');
-            console.log(previewLeverage);
+            const depositTokens = await cgMON.getDepositTokens('mon');
+            for(const token of depositTokens) {
+                console.log(`Deposit Token: ${token.interface.symbol} : ${token.interface.address} - ${token.type}`);
+            }
         }
 
         await provider.send("anvil_stopImpersonatingAccount", [test_wallet]);

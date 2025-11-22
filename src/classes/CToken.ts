@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps } from "../helpers";
+import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps, NATIVE_ADDRESS } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market, PluginTypes } from "./Market";
@@ -666,12 +666,15 @@ export class CToken extends Calldata<ICToken> {
             interface: this.getAsset(true),
             type: 'none'
         }];
+        let tokens_exclude = [this.asset.address.toLocaleLowerCase()];
 
         if(this.zapTypes.includes('native-vault')) {
             tokens.push({
                 interface: new NativeToken(setup_config.chain, this.provider),
                 type: 'native-vault'
             });
+            tokens_exclude.push(EMPTY_ADDRESS);
+            tokens_exclude.push(NATIVE_ADDRESS);
         }
 
         if(this.zapTypes.includes('native-simple')) {
@@ -679,15 +682,18 @@ export class CToken extends Calldata<ICToken> {
                 interface: new NativeToken(setup_config.chain, this.provider),
                 type: 'native-simple'
             });
+
+            if(!this.zapTypes.includes('native-vault')) {
+                tokens_exclude.push(EMPTY_ADDRESS);
+                tokens_exclude.push(NATIVE_ADDRESS);
+            }
         }
 
         if(this.zapTypes.includes('simple')) {
-            const dexAggSearch = await chain_config[setup_config.chain].dexAgg.getAvailableTokens(this.provider, search);
-            tokens = tokens.concat(dexAggSearch);
+            let dexAggSearch = await chain_config[setup_config.chain].dexAgg.getAvailableTokens(this.provider, search);
+            tokens = tokens.concat(dexAggSearch.filter(token => !tokens_exclude.includes(token.interface.address.toLocaleLowerCase())));
         }
 
-        // @NOTE: You are probably wondering... why the hell is this an async function,
-        // The future plan for other zappers will be to query an API for a token list which will require this to be async
         return tokens;
     }
 
