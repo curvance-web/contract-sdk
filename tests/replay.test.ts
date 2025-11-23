@@ -26,11 +26,15 @@ describe('Market Tests', () => {
     test('test', async function() {
         const test_wallet = "0x6D3DA13B41E18Dc7bd1c084De0034fBcB1fDbCE8";
         await provider.send("anvil_impersonateAccount", [test_wallet]);
+        
         const impersonatedSigner = await provider.getSigner(test_wallet);
         const impCurvance = await setupChain('monad-mainnet', impersonatedSigner, true);
         for(const market of impCurvance.markets) {
-            const [ tokenA, tokenB ] = market.tokens as [BorrowableCToken, BorrowableCToken];
-            console.log(tokenA.canLeverage, tokenB.canLeverage);
+            if(market.name == 'earnAUSD | AUSD') {
+                const [ earnAUSD, AUSD ] = market.tokens as [BorrowableCToken, BorrowableCToken];
+                console.log(await earnAUSD.getUserUnderlyingBalance(false));
+                await earnAUSD.depositAsCollateral(Decimal('1.00659'));
+            }
         }
 
         await provider.send("anvil_stopImpersonatingAccount", [test_wallet]);

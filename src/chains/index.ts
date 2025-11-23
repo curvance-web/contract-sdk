@@ -4,4 +4,5 @@ import monad_mainnet from "./monad-mainnet.json";
 export const chains = {
     "monad-testnet": monad_testnet,
     "monad-mainnet": monad_mainnet,
+    "local-monad-mainnet": monad_mainnet,
 };

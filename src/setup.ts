@@ -46,6 +46,13 @@ export const chain_config = {
         native_symbol: 'MON',
         wrapped_native: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A" as address,
         vaults: []
+    },
+    'local-monad-mainnet': {
+        dexAgg: KuruMainnet,
+        provider: new JsonRpcProvider("http://localhost:8545"),
+        native_symbol: 'MON',
+        wrapped_native: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A" as address,
+        vaults: []
     }
 };
 
