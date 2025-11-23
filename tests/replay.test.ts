@@ -29,7 +29,7 @@ describe('Market Tests', () => {
         const impersonatedSigner = await provider.getSigner(test_wallet);
         const impCurvance = await setupChain('monad-mainnet', impersonatedSigner, true);
         for(const market of impCurvance.markets) {
-            console.log(market);
+            console.log(market.tokens);
         }
 
         await provider.send("anvil_stopImpersonatingAccount", [test_wallet]);
