@@ -34,6 +34,42 @@
   },
   {
     "type": "function",
+    "name": "multicall",
+    "inputs": [
+      {
+        "name": "calls",
+        "type": "tuple[]",
+        "internalType": "struct Multicall.MulticallAction[]",
+        "components": [
+          {
+            "name": "target",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "isPriceUpdate",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "results",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "redeemAndSwap",
     "inputs": [
       {
@@ -400,7 +436,22 @@
   },
   {
     "type": "error",
+    "name": "Multicall__InvalidTarget",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Multicall__UnknownCalldata",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "Reentrancy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SwapperLib__SameTokens",
     "inputs": []
   },
   {

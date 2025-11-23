@@ -6,6 +6,7 @@ import { ProtocolReader } from "./classes/ProtocolReader";
 import { Faucet } from "./classes/Faucet";
 import { OracleManager } from "./classes/OracleManager";
 import Kuru from "./classes/Kuru";
+import KuruMainnet from "./classes/KuruMainnet";
 
 export type IncentiveResponse = {
     market: address,
@@ -38,6 +39,13 @@ export const chain_config = {
             // { name: "magma", contract: "0xaEef2f6B429Cb59C9B2D7bB2141ADa993E8571c3" as address }, //Has no deposit function for some reason
             // { name: "kintsu", contract: "0xe1d2439b75fb9746E7Bc6cB777Ae10AA7f7ef9c5" as address } //Has a deposit function but uses uint96 instead of uint256
         ]
+    },
+    'monad-mainnet': {
+        dexAgg: KuruMainnet,
+        provider: new JsonRpcProvider("https://localhost:8545"),
+        native_symbol: 'MON',
+        wrapped_native: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A" as address,
+        vaults: []
     }
 };
 

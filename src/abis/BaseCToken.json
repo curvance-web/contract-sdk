@@ -114,7 +114,7 @@
   },
   {
     "type": "function",
-    "name": "checkDelegationDisabled",
+    "name": "checkNewDelegationDisabled",
     "inputs": [
       {
         "name": "user",
@@ -1006,7 +1006,7 @@
         "internalType": "bool"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",

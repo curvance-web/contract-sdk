@@ -1,0 +1,39 @@
+{
+  "CentralRegistry": "0x2F5e1F7c2C50476461B476D6146992b3b966F2c5",
+  "OracleManager": "0x38c37f57a3b5c26B344671FdF3C3162BaCDA7bBa",
+  "adaptors": {
+    "ChainlinkAdaptor": "0x8D6a0f82CB31a93dBa163310eB5Ba8A72cb64C80",
+    "RedstoneClassicAdaptor": "0x81607179829EFA9735E7413090Db247cFb6231E1",
+    "RedstoneCoreAdaptor": "0xac1a863f195e855C0Cd8DE71C076332e3080D80c"
+  },
+  "calldataCheckers": {
+    "RedstoneAdaptorMulticallChecker": "0xbDa98B38aFc8433a07bf291787A10c7470E3fA06"
+  },
+  "zappers": {
+    "nativeVaultZapper": "0x7f2b026da1e31109b7049DeeCb5aa852a1f2a728",
+    "vaultZapper": "0x7c78823D78fd34891924DBB7D3DE8C53F1897643",
+    "simpleZapper": "0xFAf10acC86Dd587B1a75B832FCeB01B2fe3379Db"
+  },
+  "VaultAggregator-AUSD-sAUSD": "0xec0b3f4142fBf57ee1A076b6A6D83B5B3f523760",
+  "markets": {
+    "sAUSD | AUSD": {
+      "address": "0x955Cd836061481131b35Ac114ef96e17f9D1D402",
+      "sAUSD-DynamicIRM": "0x803f7107399a41FEFB65d2eD25F7669Ae22c7889",
+      "tokens": {
+        "sAUSD": "0xa0EF95Df879E7958281404B44f2065A72cF4A8FA",
+        "AUSD": "0xa838e40B192A3BB75F81d448BaAf3535c426C3C0"
+      },
+      "AUSD-DynamicIRM": "0xa47b3c31aeB952E60332869F7ED6F44D14890375"
+    },
+    "earnAUSD | AUSD": {
+      "address": "0x743b36f89300ee230fdFcC6Fe1d50c89DfDD80B8",
+      "earnAUSD-DynamicIRM": "0xF4F40ce017965F132d057a27ef58b0fD25C60429",
+      "tokens": {
+        "earnAUSD": "0x2a5d40ccbD99cf6aC202A32725e2E1680bd3B2A0",
+        "AUSD": "0xa8CAc481f9f8D690609f4A1EF1C32d58cFC687F0"
+      },
+      "AUSD-DynamicIRM": "0x563293e8cd4701dBA16bae02bECE743BA098F457"
+    }
+  },
+  "ProtocolReader": "0x5e50991E19a1fDcE15710f4958D4f60e6D754964"
+}

@@ -253,6 +253,11 @@
             "internalType": "contract ICToken"
           },
           {
+            "name": "expectedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "swapAction",
             "type": "tuple",
             "internalType": "struct SwapperLib.Swap",
@@ -315,7 +320,7 @@
   },
   {
     "type": "function",
-    "name": "checkDelegationDisabled",
+    "name": "checkNewDelegationDisabled",
     "inputs": [
       {
         "name": "user",
@@ -1467,7 +1472,7 @@
         "internalType": "bool"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1793,6 +1798,12 @@
         "internalType": "uint256"
       },
       {
+        "name": "debtAssetsOwed",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
         "name": "account",
         "type": "address",
         "indexed": false,
@@ -1822,6 +1833,25 @@
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DebtAccrued",
+    "inputs": [
+      {
+        "name": "newDebtAssets",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "protocolFeeAssets",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -2031,6 +2061,12 @@
         "internalType": "uint256"
       },
       {
+        "name": "debtAssetsOwed",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
         "name": "payer",
         "type": "address",
         "indexed": false,
@@ -2160,6 +2196,11 @@
   {
     "type": "error",
     "name": "BorrowableCToken__DebtPositionActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BorrowableCToken__DepositsNotInitialized",
     "inputs": []
   },
   {

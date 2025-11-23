@@ -24,18 +24,12 @@ describe('Market Tests', () => {
     })
 
     test('test', async function() {
-        const test_wallet = "0x297f05AF42c78c243AaF1cA2156a32007A361434";
+        const test_wallet = "0x6D3DA13B41E18Dc7bd1c084De0034fBcB1fDbCE8";
         await provider.send("anvil_impersonateAccount", [test_wallet]);
         const impersonatedSigner = await provider.getSigner(test_wallet);
-        const impCurvance = await setupChain(process.env.TEST_CHAIN as ChainRpcPrefix, impersonatedSigner, true);
+        const impCurvance = await setupChain('monad-mainnet', impersonatedSigner, true);
         for(const market of impCurvance.markets) {
-            if(market.name != 'gMON & WMON') continue;
-            
-            const [ cgMON, cWMON ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
-            const depositTokens = await cgMON.getDepositTokens('mon');
-            for(const token of depositTokens) {
-                console.log(`Deposit Token: ${token.interface.symbol} : ${token.interface.address} - ${token.type}`);
-            }
+            console.log(market);
         }
 
         await provider.send("anvil_stopImpersonatingAccount", [test_wallet]);

@@ -39,7 +39,7 @@
   },
   {
     "type": "function",
-    "name": "checkDelegationDisabled",
+    "name": "checkNewDelegationDisabled",
     "inputs": [
       {
         "name": "user",
@@ -255,6 +255,11 @@
             "internalType": "contract ICToken"
           },
           {
+            "name": "expectedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "swapAction",
             "type": "tuple",
             "internalType": "struct SwapperLib.Swap",
@@ -356,6 +361,11 @@
             "internalType": "contract ICToken"
           },
           {
+            "name": "expectedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "swapAction",
             "type": "tuple",
             "internalType": "struct SwapperLib.Swap",
@@ -431,6 +441,11 @@
             "name": "cToken",
             "type": "address",
             "internalType": "contract ICToken"
+          },
+          {
+            "name": "expectedShares",
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
             "name": "swapAction",
@@ -577,6 +592,11 @@
             "name": "cToken",
             "type": "address",
             "internalType": "contract ICToken"
+          },
+          {
+            "name": "expectedShares",
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
             "name": "swapAction",
@@ -896,6 +916,11 @@
   {
     "type": "error",
     "name": "Reentrancy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SwapperLib__SameTokens",
     "inputs": []
   },
   {

@@ -970,6 +970,87 @@
   },
   {
     "type": "function",
+    "name": "hypotheticalLiquidityOf",
+    "inputs": [
+      {
+        "name": "mm",
+        "type": "address",
+        "internalType": "contract IMarketManager"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "cTokenModified",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "redemptionShares",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "borrowAssets",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "bufferTime",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "result",
+        "type": "tuple",
+        "internalType": "struct ProtocolReader.HypotheticalResult",
+        "components": [
+          {
+            "name": "collateral",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxDebt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "collateralSurplus",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidityDeficit",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "loanSizeError",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "oracleError",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "hypotheticalRedemptionOf",
     "inputs": [
       {

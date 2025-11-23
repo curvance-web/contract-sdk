@@ -100,6 +100,11 @@
         "name": "decimals",
         "type": "uint8",
         "internalType": "uint8"
+      },
+      {
+        "name": "id",
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "outputs": [],
@@ -159,6 +164,11 @@
     ],
     "outputs": [
       {
+        "name": "dataFeedId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
         "name": "decimals",
         "type": "uint8",
         "internalType": "uint8"
@@ -172,11 +182,6 @@
         "name": "price",
         "type": "uint200",
         "internalType": "uint200"
-      },
-      {
-        "name": "symbolHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -355,13 +360,13 @@
           },
           {
             "name": "basePrice",
-            "type": "uint96",
-            "internalType": "uint96"
+            "type": "uint88",
+            "internalType": "uint88"
           },
           {
             "name": "minPrice",
-            "type": "uint80",
-            "internalType": "uint80"
+            "type": "uint88",
+            "internalType": "uint88"
           }
         ]
       }
@@ -428,13 +433,13 @@
       },
       {
         "name": "basePrice",
-        "type": "uint96",
-        "internalType": "uint96"
+        "type": "uint88",
+        "internalType": "uint88"
       },
       {
         "name": "minPrice",
-        "type": "uint80",
-        "internalType": "uint80"
+        "type": "uint88",
+        "internalType": "uint88"
       }
     ],
     "stateMutability": "view"
@@ -561,6 +566,11 @@
         "internalType": "struct RedstoneCoreAdaptor.AssetConfig",
         "components": [
           {
+            "name": "dataFeedId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
             "name": "decimals",
             "type": "uint8",
             "internalType": "uint8"
@@ -574,11 +584,6 @@
             "name": "price",
             "type": "uint200",
             "internalType": "uint200"
-          },
-          {
-            "name": "symbolHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
           }
         ]
       },
@@ -626,13 +631,13 @@
           },
           {
             "name": "basePrice",
-            "type": "uint96",
-            "internalType": "uint96"
+            "type": "uint88",
+            "internalType": "uint88"
           },
           {
             "name": "minPrice",
-            "type": "uint80",
-            "internalType": "uint80"
+            "type": "uint88",
+            "internalType": "uint88"
           }
         ]
       }
@@ -665,6 +670,11 @@
   },
   {
     "type": "error",
+    "name": "BaseOracleAdaptor__BasePriceBelowCurrentPrice",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BaseOracleAdaptor__InvalidConfig",
     "inputs": []
   },
@@ -681,11 +691,6 @@
   {
     "type": "error",
     "name": "BaseOracleAdaptor__Unauthorized",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Bytes32Helper__ExcessiveLength",
     "inputs": []
   },
   {
