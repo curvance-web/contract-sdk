@@ -42,7 +42,7 @@ export const chain_config = {
     },
     'monad-mainnet': {
         dexAgg: KuruMainnet,
-        provider: new JsonRpcProvider("https://localhost:8545"),
+        provider: new JsonRpcProvider("https://rpc-mainnet.monadinfra.com/rpc/yXdhejk7tio3mpBmpTyzQCdIQjDXsuAk"),
         native_symbol: 'MON',
         wrapped_native: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A" as address,
         vaults: []
