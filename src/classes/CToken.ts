@@ -105,10 +105,12 @@ export class CToken extends Calldata<ICToken> {
 
         if(isVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
         if(isWrappedNative) this.zapTypes.push('native-simple');
 
-        this.zapTypes.push('simple');
-        this.leverageTypes.push('simple');
+        if(setup_config.chain == 'monad-testnet') {
+            this.zapTypes.push('simple');
+        }
     }
 
     get adapters() { return this.cache.adapters; }
