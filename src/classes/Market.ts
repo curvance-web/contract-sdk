@@ -653,7 +653,7 @@ export class Market {
             const market_address = staticData.address;
             let deploy_data: DeployData | undefined;
 
-            if(market_address == "0x83840d837E7A3E00bBb0B8501E60E989A8987c37") {
+            if(market_address == "0x83840d837E7A3E00bBb0B8501E60E989A8987c37" || market_address == "0xe5970cDB1916B2cCF6185C86C174EEE2d330D05B") {
                 continue;
             }
             
