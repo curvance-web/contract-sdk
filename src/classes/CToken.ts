@@ -100,17 +100,17 @@ export class CToken extends Calldata<ICToken> {
         this.market = market;
 
         const chain_config = getChainConfig();
-        const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
+        const isNativeVault = chain_config.native_vaults.some(vault => vault.contract == this.asset.address);
+        // const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
         const isWrappedNative = chain_config.wrapped_native == this.asset.address;
 
-        if(isVault) this.zapTypes.push('native-vault');
-        if("nativeVaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('native-vault');
-        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        if(isNativeVault) this.zapTypes.push('native-vault');
+        if("nativeVaultPositionManager" in this.market.plugins && isNativeVault) this.leverageTypes.push('native-vault');
         if(isWrappedNative) this.zapTypes.push('native-simple');
-
-        if(setup_config.chain == 'monad-testnet') {
-            this.zapTypes.push('simple');
-        }
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        // if(isVault) this.zapTypes.push('vault');
+        // if("vaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('vault');
+        this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -470,6 +470,7 @@ export class CToken extends Calldata<ICToken> {
 
             case 'positionManager': {
                 switch(plugin) {
+                    case 'vault': return this.market.plugins.vaultPositionManager as address;
                     case 'native-vault': return this.market.plugins.nativeVaultPositionManager as address;
                     case 'simple': return this.market.plugins.simplePositionManager as address;
                     default: throw new Error("Unknown position manager type");
