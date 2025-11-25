@@ -136,18 +136,18 @@ export class CToken extends Calldata<ICToken> {
 
     /** @returns Remaining Collateral cap */
     getRemainingCollateral(formatted: true): USD;
-    getRemainingCollateral(formatted: false): USD_WAD;
-    getRemainingCollateral(formatted: boolean = true): USD | USD_WAD {
-        const inUsdWad = this.cache.collateralCap - this.cache.collateral;
-        return formatted ? Decimal(inUsdWad).div(WAD) as USD : inUsdWad as USD_WAD;
+    getRemainingCollateral(formatted: false): bigint;
+    getRemainingCollateral(formatted: boolean = true): USD | bigint {
+        const diff = this.cache.collateralCap - this.cache.collateral;
+        return formatted ? this.convertTokensToUsd(diff) as USD : diff as bigint;
     }
 
     /** @returns Remaining Debt cap */
     getRemainingDebt(formatted: true): USD;
-    getRemainingDebt(formatted: false): USD_WAD;
-    getRemainingDebt(formatted:boolean = true): USD | USD_WAD {
-        const inUsdWad = this.cache.debtCap - this.cache.debt;
-        return formatted ? Decimal(inUsdWad).div(WAD) as USD : inUsdWad as USD_WAD;
+    getRemainingDebt(formatted: false): bigint;
+    getRemainingDebt(formatted:boolean = true): USD | bigint {
+        const diff = this.cache.debtCap - this.cache.debt;
+        return formatted ? this.convertTokensToUsd(diff) as USD : diff as bigint;
     }
 
     /** @returns Collateral Ratio in BPS or bigint */

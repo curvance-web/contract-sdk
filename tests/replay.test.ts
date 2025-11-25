@@ -24,16 +24,16 @@ describe('Market Tests', () => {
     })
 
     test('test', async function() {
-        const test_wallet = "0x6D3DA13B41E18Dc7bd1c084De0034fBcB1fDbCE8";
+        const test_wallet = "0x6d3da13b41e18dc7bd1c084de0034fbcb1fdbce8";
         await provider.send("anvil_impersonateAccount", [test_wallet]);
         
         const impersonatedSigner = await provider.getSigner(test_wallet);
         const impCurvance = await setupChain('monad-mainnet', impersonatedSigner, true);
         for(const market of impCurvance.markets) {
-            if(market.name == 'earnAUSD | AUSD') {
-                const [ earnAUSD, AUSD ] = market.tokens as [BorrowableCToken, BorrowableCToken];
-                console.log(await earnAUSD.getUserUnderlyingBalance(false));
-                await earnAUSD.depositAsCollateral(Decimal('1.00659'));
+            console.log(market.name);
+            if(market.name == 'shMON | WMON') {
+                const [ WMON, shMON ] = market.tokens as [BorrowableCToken, BorrowableCToken];
+                console.log(shMON.getRemainingCollateral(true), shMON.getRemainingDebt(true));
             }
         }
 
