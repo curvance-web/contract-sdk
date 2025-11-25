@@ -110,7 +110,7 @@ export class CToken extends Calldata<ICToken> {
         if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
         // if(isVault) this.zapTypes.push('vault');
         // if("vaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('vault');
-        this.zapTypes.push('simple');
+        // this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
