@@ -37,7 +37,7 @@ const cached_jwt = new Map<string, KuruJWTResponse>();
 const cached_requests = new Map<string, number[]>();
 
 export default class Kuru {
-    static api = "https://ws.staging.kuru.io/api"
+    api = "https://ws.staging.kuru.io/api"
     static router = "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6" as address; // KuruFlowEntrypoint
     jwt: string | null = null;
     rps = 1;
@@ -56,7 +56,7 @@ export default class Kuru {
             }
         }
 
-        const resp = await fetch(`${Kuru.api}/generate-token`, {
+        const resp = await fetch(`${this.api}/generate-token`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -199,7 +199,7 @@ export default class Kuru {
     }
 
     static async quote(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
-        const kuru = new Kuru();
+        const kuru = new this();
         await kuru.loadJWT(wallet);
         await kuru.rateLimitSleep(wallet);
 
@@ -228,7 +228,7 @@ export default class Kuru {
         }
 
         cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(Kuru.getCurrentTime()));
-        const resp = await fetch(`${Kuru.api}/quote`, {
+        const resp = await fetch(`${kuru.api}/quote`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
