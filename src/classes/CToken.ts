@@ -610,6 +610,19 @@ export class CToken extends Calldata<ICToken> {
         return tx;
     }
 
+    // TODO: Hack to remove
+    async ensureUnderlyingAmount(amount: TokenInput) {
+        const signer = validateProviderAsSigner(this.provider);
+        const asset = this.getAsset(true);
+        const balance = await asset.balanceOf(signer.address as address);
+
+        if(this.convertTokenInput(amount) > balance) {
+            return amount;
+        }
+        
+        return this.convertBigInt(balance);
+    }
+
     async removeCollateral(amount: TokenInput) {
         const shares = this.convertTokenInput(amount, true, true);
         const current_shares = await this.fetchUserCollateral();
@@ -854,6 +867,7 @@ export class CToken extends Calldata<ICToken> {
         type: PositionManagerTypes,
         slippage_: TokenInput = Decimal(0.5)
     ) {
+        depositAmount = await this.ensureUnderlyingAmount(depositAmount);
         const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
@@ -965,6 +979,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async deposit(amount: TokenInput, zap: ZapperInstructions = 'none', receiver: address | null = null) {
+        amount = await this.ensureUnderlyingAmount(amount);
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
@@ -985,6 +1000,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async depositAsCollateral(amount: Decimal, zap: ZapperInstructions = 'none',  receiver: address | null = null) {
+        amount = await this.ensureUnderlyingAmount(amount);
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
