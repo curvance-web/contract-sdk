@@ -131,7 +131,8 @@ export class CToken extends Calldata<ICToken> {
         if(this.getUserCollateral(true).equals(0)) {
             return Decimal(0);
         }
-        return (this.getUserCollateral(true).add(this.market.userDebt)).div(this.getUserCollateral(true));
+        // return (this.getUserCollateral(true).add(this.market.userDebt)).div(this.getUserCollateral(true));
+        return this.getUserCollateral(true).div(this.getUserCollateral(true).sub(this.market.userDebt));
     }
 
     /** @returns Remaining Collateral cap */

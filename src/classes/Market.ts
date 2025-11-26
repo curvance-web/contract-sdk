@@ -129,7 +129,7 @@ export class Market {
             return null;
         }
         
-        return Decimal(this.cache.user.positionHealth).div(WAD_DECIMAL).sub(1);
+        return this.formatPositionHealth(this.cache.user.positionHealth);
     }
 
     /**
@@ -480,7 +480,11 @@ export class Market {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
 
-        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+        return this.formatPositionHealth(data.positionHealth);
+    }
+
+    formatPositionHealth(positionHealth: bigint): Percentage | null {
+        return Decimal(positionHealth).div(WAD_DECIMAL).sub(1);
     }
 
     /**
@@ -516,7 +520,7 @@ export class Market {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
 
-        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+        return this.formatPositionHealth(data.positionHealth);
     }
 
     /**
@@ -554,7 +558,7 @@ export class Market {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
 
-        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+        return this.formatPositionHealth(data.positionHealth);
     }
 
     /**
@@ -582,7 +586,7 @@ export class Market {
             throw new Error(`Error code hit when calculating position health preview. This usually means price is stale so we couldn't get a valid health value.`);
         }
 
-        return data.positionHealth == UINT256_MAX ? null : Decimal(data.positionHealth).div(WAD);
+        return this.formatPositionHealth(data.positionHealth);
     }
 
     /**
