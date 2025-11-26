@@ -364,8 +364,8 @@ export class Market {
 
         const supply_percent = Decimal(supply * getRateSeconds(rate_change)).div(WAD);
         const borrow_percent = Decimal(borrow * getRateSeconds(rate_change)).div(WAD);
-        const supply_change = debt_ctoken.convertTokensToUsd(amount_in).mul(supply_percent);
-        const borrow_change = collateral_ctoken.convertTokensToUsd(amount_out).mul(borrow_percent);
+        const supply_change = collateral_ctoken.convertTokensToUsd(amount_in).mul(supply_percent);
+        const borrow_change = debt_ctoken.convertTokensToUsd(amount_out).mul(borrow_percent);
 
         return {
             supply: {
