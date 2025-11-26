@@ -122,10 +122,14 @@ export class Market {
 
     /**
      * Get the user's position health.
-     * @returns {USD | null} - The user's position health Percentage or null if infinity
+     * @returns {Percentage | null} - The user's position health Percentage or null if infinity
      */
     get positionHealth() {
-        return this.cache.user.positionHealth == UINT256_MAX ? null : Decimal(this.cache.user.positionHealth).div(WAD_DECIMAL);
+        if (this.cache.user.positionHealth == UINT256_MAX) {
+            return null;
+        }
+        
+        return Decimal(this.cache.user.positionHealth).div(WAD_DECIMAL).sub(1);
     }
 
     /**
