@@ -31,10 +31,14 @@ describe('Market Tests', () => {
         const impCurvance = await setupChain('monad-mainnet', impersonatedSigner, true);
         for(const market of impCurvance.markets) {
             // console.log(market.name);
-            if(market.name == 'WMON | AUSD') {
-                const [ WMON, AUSD ] = market.tokens as [BorrowableCToken, BorrowableCToken];
-                console.log(await WMON.market.previewAssetImpact(test_wallet, WMON, AUSD, Decimal(115876), Decimal(1000), 'day'));
-            }
+            if(market.name == 'aprMON | WMON') {
+                const [ aprMON, WMON ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
+                await WMON.approveUnderlying();
+                await WMON.deposit(Decimal(4779.433969669800378533));
+            }   
+            // for(const token of market.tokens) {
+            //     console.log(token.symbol, token.getLeverage(), token.getUserCollateral(true), token.getUserDebt(true));
+            // }
         }
 
         await provider.send("anvil_stopImpersonatingAccount", [test_wallet]);

@@ -617,10 +617,14 @@ export class CToken extends Calldata<ICToken> {
         const balance = await asset.balanceOf(signer.address as address);
 
         if(this.convertTokenInput(amount) > balance) {
-            return amount;
+            console.warn('[WARNING] Detected higher deposit amount then underlying balance, changing to the underlying balance. Diff: ', {
+                raw: this.convertTokenInput(amount) - balance, 
+                formatted: this.convertBigInt(this.convertTokenInput(amount) - balance)
+            });
+            return this.convertBigInt(balance);
         }
         
-        return this.convertBigInt(balance);
+        return amount;
     }
 
     async removeCollateral(amount: TokenInput) {
