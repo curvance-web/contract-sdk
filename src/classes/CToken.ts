@@ -494,9 +494,9 @@ export class CToken extends Calldata<ICToken> {
      * @param amount - if null it will approve the max uint256, otherwise the amount specified
      * @returns tx
      */
-    async approveUnderlying(amount: TokenInput | null = null) {
+    async approveUnderlying(amount: TokenInput | null = null, target: address | null = null) {
         const erc20 = new ERC20(this.provider, this.asset.address);
-        const tx = await erc20.approve(this.address, amount);
+        const tx = await erc20.approve(target ? target : this.address, amount);
         return tx;
     }
 
@@ -770,7 +770,7 @@ export class CToken extends Calldata<ICToken> {
 
         switch(type) {
             case 'simple': {
-                const { action } = await chain_config[setup_config.chain].dexAgg.quoteAction(
+                const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
                     signer.address as address,
                     borrow.asset.address,
                     this.asset.address,
@@ -783,6 +783,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets    : borrow.convertTokenInput(borrowAmount),
                         cToken          : this.address,
+                        expectedShares  : BigInt(quote.minOut),
                         swapAction      : action,
                         auxData         : "0x",
                     },
@@ -796,6 +797,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets    : borrow.convertTokenInput(borrowAmount),
                         cToken          : this.address,
+                        expectedShares  : borrow.convertTokenInput(borrowAmount),
                         swapAction      : PositionManager.emptySwapAction(),
                         auxData         : "0x",
                     },
@@ -895,6 +897,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets: borrow.convertTokenInput(borrowAmount),
                         cToken: this.address,
+                        expectedShares: BigInt(quote.minOut),
                         swapAction: action,
                         auxData: "0x",
                     },
@@ -908,6 +911,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets: borrow.convertTokenInput(borrowAmount),
                         cToken: this.address,
+                        expectedShares: borrow.convertTokenInput(borrowAmount),
                         swapAction: {
                             inputToken: EMPTY_ADDRESS,
                             inputAmount: 0n,

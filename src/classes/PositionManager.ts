@@ -10,6 +10,7 @@ export interface LeverageAction {
     borrowableCToken: address;
     borrowAssets: bigint;
     cToken: address;
+    expectedShares: bigint;
     swapAction?: Swap;
     auxData?: bytes;
 }
