@@ -358,8 +358,8 @@ export class Market {
      * @returns Supply, borrow & earn rates
      */
     async previewAssetImpact(user: address, collateral_ctoken: CToken, debt_ctoken: BorrowableCToken, deposit_amount: TokenInput, borrow_amount: TokenInput, rate_change: ChangeRate) {
-        const amount_in = toBigInt(deposit_amount.toNumber(), collateral_ctoken.asset.decimals);
-        const amount_out = toBigInt(borrow_amount.toNumber(), debt_ctoken.asset.decimals);
+        const amount_in = toBigInt(deposit_amount, collateral_ctoken.asset.decimals);
+        const amount_out = toBigInt(borrow_amount, debt_ctoken.asset.decimals);
 
         const { supply, borrow } = await this.reader.previewAssetImpact(user, collateral_ctoken.address, debt_ctoken.address, amount_in, amount_out);
 
@@ -368,8 +368,8 @@ export class Market {
 
         const supply_percent = Decimal(supply * getRateSeconds(rate_change)).div(WAD);
         const borrow_percent = Decimal(borrow * getRateSeconds(rate_change)).div(WAD);
-        const supply_change = debt_ctoken.convertTokensToUsd(amount_in).mul(supply_percent);
-        const borrow_change = collateral_ctoken.convertTokensToUsd(amount_out).mul(borrow_percent);
+        const supply_change = collateral_ctoken.convertTokensToUsd(amount_in).mul(supply_percent);
+        const borrow_change = debt_ctoken.convertTokensToUsd(amount_out).mul(borrow_percent);
 
         return {
             supply: {
