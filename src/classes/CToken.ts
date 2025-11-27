@@ -882,7 +882,6 @@ export class CToken extends Calldata<ICToken> {
 
         switch(type) {
             case 'simple':
-                const assets = this.convertTokenInput(depositAmount);
                 const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
                     signer.address as address,
                     borrow.asset.address,

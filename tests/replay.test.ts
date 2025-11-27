@@ -37,7 +37,7 @@ describe('Market Tests', () => {
                 const pluginAddr = WMON.getPluginAddress('simple', 'positionManager');
                 await WMON.approveUnderlying(null, pluginAddr);
                 await WMON.approvePlugin('simple', 'positionManager');
-                await WMON.depositAndLeverage(depositAmount, aprMON, depositAmount.mul(8.33), 'simple');
+                await WMON.depositAndLeverage(depositAmount, aprMON, depositAmount.mul(8.33), 'simple', Decimal(.9));
                 
             }   
             // for(const token of market.tokens) {

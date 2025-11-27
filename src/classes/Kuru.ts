@@ -41,6 +41,7 @@ export default class Kuru {
     static router = "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6" as address; // KuruFlowEntrypoint
     jwt: string | null = null;
     rps = 1;
+    dao = "0x0Acb7eF4D8733C719d60e0992B489b629bc55C02" as address;
 
     async loadJWT(wallet: string) {
         if(cached_jwt.has(wallet)) {
@@ -217,7 +218,7 @@ export default class Kuru {
             tokenIn: tokenIn,
             tokenOut: tokenOut,
             amount: amount,
-            referrerAddress: "0xBAaf22d2Bc4Ac001BBDDA7De73d3ae1bA71dfDDB",
+            referrerAddress: kuru.dao,
             referrerFeeBps: 10,
         };
 
