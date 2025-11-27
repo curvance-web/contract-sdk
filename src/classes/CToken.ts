@@ -107,9 +107,11 @@ export class CToken extends Calldata<ICToken> {
         if(isNativeVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && isNativeVault) this.leverageTypes.push('native-vault');
         if(isWrappedNative) this.zapTypes.push('native-simple');
-        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        
         // if(isVault) this.zapTypes.push('vault');
         // if("vaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('vault');
+
+        // if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
         // this.zapTypes.push('simple');
     }
 
