@@ -15,3 +15,4 @@ export * from './classes/Kuru';
 export * from './helpers';
 export * from './setup';
 export * from './types';
+export * from './retry-provider';

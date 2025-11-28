@@ -6,6 +6,7 @@ import { ProtocolReader } from "./classes/ProtocolReader";
 import { OracleManager } from "./classes/OracleManager";
 import Kuru from "./classes/Kuru";
 import KuruMainnet from "./classes/KuruMainnet";
+import { wrapProviderWithRetries } from "./retry-provider";
 
 export type IncentiveResponse = {
     market: address,
@@ -66,6 +67,8 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
     if(provider == null) {
         provider = chain_config[chain].provider!;
     }
+
+    provider = wrapProviderWithRetries(provider);
 
     setup_config = {
         chain,
