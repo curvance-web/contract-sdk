@@ -614,11 +614,14 @@ export class CToken extends Calldata<ICToken> {
 
     getZapBalance(zap: ZapperInstructions): Promise<bigint> {
         const signer = validateProviderAsSigner(this.provider);
-
         let asset: ERC20 | NativeToken;
 
         if(typeof zap === 'object') {
-            asset = new ERC20(this.provider, zap.inputToken);
+            if(zap.type === 'native-vault' || zap.type === 'native-simple') {
+                asset = new NativeToken(setup_config.chain, this.provider); 
+            } else {
+                asset = new ERC20(this.provider, zap.inputToken);
+            }
         } else {
             switch (zap) {
                 case 'none': asset = this.getAsset(true); break;
