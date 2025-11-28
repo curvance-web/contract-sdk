@@ -612,11 +612,28 @@ export class CToken extends Calldata<ICToken> {
         return tx;
     }
 
-    // TODO: Hack to remove
-    async ensureUnderlyingAmount(amount: TokenInput) {
+    getZapBalance(zap: ZapperInstructions): Promise<bigint> {
         const signer = validateProviderAsSigner(this.provider);
-        const asset = this.getAsset(true);
-        const balance = await asset.balanceOf(signer.address as address);
+
+        let asset: ERC20 | NativeToken;
+
+        if(typeof zap === 'object') {
+            asset = new ERC20(this.provider, zap.inputToken);
+        } else {
+            switch (zap) {
+                case 'none': asset = this.getAsset(true); break;
+                case 'native-vault': asset = new NativeToken(setup_config.chain, this.provider); break;
+                case 'native-simple': asset = new NativeToken(setup_config.chain, this.provider); break;
+                default: throw new Error("Unsupported zap type for balance fetch");
+            }
+        }
+        
+        return asset.balanceOf(signer.address as address, false);
+    }
+
+    // TODO: Hack to remove
+    async ensureUnderlyingAmount(amount: TokenInput, zap: ZapperInstructions) : Promise<TokenInput> {
+        const balance = await this.getZapBalance(zap);
 
         if(this.convertTokenInput(amount) > balance) {
             console.warn('[WARNING] Detected higher deposit amount then underlying balance, changing to the underlying balance. Diff: ', {
@@ -875,7 +892,7 @@ export class CToken extends Calldata<ICToken> {
         type: PositionManagerTypes,
         slippage_: TokenInput = Decimal(0.5)
     ) {
-        depositAmount = await this.ensureUnderlyingAmount(depositAmount);
+        depositAmount = await this.ensureUnderlyingAmount(depositAmount, 'none');
         const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
@@ -988,7 +1005,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async deposit(amount: TokenInput, zap: ZapperInstructions = 'none', receiver: address | null = null) {
-        amount = await this.ensureUnderlyingAmount(amount);
+        amount = await this.ensureUnderlyingAmount(amount, zap);
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
@@ -1009,7 +1026,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async depositAsCollateral(amount: Decimal, zap: ZapperInstructions = 'none',  receiver: address | null = null) {
-        amount = await this.ensureUnderlyingAmount(amount);
+        amount = await this.ensureUnderlyingAmount(amount, zap);
         const signer = validateProviderAsSigner(this.provider);
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);

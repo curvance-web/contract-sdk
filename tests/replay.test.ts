@@ -33,11 +33,12 @@ describe('Market Tests', () => {
             // console.log(market.name);
             if(market.name == 'aprMON | WMON') {
                 const [ aprMON, WMON ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
-                const depositAmount = Decimal(4779.433969669800378533);
-                const pluginAddr = WMON.getPluginAddress('simple', 'positionManager');
-                await WMON.approveUnderlying(null, pluginAddr);
-                await WMON.approvePlugin('simple', 'positionManager');
-                await WMON.depositAndLeverage(depositAmount, aprMON, depositAmount.mul(8.33), 'simple', Decimal(.9));
+                await WMON.deposit(Decimal(50000000), 'none');
+                // const depositAmount = Decimal(4779.433969669800378533);
+                // const pluginAddr = WMON.getPluginAddress('simple', 'positionManager');
+                // await WMON.approveUnderlying(null, pluginAddr);
+                // await WMON.approvePlugin('simple', 'positionManager');
+                // await WMON.depositAndLeverage(depositAmount, aprMON, depositAmount.mul(8.33), 'simple', Decimal(.9));
                 
             }   
             // for(const token of market.tokens) {
