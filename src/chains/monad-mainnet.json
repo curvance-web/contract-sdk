@@ -18,7 +18,7 @@
   "VaultAggregator-AUSD-sAUSD": "0x6b5a6A0DFA18B32081AAFFA6310cE221637b5d7D",
   "StaticPriceAggregator-loAZND": "0x6eCb16faf9b0c0F7098204e0FE685D2960b4C0Ba",
   "markets": {
-    "MUBOND | AUSD": {
+    "MUBOND → AUSD": {
       "address": "0x830D40CDFdc494BC1A2729a7381bfCe44326c944",
       "muBOND-DynamicIRM": "0x5b1d3a91457f7AD854a559dAACc0be18cD402D12",
       "tokens": {
@@ -30,7 +30,7 @@
       },
       "AUSD-DynamicIRM": "0x08DcB6Ad285217ef29816Ac0F813C21C54c48Cd5"
     },
-    "loAZND | AUSD": {
+    "loAZND → AUSD": {
       "address": "0x7C822B093A116654F824Ec2A35CD23a3749E4f90",
       "loAZND-DynamicIRM": "0x5d2b40E3e3FdCDEd15314290d4384D4D12044233",
       "tokens": {
@@ -39,7 +39,7 @@
       },
       "AUSD-DynamicIRM": "0xf4E19DEdB240FFd9ECEDbfad88A91C34aC3095AA"
     },
-    "ezETH | WETH": {
+    "ezETH → WETH": {
       "address": "0x83840d837E7A3E00bBb0B8501E60E989A8987c37",
       "ezETH-DynamicIRM": "0x28444Eb9FA9dDA1E6F3D240B2e06a453505e16E6",
       "tokens": {
@@ -51,7 +51,7 @@
       },
       "WETH-DynamicIRM": "0xf23d194e151069d09c927E8CD8ae3e14922F2a23"
     },
-    "shMON | WMON": {
+    "shMON → WMON": {
       "address": "0xE1C24B2E93230FBe33d32Ba38ECA3218284143e2",
       "shMON-DynamicIRM": "0x2C802F49fb5ce37D37E947D9b88B2A2Cea7A3C31",
       "tokens": {
@@ -64,7 +64,7 @@
       },
       "WMON-DynamicIRM": "0x963E8aFc1a60E470EB2381896F75853bF6C1FeD2"
     },
-    "aprMON | WMON": {
+    "aprMON → WMON": {
       "address": "0x5EA0a1Cf3501C954b64902c5e92100b8A2CaB1Ac",
       "aprMON-DynamicIRM": "0x0d44480D72B23D19673EEde88aEa03a119bc13f4",
       "tokens": {
@@ -77,7 +77,7 @@
       },
       "WMON-DynamicIRM": "0x309d475e84b7C99C98031006F491e20280a1A768"
     },
-    "sMON | WMON": {
+    "sMON → WMON": {
       "address": "0xe5970cDB1916B2cCF6185C86C174EEE2d330D05B",
       "sMON-DynamicIRM": "0x0db363a2eDB3Ac8F4CDdC174ff44B6dfd09A2FeF",
       "tokens": {
@@ -89,7 +89,7 @@
       },
       "WMON-DynamicIRM": "0x16cB8A09f2a17E30273b749ed178954FE63bb1BC"
     },
-    "sAUSD | AUSD": {
+    "sAUSD → AUSD": {
       "address": "0xBBE7A3c45aDBb16F6490767b663428c34aA341Eb",
       "sAUSD-DynamicIRM": "0xcf31332aB92953101B8E1af7Ca841f6426936da8",
       "tokens": {
@@ -102,7 +102,7 @@
       },
       "AUSD-DynamicIRM": "0x22dCF7dd5518F5F08ec05c59606d84698FFF07BB"
     },
-    "earnAUSD | AUSD": {
+    "earnAUSD → AUSD": {
       "address": "0xd6365555f6a697C7C295bA741100AA644cE28545",
       "earnAUSD-DynamicIRM": "0x346339e3Fbd21ed48ADDDE1523896c0d97cF1851",
       "tokens": {
@@ -114,7 +114,7 @@
       },
       "AUSD-DynamicIRM": "0x46e2bA1D6CFfB180Efa17d4D5A726b599ED8B904"
     },
-    "WMON | AUSD": {
+    "WMON ↔ AUSD": {
       "address": "0x05e70717fA8BD0F21a9F826d093d99f6Da4f1554",
       "WMON-DynamicIRM": "0xc17A271F79ac4449FaABeAf64E805BEE37B78DBd",
       "tokens": {
@@ -126,7 +126,7 @@
       },
       "AUSD-DynamicIRM": "0x72cb6a15E050427e1a6047614A47659A2C94d1bA"
     },
-    "WMON | USDC": {
+    "WMON ↔ USDC": {
       "address": "0xa6A2A92F126b79Ee0804845ee6B52899b4491093",
       "WMON-DynamicIRM": "0x50264B615175f8DBFFF417CF6D0003D2e77D87B4",
       "tokens": {
@@ -138,7 +138,7 @@
       },
       "USDC-DynamicIRM": "0x1622D77E311638C77779e6D9B212E3e7D73AaFB4"
     },
-    "WBTC | USDC": {
+    "WBTC ↔ USDC": {
       "address": "0x01C4a0d396EFE982B1B103BE9910321d34e1aEA9",
       "WBTC-DynamicIRM": "0x8a78Bd450258B7B1D42431fB904453cA43161AdE",
       "tokens": {
@@ -150,7 +150,7 @@
       },
       "USDC-DynamicIRM": "0x9F57957F2CA8d0DB433e4623f8bd248293b01e86"
     },
-    "WETH | USDC": {
+    "WETH ↔ USDC": {
       "address": "0xb3E9E0134354cc91b7FB9F9d6C3ab0dE7854BB49",
       "WETH-DynamicIRM": "0x8c82ccF6Ee43346425E04325Df03219cf46a7739",
       "tokens": {
