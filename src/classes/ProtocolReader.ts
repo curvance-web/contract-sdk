@@ -90,6 +90,7 @@ export interface UserMarketToken {
     userCollateral: bigint;
     exchangeRate: bigint;
     userDebt: bigint;
+    liquidationPrice: bigint;
 }
 
 export interface UserMarket {
@@ -249,7 +250,8 @@ export class ProtocolReader {
                     userUnderlyingBalance: BigInt(token.userUnderlyingBalance),
                     userCollateral: BigInt(token.userCollateral),
                     exchangeRate: BigInt(token.exchangeRate),
-                    userDebt: BigInt(token.userDebt)
+                    userDebt: BigInt(token.userDebt),
+                    liquidationPrice: BigInt(token.liquidationPrice)
                 }))
             }))
         };

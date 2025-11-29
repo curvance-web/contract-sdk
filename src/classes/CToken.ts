@@ -128,6 +128,7 @@ export class CToken extends Calldata<ICToken> {
     get exchangeRate() { return this.cache.exchangeRate; }
     get canZap() { return this.zapTypes.length > 0; }
     get canLeverage() { return this.leverageTypes.length > 0; }
+    get liquidationPrice(): USD { return toDecimal(this.cache.liquidationPrice, 18n); }
 
     getLeverage() {
         if(this.getUserCollateral(true).equals(0)) {

@@ -1485,6 +1485,11 @@
   },
   {
     "type": "error",
+    "name": "BaseCToken__InvariantError",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BaseCToken__TransferError",
     "inputs": []
   },
