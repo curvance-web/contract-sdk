@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps, NATIVE_ADDRESS } from "../helpers";
+import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps, NATIVE_ADDRESS, UINT256_MAX } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market, PluginTypes } from "./Market";
@@ -128,14 +128,18 @@ export class CToken extends Calldata<ICToken> {
     get exchangeRate() { return this.cache.exchangeRate; }
     get canZap() { return this.zapTypes.length > 0; }
     get canLeverage() { return this.leverageTypes.length > 0; }
-    get liquidationPrice(): USD { return toDecimal(this.cache.liquidationPrice, 18n); }
+    get liquidationPrice(): USD | null {
+        if (this.cache.liquidationPrice == UINT256_MAX) return null;
+        return toDecimal(this.cache.liquidationPrice, 18n); 
+    }
 
     getLeverage() {
         if(this.getUserCollateral(true).equals(0)) {
-            return Decimal(0);
+            return null;
         }
-        // return (this.getUserCollateral(true).add(this.market.userDebt)).div(this.getUserCollateral(true));
-        return this.getUserCollateral(true).div(this.getUserCollateral(true).sub(this.market.userDebt));
+        
+        const leverage = this.getUserCollateral(true).div(this.getUserCollateral(true).sub(this.market.userDebt));
+        return leverage.eq(1) ? null : leverage;
     }
 
     /** @returns Remaining Collateral cap */
@@ -752,7 +756,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     previewLeverageUp(newLeverage: Decimal, borrow: BorrowableCToken) {
-        if(newLeverage.lte(this.getLeverage())) {
+        if(this.getLeverage() == null || this.getLeverage() != null && newLeverage.lte(this.getLeverage() as Decimal)) {
             throw new Error("New leverage must be more than current leverage");
         }
 

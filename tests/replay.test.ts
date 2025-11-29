@@ -33,7 +33,7 @@ describe('Market Tests', () => {
             // console.log(market.name);
             if(market.name == 'MUBOND | AUSD') {
                 const [ muBOND, AUSD ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
-                console.log(muBOND.liquidationPrice, AUSD.liquidationPrice);
+                console.log(muBOND.liquidationPrice, AUSD.liquidationPrice, muBOND.getLeverage());
                 // const depositAmount = Decimal(4779.433969669800378533);
                 // const pluginAddr = WMON.getPluginAddress('simple', 'positionManager');
                 // await WMON.approveUnderlying(null, pluginAddr);
