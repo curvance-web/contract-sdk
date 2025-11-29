@@ -24,20 +24,16 @@ describe('Market Tests', () => {
     })
 
     test('test', async function() {
-        const test_wallet = "0x0e51C3deb7C6C72EE1BE5f17CC492c6515F00475";
+        const test_wallet = "0xe2165a834F93C39483123Ac31533780b9c679ed4";
         await provider.send("anvil_impersonateAccount", [test_wallet]);
         
         const impersonatedSigner = await provider.getSigner(test_wallet);
         const impCurvance = await setupChain('monad-mainnet', impersonatedSigner, true);
         for(const market of impCurvance.markets) {
             // console.log(market.name);
-            if(market.name == 'shMON | WMON') {
-                const [ shMON, WMON ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
-                await shMON.deposit(Decimal(9.72498804553), {
-                    type: "native-vault",
-                    inputToken: "0x1B68626dCa36c7fE922fD2d55E4f631d962dE19c",
-                    slippage: 50n
-                });
+            if(market.name == 'MUBOND | AUSD') {
+                const [ muBOND, AUSD ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
+                console.log(muBOND.liquidationPrice, AUSD.liquidationPrice);
                 // const depositAmount = Decimal(4779.433969669800378533);
                 // const pluginAddr = WMON.getPluginAddress('simple', 'positionManager');
                 // await WMON.approveUnderlying(null, pluginAddr);
