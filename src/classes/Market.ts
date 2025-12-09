@@ -660,10 +660,6 @@ export class Market {
 
             const market_address = staticData.address;
             let deploy_data: DeployData | undefined;
-
-            if(market_address == "0x83840d837E7A3E00bBb0B8501E60E989A8987c37") {
-                continue;
-            }
             
             for(const obj_key of deploy_keys) {
                 const data = (setup_config.contracts.markets as any)[obj_key];
