@@ -16,7 +16,17 @@ export type IncentiveResponse = {
     image: string
 };
 
-export type Milestones = { [key: string]: number };
+export type MilestoneResponse = {
+    market: address;
+    tvl: number;
+    multiplier: number;
+    fail_multiplier: number;
+    chain_network: string;
+    start_date: string;
+    end_date: string;
+    duration_in_days: number;
+}
+export type Milestones = { [key: string]: MilestoneResponse };
 export type Incentives = { [key: address]: Array<IncentiveResponse> };
 
 export let setup_config: {
@@ -92,12 +102,12 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
     let incentives: Incentives = {};
     if(setup_config.api_url != null) {
         const rewards = await fetch(`${setup_config.api_url}/v1/rewards/active/${chain}`).then(res => res.json()) as { 
-            milestones: Array<{ market: address, tvl: number }>
+            milestones: Array<MilestoneResponse>
             incentives: Array<IncentiveResponse>
         };
 
         for(const milestone of rewards.milestones) {
-            milestones[milestone.market] = milestone.tvl;
+            milestones[milestone.market] = milestone;
         }
 
         for(const incentive of rewards.incentives) {
