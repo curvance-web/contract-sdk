@@ -6,7 +6,7 @@ import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
 import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { OracleManager } from "./OracleManager";
-import { IncentiveResponse, Incentives, Milestones, setup_config } from "../setup";
+import { IncentiveResponse, Incentives, MilestoneResponse, Milestones, setup_config } from "../setup";
 import { BorrowableCToken } from "./BorrowableCToken";
 
 export type MarketToken = CToken | BorrowableCToken;
@@ -60,7 +60,7 @@ export class Market {
     oracle_manager: OracleManager;
     reader: ProtocolReader;
     cache: { static: StaticMarketData, dynamic: DynamicMarketData, user: UserMarket, deploy: DeployData };
-    milestone: number | null = null;
+    milestone: MilestoneResponse | null = null;
     incentives: Array<IncentiveResponse> = [];
 
     constructor(
@@ -699,7 +699,7 @@ export class Market {
 
             const market = new Market(provider, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
             if(milestones[market.address] != undefined) {
-                market.milestone = milestones[market.address] as number;
+                market.milestone = milestones[market.address];
             }
             if(incentives[market.address] != undefined) {
                 market.incentives = incentives[market.address]!;
