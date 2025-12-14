@@ -89,18 +89,6 @@
       },
       "WMON-DynamicIRM": "0x16cB8A09f2a17E30273b749ed178954FE63bb1BC"
     },
-    "gMON | WMON": {
-      "address": "0xb00aFF53a4Df2b4E2f97a3d9ffaDb55564C8E42F",
-      "gMON-DynamicIRM": "0x95DFba58340Ba7Cde59FB4D16EA85caDb4F83894",
-      "tokens": {
-        "gMON": "0x5ca6966543c0786f547446234492D2F11C82f11f",
-        "WMON": "0xf473568b26B8C5aadCa9fbC0eA17E1728d5ec925"
-      },
-      "plugins": {
-        "simplePositionManager": "0x0f0aF2a4fC128aE6a112FC3355BDD2C9f68dcD9b"
-      },
-      "WMON-DynamicIRM": "0x034Cb4152B6506c445f18d564b3Ce86B0DE05C7B"
-    },
     "sAUSD | AUSD": {
       "address": "0xBBE7A3c45aDBb16F6490767b663428c34aA341Eb",
       "sAUSD-DynamicIRM": "0xcf31332aB92953101B8E1af7Ca841f6426936da8",
@@ -173,7 +161,20 @@
         "simplePositionManager": "0x37f94A5C9F04399477D1dF851758c0E0348CB019"
       },
       "USDC-DynamicIRM": "0x034f1a014946Fe4d4ea3bD36A315F775a8C1aB26"
+    },
+    "gMON | WMON": {
+      "address": "0xb00aFF53a4Df2b4E2f97a3d9ffaDb55564C8E42F",
+      "gMON-DynamicIRM": "0x95DFba58340Ba7Cde59FB4D16EA85caDb4F83894",
+      "tokens": {
+        "gMON": "0x5ca6966543c0786f547446234492D2F11C82f11f",
+        "WMON": "0xf473568b26B8C5aadCa9fbC0eA17E1728d5ec925"
+      },
+      "plugins": {
+        "simplePositionManager": "0x0f0aF2a4fC128aE6a112FC3355BDD2C9f68dcD9b"
+      },
+      "WMON-DynamicIRM": "0x034Cb4152B6506c445f18d564b3Ce86B0DE05C7B"
     }
   },
-  "ProtocolReader": "0xBF67b967eCcf21f2C196f947b703e874D5dB649d"
+  "ProtocolReader": "0x2c7362150c3fdF1F4f41cA4da0F06d214fa48419",
+  "CombinedAggregator-ezETH": "0xd5F84C4497621768f3F08b65ad7019BdF183b1fd"
 }

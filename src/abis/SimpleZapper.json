@@ -456,6 +456,17 @@
   },
   {
     "type": "error",
+    "name": "SwapperLib__Slippage",
+    "inputs": [
+      {
+        "name": "slippage",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "SwapperLib__UnknownCalldata",
     "inputs": []
   }
