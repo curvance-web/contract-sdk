@@ -699,7 +699,7 @@ export class Market {
 
             const market = new Market(provider, staticData, dynamicData, userData, deploy_data, oracle_manager, reader);
             if(milestones[market.address] != undefined) {
-                market.milestone = milestones[market.address];
+                market.milestone = milestones[market.address]!;
             }
             if(incentives[market.address] != undefined) {
                 market.incentives = incentives[market.address]!;
