@@ -224,7 +224,7 @@ export class Market {
         const users_market_collateral = this.userCollateral;
 
         for(const token of this.tokens) {
-            if(token.isBorrowable) {
+            if(token.isBorrowable && token.getDebtCap(true).greaterThan(0)) {
                 if(token.getUserCollateral(false).greaterThan(0) || users_market_collateral.lessThanOrEqualTo(0)) {
                     result.ineligible.push(token as BorrowableCToken);
                 } else {
