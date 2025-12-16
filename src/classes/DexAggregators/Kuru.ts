@@ -1,9 +1,10 @@
 import Decimal from "decimal.js";
-import { address, curvance_provider, TokenInput } from "../types";
-import { ERC20 } from "./ERC20";
-import { toBigInt, toDecimal, validateProviderAsSigner, WAD } from "../helpers";
-import { ZapToken } from "./CToken";
-import { Swap } from "./Zapper";
+import { address, bytes, curvance_provider, TokenInput } from "../../types";
+import { ERC20 } from "../ERC20";
+import { toBigInt, toDecimal, validateProviderAsSigner, WAD } from "../../helpers";
+import { ZapToken } from "../CToken";
+import { Swap } from "../Zapper";
+import IDexAgg from "./IDexAgg";
 
 interface KuruJWTResponse {
     token: string;
@@ -36,17 +37,29 @@ interface KuruQuoteResponse {
 const cached_jwt = new Map<string, KuruJWTResponse>();
 const cached_requests = new Map<string, number[]>();
 
-export default class Kuru {
-    api = "https://ws.staging.kuru.io/api"
-    static router = "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6" as address; // KuruFlowEntrypoint
+export class Kuru implements IDexAgg {
+    api: string;
+    router: address;
     jwt: string | null = null;
-    rps = 1;
-    dao = "0x0Acb7eF4D8733C719d60e0992B489b629bc55C02" as address;
+    rps: number;
+    dao: address;
+
+    constructor(
+        dao: address = "0x0Acb7eF4D8733C719d60e0992B489b629bc55C02", 
+        rps: number = 1, 
+        router: address = "0xb3e6778480b2E488385E8205eA05E20060B813cb", 
+        apiUrl: string = "https://ws.kuru.io/api"
+    ) {
+        this.api = apiUrl;
+        this.router = router;
+        this.rps = rps;
+        this.dao = dao;
+    }
 
     async loadJWT(wallet: string) {
         if(cached_jwt.has(wallet)) {
             const cached = cached_jwt.get(wallet)!;
-            const currentTime = Kuru.getCurrentTime();
+            const currentTime = this.getCurrentTime();
 
             if(cached.expires_at > currentTime) {
                 this.jwt = cached.token;
@@ -80,7 +93,7 @@ export default class Kuru {
     }
 
     async rateLimitSleep(wallet: string) {
-        const now = Kuru.getCurrentTime();
+        const now = this.getCurrentTime();
         const requests = cached_requests.get(wallet) || [];
         const windowStart = now - 2;
 
@@ -92,7 +105,7 @@ export default class Kuru {
         }
     }
 
-    static async getAvailableTokens(provider: curvance_provider, query: string | null = null) {
+    async getAvailableTokens(provider: curvance_provider, query: string | null = null) {
         const signer = validateProviderAsSigner(provider);
 
         const userAddress = signer.address;
@@ -160,13 +173,12 @@ export default class Kuru {
             tokens.push({
                 interface: erc20,
                 type: 'simple',
-                quote: async(tokenIn: string, tokenOut: string, amount: TokenInput, slippageTolerance: bigint | null = null) => {
+                quote: async(tokenIn: string, tokenOut: string, amount: TokenInput, slippage: bigint) => {
                     const raw_amount = toBigInt(amount, 18n);
-                    const data = await Kuru.quote(signer.address, tokenIn, tokenOut, raw_amount.toString(), slippageTolerance);
+                    const data = await this.quote(signer.address, tokenIn, tokenOut, raw_amount, slippage);
                     return {
-                        output: toDecimal(BigInt(data.output ?? 0), BigInt(token.decimals ?? 18)),
-                        minOut: toDecimal(BigInt(data.minOut ?? 0), BigInt(token.decimals ?? 18)),
-                        max_slippage: data.max_slippage
+                        out: toDecimal(BigInt(data.out ?? 0), BigInt(token.decimals ?? 18)),
+                        min_out: toDecimal(BigInt(data.min_out ?? 0), BigInt(token.decimals ?? 18)),
                     };
                 }
             });
@@ -176,33 +188,32 @@ export default class Kuru {
     }
 
     // Get current time in seconds
-    static getCurrentTime() {
+    getCurrentTime() {
         return Math.floor(Date.now() / 1000);
     }
 
-    static async quoteAction(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
-        const quote = await Kuru.quote(wallet, tokenIn, tokenOut, amount, slippageTolerance);
+    async quoteAction(wallet: string, tokenIn: string, tokenOut: string, amount: bigint, slippage: bigint) {
+        const quote = await this.quote(wallet, tokenIn, tokenOut, amount, slippage);
         const action = {
             inputToken: tokenIn,
             inputAmount: BigInt(amount),
             outputToken: tokenOut,
-            target: quote.transaction.to,
-            slippage: slippageTolerance ?? 0n,
-            call: `0x${quote.transaction.calldata}`
+            target: quote.to,
+            slippage: slippage ?? 0n,
+            call: quote.calldata
         } as Swap;
 
         return { action, quote };
     }
 
-    static async quoteMin(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
-        const quote = await Kuru.quote(wallet, tokenIn, tokenOut, amount, slippageTolerance);
-        return quote.minOut;
+    async quoteMin(wallet: string, tokenIn: string, tokenOut: string, amount: bigint, slippage: bigint) {
+        const quote = await this.quote(wallet, tokenIn, tokenOut, amount, slippage);
+        return quote.out;
     }
 
-    static async quote(wallet: string, tokenIn: string, tokenOut: string, amount: string, slippageTolerance: bigint | null = null) {
-        const kuru = new this();
-        await kuru.loadJWT(wallet);
-        await kuru.rateLimitSleep(wallet);
+    async quote(wallet: string, tokenIn: string, tokenOut: string, amount: bigint, slippage: bigint) {
+        await this.loadJWT(wallet);
+        await this.rateLimitSleep(wallet);
 
         const payload: {
             userAddress: string;
@@ -217,23 +228,18 @@ export default class Kuru {
             userAddress: wallet,
             tokenIn: tokenIn,
             tokenOut: tokenOut,
-            amount: amount,
-            referrerAddress: kuru.dao,
+            amount: amount.toString(),
+            referrerAddress: this.dao,
             referrerFeeBps: 10,
+            slippage_tolerance: Number(slippage)
         };
 
-        if(!slippageTolerance) {
-            payload.autoSlippage = true;
-        } else {
-            payload.slippage_tolerance = Number(slippageTolerance);
-        }
-
-        cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(Kuru.getCurrentTime()));
-        const resp = await fetch(`${kuru.api}/quote`, {
+        cached_requests.set(wallet, (cached_requests.get(wallet) || []).concat(this.getCurrentTime()));
+        const resp = await fetch(`${this.api}/quote`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${kuru.jwt}`
+                "Authorization": `Bearer ${this.jwt}`
             },
             body: JSON.stringify(payload),
         });
@@ -245,12 +251,14 @@ export default class Kuru {
         const data = await resp.json() as KuruQuoteResponse;
 
         return {
-            ...data,
-            max_slippage: Kuru.getSlippage(BigInt(data.output ?? 0), BigInt(data.minOut ?? 0))
+            to: data.transaction.to as address,
+            calldata: `0x${data.transaction.calldata}` as bytes,
+            min_out: BigInt(data.minOut),
+            out: BigInt(data.output)
         };
     }
 
-    static getSlippage(output: bigint, min_output: bigint) {
+    private getSlippage(output: bigint, min_output: bigint) {
         const diff = output - min_output;
         const decimal = Decimal(diff).div(output).mul(100);
         return decimal ?? Decimal(100);

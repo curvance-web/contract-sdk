@@ -31,17 +31,16 @@ export interface MulticallAction {
 export interface ZapToken {
     interface: NativeToken | ERC20;
     type: ZapperTypes;
-    quote?: (tokenIn: string, tokenOut: string, amount: TokenInput) => Promise<{
-        output: TokenInput,
-        minOut: TokenInput,
-        max_slippage: Decimal;
+    quote?: (tokenIn: string, tokenOut: string, amount: TokenInput, slippage: bigint) => Promise<{
+        out: TokenInput,
+        min_out: TokenInput
     }>;
 }
 
 export type ZapperInstructions =  'none' | 'native-vault' | 'vault' | 'native-simple' | {
     type: ZapperTypes;
     inputToken: address;
-    slippage?: bigint;
+    slippage: bigint;
 }
 
 export interface ICToken {
@@ -801,7 +800,7 @@ export class CToken extends Calldata<ICToken> {
                     signer.address as address,
                     borrow.asset.address,
                     this.asset.address,
-                    borrow.convertTokenInput(borrowAmount, false).toString(),
+                    borrow.convertTokenInput(borrowAmount, false),
                     slippage
                 );
 
@@ -810,7 +809,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets    : borrow.convertTokenInput(borrowAmount),
                         cToken          : this.address,
-                        expectedShares  : BigInt(quote.minOut),
+                        expectedShares  : BigInt(quote.min_out),
                         swapAction      : action,
                         auxData         : "0x",
                     },
@@ -866,10 +865,10 @@ export class CToken extends Calldata<ICToken> {
                     signer.address,
                     this.asset.address,
                     borrowToken.asset.address,
-                    collateralAssetReduction.toString(),
+                    collateralAssetReduction,
                     slippage
                 );
-                const minRepay = leverageDiff.equals(1) ? 0 : quote.minOut;
+                const minRepay = leverageDiff.equals(1) ? 0 : quote.min_out;
 
                 calldata = manager.getDeleverageCalldata({
                     cToken: this.address,
@@ -913,7 +912,7 @@ export class CToken extends Calldata<ICToken> {
                     signer.address as address,
                     borrow.asset.address,
                     this.asset.address,
-                    borrow.convertTokenInput(borrowAmount).toString(),
+                    borrow.convertTokenInput(borrowAmount),
                     slippage
                 );
                 
@@ -923,7 +922,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets: borrow.convertTokenInput(borrowAmount),
                         cToken: this.address,
-                        expectedShares: BigInt(quote.minOut),
+                        expectedShares: BigInt(quote.min_out),
                         swapAction: action,
                         auxData: "0x",
                     },
@@ -969,12 +968,12 @@ export class CToken extends Calldata<ICToken> {
     async zap(assets: bigint, zap: ZapperInstructions, collateralize = false, default_calldata : bytes) {
         let calldata: bytes;
         let calldata_overrides = {};
-        let slippage: bigint | null = null;
+        let slippage: bigint = 0n;
         let inputToken: address | null = null;
         let type_of_zap: ZapperTypes;
 
         if(typeof zap == 'object') {
-            slippage = zap.slippage ?? null;
+            slippage = zap.slippage;
             inputToken = zap.inputToken;
             type_of_zap = zap.type;
         } else {

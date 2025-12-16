@@ -4,3 +4,4 @@ dist
 output
 storage
 diff.diff
+test.ts

@@ -53,25 +53,25 @@ export class Zapper extends Calldata<IZapper> {
         return this.executeCallData(calldata, { value: amount });
     }
 
-    async simpleZap(ctoken: CToken, inputToken: address, outputToken: address,  amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
+    async simpleZap(ctoken: CToken, inputToken: address, outputToken: address,  amount: bigint, collateralize: boolean, slippage: bigint) {
         const calldata = await this.getSimpleZapCalldata(ctoken, inputToken, outputToken, amount, collateralize, slippage);
         return this.executeCallData(calldata);
     }
 
-    async getSimpleZapCalldata(ctoken: CToken, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint | null = null) {
+    async getSimpleZapCalldata(ctoken: CToken, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint) {
         const config = getChainConfig();
-        const quote = await config.dexAgg.quote(this.provider.address, inputToken, outputToken, amount.toString(), slippage);
+        const quote = await config.dexAgg.quote(this.provider.address, inputToken, outputToken, amount, slippage);
 
         const swap: Swap = {
             inputToken: inputToken,
             inputAmount: amount,
             outputToken: outputToken,
             target: config.dexAgg.router,
-            slippage: BigInt(Math.floor(quote.max_slippage.mul(100).toNumber())),
-            call: `0x${quote.transaction.calldata}` as bytes
+            slippage: slippage,
+            call: `0x${quote.calldata}` as bytes
         };
 
-        const expected_shares = await ctoken.convertToShares(BigInt(quote.minOut));
+        const expected_shares = await ctoken.convertToShares(BigInt(quote.min_out));
 
         return this.getCallData("swapAndDeposit", [
             ctoken.address,

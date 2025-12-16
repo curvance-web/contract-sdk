@@ -4,9 +4,8 @@ import { Market } from "./classes/Market";
 import { address, curvance_provider } from './types';
 import { ProtocolReader } from "./classes/ProtocolReader";
 import { OracleManager } from "./classes/OracleManager";
-import Kuru from "./classes/Kuru";
-import KuruMainnet from "./classes/KuruMainnet";
 import { wrapProviderWithRetries } from "./retry-provider";
+import { Kuru } from "./classes/DexAggregators/Kuru";
 
 export type IncentiveResponse = {
     market: address,
@@ -38,7 +37,7 @@ export let setup_config: {
 };
 
 const monad_mainnet_config = {
-    dexAgg: KuruMainnet,
+    dexAgg: new Kuru(),
     provider: new JsonRpcProvider("https://rpc-mainnet.monadinfra.com/rpc/yXdhejk7tio3mpBmpTyzQCdIQjDXsuAk"),
     native_symbol: 'MON',
     wrapped_native: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A" as address,
@@ -53,7 +52,12 @@ const monad_mainnet_config = {
 };
 export const chain_config = {
     'monad-testnet': {
-        dexAgg: Kuru,
+        dexAgg: new Kuru(
+            "0x0Acb7eF4D8733C719d60e0992B489b629bc55C02",
+            1,
+            "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6",
+            "https://ws.staging.kuru.io/api"
+        ),
         provider: new JsonRpcProvider("https://rpc.ankr.com/monad_testnet"),
         native_symbol: 'MON',
         wrapped_native: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" as address,
