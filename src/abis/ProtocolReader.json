@@ -688,6 +688,11 @@
                 "internalType": "uint256"
               },
               {
+                "name": "maxLeverage",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
                 "name": "collReqSoft",
                 "type": "uint256",
                 "internalType": "uint256"
@@ -1142,6 +1147,11 @@
         "name": "account",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "isAuction",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "outputs": [

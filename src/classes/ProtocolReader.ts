@@ -42,6 +42,7 @@ export interface StaticMarketToken {
     debtCap: bigint;
     isListed: boolean;
     collRatio: TypeBPS;
+    maxLeverage: TypeBPS;
     collReqSoft: TypeBPS;
     collReqHard: TypeBPS;
     liqIncBase: TypeBPS;
@@ -317,6 +318,7 @@ export class ProtocolReader {
                 debtCap: BigInt(token.debtCap),
                 isListed: token.isListed,
                 collRatio: BigInt(token.collRatio),
+                maxLeverage: BigInt(token.maxLeverage),
                 collReqSoft: BigInt(token.collReqSoft),
                 collReqHard: BigInt(token.collReqHard),
                 liqIncBase: BigInt(token.liqIncBase),

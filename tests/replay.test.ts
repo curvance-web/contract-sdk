@@ -30,17 +30,24 @@ describe('Market Tests', () => {
         const impersonatedSigner = await provider.getSigner(test_wallet);
         const impCurvance = await setupChain('monad-mainnet', impersonatedSigner, true);
         for(const market of impCurvance.markets) {
+
+            const [ tokenA, tokenB ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
+            console.log('--- ', market.name, ' ---');
+            console.log(`${tokenA.symbol}: ${tokenA.maxLeverage}x`);
+            console.log(`${tokenB.symbol}: ${tokenB.maxLeverage}x`);
+
             // console.log(market.name);
-            if(market.name == 'MUBOND | AUSD') {
-                const [ muBOND, AUSD ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
-                console.log(muBOND.liquidationPrice, AUSD.liquidationPrice, muBOND.getLeverage());
+            // if(market.name == 'MUBOND | AUSD') {
+            //     const [ muBOND, AUSD ] = market.tokens as [ BorrowableCToken, BorrowableCToken ];
+            //     console.log(muBOND.maxLeverage, AUSD.maxLeverage);
+            //     console.log(muBOND.liquidationPrice, AUSD.liquidationPrice, muBOND.getLeverage());
                 // const depositAmount = Decimal(4779.433969669800378533);
                 // const pluginAddr = WMON.getPluginAddress('simple', 'positionManager');
                 // await WMON.approveUnderlying(null, pluginAddr);
                 // await WMON.approvePlugin('simple', 'positionManager');
                 // await WMON.depositAndLeverage(depositAmount, aprMON, depositAmount.mul(8.33), 'simple', Decimal(.9));
                 
-            }   
+            // }   
             // for(const token of market.tokens) {
             //     console.log(token.symbol, token.getLeverage(), token.getUserCollateral(true), token.getUserDebt(true));
             // }

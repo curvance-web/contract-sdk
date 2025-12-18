@@ -175,6 +175,7 @@
       "WMON-DynamicIRM": "0x034Cb4152B6506c445f18d564b3Ce86B0DE05C7B"
     }
   },
-  "ProtocolReader": "0x2c7362150c3fdF1F4f41cA4da0F06d214fa48419",
-  "CombinedAggregator-ezETH": "0xd5F84C4497621768f3F08b65ad7019BdF183b1fd"
+  "ProtocolReader": "0x878cDfc2F3D96a49A5CbD805FAF4F3080768a6d2",
+  "CombinedAggregator-ezETH": "0xd5F84C4497621768f3F08b65ad7019BdF183b1fd",
+  "CombinedAggregator-earnAUSD": "0xf80CC9965d260d7cD96E41b9734F031279dCDf2f"
 }
