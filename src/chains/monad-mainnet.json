@@ -7,13 +7,13 @@
     "RedstoneCoreAdaptor": "0x1779e22c746b3CA505FfA636F96c4E0916D616d8"
   },
   "calldataCheckers": {
-    "KuruRouterChecker": "0xe99424bf14ad76e3304214129100a55b7730b8fd",
-    "RedstoneAdaptorMulticallChecker": "0x75c30005f479307D743753F8604A847fFFe01a04"
+    "RedstoneAdaptorMulticallChecker": "0x75c30005f479307D743753F8604A847fFFe01a04",
+    "KyberSwapChecker": "0x206639D34bB079C1AD334c958c3ED3feC85Fbfff"
   },
   "zappers": {
-    "nativeVaultZapper": "0x1D60A3F3f84F095b3D6001fbc135F6D42c812269",
-    "vaultZapper": "0x6A6A087EEC9333ACc0A71782daF2ce9fc229D145",
-    "simpleZapper": "0x5af9b7cAc0530d3C9e11C23B7A69Cce335B8C395"
+    "nativeVaultZapper": "0xbfE3612D3Db96dc58F2210e2e7FDfe9F4B8c5Ec0",
+    "vaultZapper": "0x9cb6cc5029c23140662636A50c4E8Dc618cC13F1",
+    "simpleZapper": "0x91da3583924263ee0da81a06d01946E95FFFB22E"
   },
   "VaultAggregator-AUSD-sAUSD": "0x73Af3E1848636D4DE6A61050D5487d6f09A7A1Be",
   "StaticPriceAggregator-loAZND": "0x6eCb16faf9b0c0F7098204e0FE685D2960b4C0Ba",
