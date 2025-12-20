@@ -1,4 +1,4 @@
-import { JsonRpcProvider } from "ethers";
+import { ethers, JsonRpcProvider } from "ethers";
 import { getTestSetup, NonceManagerSigner, setNativeBalance } from "./helper";
 import { address, BorrowableCToken, ChainRpcPrefix, curvance_signer, ERC20, Market, setupChain } from "../../src";
 import Decimal from "decimal.js";
@@ -56,6 +56,32 @@ export class TestFramework {
         this.provider = setup.provider;
         this.signer = setup.signer;
         this.curvance = await setupChain(this.chain, this.signer, true);
+    }
+
+    async skipMarketCooldown(market: address, account?: address | undefined) {
+        const ACCOUNT_ASSETS_SLOT = 2;
+        const COOLDOWN_TIMESTAMP_OFFSET = 0;
+
+        account = account || this.account;
+        const getStorageSlot = () => {
+            const mappingSlot = ethers.keccak256(
+                ethers.AbiCoder.defaultAbiCoder().encode(
+                    ['address', 'uint256'], 
+                    [account, ACCOUNT_ASSETS_SLOT]
+                )
+            );
+
+            const cooldownTimestampSlot = BigInt(mappingSlot) + BigInt(COOLDOWN_TIMESTAMP_OFFSET);
+            return ethers.toQuantity(cooldownTimestampSlot);
+        }
+
+        const slot = getStorageSlot();
+        const value = "0x0000000000000000000000000000000000000000000000000000000000000000"; // 0 timestamp
+        await this.provider.send("anvil_setStorageAt", [
+            market,
+            slot,
+            value
+        ]);
     }
 
     async seedLiquidity() {

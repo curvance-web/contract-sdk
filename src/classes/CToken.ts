@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps, NATIVE_ADDRESS, UINT256_MAX } from "../helpers";
+import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps, NATIVE_ADDRESS, UINT256_MAX, fromBpsToWad } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market, PluginTypes } from "./Market";
@@ -841,7 +841,7 @@ export class CToken extends Calldata<ICToken> {
                         swapAction      : action,
                         auxData         : "0x",
                     },
-                    slippage * WAD);
+                    fromBpsToWad(slippage));
                 break;
             }
 
@@ -855,7 +855,7 @@ export class CToken extends Calldata<ICToken> {
                         swapAction      : PositionManager.emptySwapAction(),
                         auxData         : "0x",
                     },
-                    slippage * WAD);
+                    fromBpsToWad(slippage));
                 break;
             }
 
@@ -906,7 +906,7 @@ export class CToken extends Calldata<ICToken> {
                     repayAssets: BigInt(minRepay),
                     swapActions: [ action ],
                     auxData: "0x",
-                }, slippage * WAD);
+                }, fromBpsToWad(slippage));
 
                 break;
             }
@@ -956,7 +956,7 @@ export class CToken extends Calldata<ICToken> {
                         swapAction: action,
                         auxData: "0x",
                     },
-                    slippage * WAD);
+                    fromBpsToWad(slippage));
                 break;
                 
             case 'native-vault': {
@@ -977,7 +977,7 @@ export class CToken extends Calldata<ICToken> {
                         },
                         auxData: "0x",
                     },
-                    slippage * WAD);
+                    fromBpsToWad(slippage));
                 break;
             }
 

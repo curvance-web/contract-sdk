@@ -3,6 +3,7 @@ import { address, bytes, curvance_provider } from "../../types";
 import { ZapToken } from "../CToken";
 import IDexAgg from "./IDexAgg";
 import { Swap } from "../Zapper";
+import { fromBpsToWad, WAD } from "../..";
 
 export interface KyperSwapErrorResponse {
     code: number;
@@ -115,7 +116,7 @@ export class KyberSwap implements IDexAgg {
             inputAmount: BigInt(amount),
             outputToken: tokenOut,
             target: quote.to,
-            slippage: slippage ?? 0n,
+            slippage: slippage ? fromBpsToWad(slippage) : 0n,
             call: quote.calldata
         } as Swap;
 

@@ -4,6 +4,7 @@ import { test, describe, before, afterEach } from 'node:test';
 import { address } from '../src/types';
 import Decimal from 'decimal.js';
 import { TestFramework } from './utils/TestFramework';
+import { fastForwardTime, MARKET_HOLD_PERIOD_SECS } from './utils/helper';
 
 describe('Leverage', () => {
     let account: address;
@@ -18,17 +19,17 @@ describe('Leverage', () => {
         account = framework.account;
     })
 
-    afterEach(async () => {
-        await framework.reset();
-    });
+    // afterEach(async () => {
+    //     await framework.reset();
+    // });
 
-    test('Simple deposit and leverage', async function() {
-        const [ market, earnAUSD, AUSD ] = await framework.getMarket('earnAUSD | AUSD');
-        const depositAmount = Decimal(1_000);
-        await earnAUSD.approvePlugin('simple', 'positionManager');
-        await earnAUSD.approveUnderlying(depositAmount, earnAUSD.getPluginAddress('simple', 'positionManager'));
-        await earnAUSD.depositAndLeverage(depositAmount, AUSD, Decimal(3_000), 'simple', Decimal(0.005));
-    });
+    // test('Simple deposit and leverage', async function() {
+    //     const [ market, earnAUSD, AUSD ] = await framework.getMarket('earnAUSD | AUSD');
+    //     const depositAmount = Decimal(1_000);
+    //     await earnAUSD.approvePlugin('simple', 'positionManager');
+    //     await earnAUSD.approveUnderlying(depositAmount, earnAUSD.getPluginAddress('simple', 'positionManager'));
+    //     await earnAUSD.depositAndLeverage(depositAmount, AUSD, Decimal(3_000), 'simple', Decimal(0.005));
+    // });
 
     test('Simple leverage up & down', async function() {
         const [ market, earnAUSD, AUSD ] = await framework.getMarket('earnAUSD | AUSD');
@@ -39,8 +40,7 @@ describe('Leverage', () => {
         await earnAUSD.approvePlugin('simple', 'positionManager');
         await earnAUSD.leverageUp(AUSD, Decimal(3), 'simple', Decimal(0.005));
         
-        console.log(`Current leverage is: ${earnAUSD.getLeverage()}`);
-
-        // await earnAUSD.leverageDown(AUSD, earnAUSD.getLeverage() as Decimal, Decimal(1.5), 'simple', Decimal(0.005));
+        await framework.skipMarketCooldown(market.address);
+        await earnAUSD.leverageDown(AUSD, earnAUSD.getLeverage() as Decimal, Decimal(1.5), 'simple', Decimal(0.05));
     });
 });

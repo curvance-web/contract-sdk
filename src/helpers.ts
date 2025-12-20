@@ -55,6 +55,10 @@ export function toBps(value: Percentage): bigint {
     return BigInt(value.mul(Decimal(BPS)).toFixed(0));
 }
 
+export function fromBpsToWad(value: bigint): bigint {
+    return (value * WAD) / BPS;
+}
+
 export function toBigInt(value: number | Decimal, decimals: bigint): bigint {
     if(Decimal.isDecimal(value)) {
         const scaled = value.mul(Decimal(10).pow(decimals));
