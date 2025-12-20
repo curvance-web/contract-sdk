@@ -85,7 +85,7 @@ export class KyberSwap implements IDexAgg {
 
     constructor(
         dao: address = "0x0Acb7eF4D8733C719d60e0992B489b629bc55C02",
-        router: address = "0x00", // TODO: Replace with actual KyberSwap router address 
+        router: address = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
         chain: string = "monad-mainnet",
         api: string = "https://aggregator-api.kyberswap.com"
     ) {
@@ -175,10 +175,9 @@ export class KyberSwap implements IDexAgg {
         // I need to figure out what min_out is by applying the slippage which is in bps to build_data.amountOut
         const min_out = BigInt(build_data.data.amountOut) * BigInt(10000n - slippage) / BigInt(10000);
 
-        // TODO: Uncomment once we have deployed calldata checker and are supporting the address
-        // if(build_data.data.routerAddress != this.router) {
-        //     throw new Error(`KyberSwap returned unexpected router address: ${build_data.data.routerAddress}`);
-        // }
+        if(build_data.data.routerAddress != this.router) {
+            throw new Error(`KyberSwap returned unexpected router address: ${build_data.data.routerAddress}`);
+        }
 
         return {
             to: build_data.data.routerAddress as address,

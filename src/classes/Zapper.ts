@@ -68,7 +68,7 @@ export class Zapper extends Calldata<IZapper> {
             outputToken: outputToken,
             target: config.dexAgg.router,
             slippage: slippage,
-            call: `0x${quote.calldata}` as bytes
+            call: quote.calldata
         };
 
         const expected_shares = await ctoken.convertToShares(BigInt(quote.min_out));

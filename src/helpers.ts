@@ -52,7 +52,7 @@ export function toDecimal(value: bigint, decimals: bigint): Decimal {
 }
 
 export function toBps(value: Percentage): bigint {
-    return BigInt(value.mul(Decimal(10_000)).toFixed(0));
+    return BigInt(value.mul(Decimal(BPS)).toFixed(0));
 }
 
 export function toBigInt(value: number | Decimal, decimals: bigint): bigint {

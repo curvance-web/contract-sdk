@@ -13,6 +13,7 @@ import { chain_config, setup_config } from "../setup";
 import { PositionManager, PositionManagerTypes } from "./PositionManager";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { NativeToken } from "./NativeToken";
+import { ERC4626 } from "./ERC4626";
 
 export interface AccountSnapshot {
     asset: address;
@@ -40,7 +41,7 @@ export interface ZapToken {
 export type ZapperInstructions =  'none' | 'native-vault' | 'vault' | 'native-simple' | {
     type: ZapperTypes;
     inputToken: address;
-    slippage: bigint;
+    slippage: Percentage;
 }
 
 export interface ICToken {
@@ -84,6 +85,9 @@ export class CToken extends Calldata<ICToken> {
     market: Market;
     zapTypes: ZapperTypes[] = [];
     leverageTypes: string[] = [];
+    isVault: boolean = false;
+    isNativeVault: boolean = false;
+    isWrappedNative: boolean = false;
 
     constructor(
         provider: curvance_provider,
@@ -99,19 +103,19 @@ export class CToken extends Calldata<ICToken> {
         this.market = market;
 
         const chain_config = getChainConfig();
-        const isNativeVault = chain_config.native_vaults.some(vault => vault.contract == this.asset.address);
-        // const isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
-        const isWrappedNative = chain_config.wrapped_native == this.asset.address;
+        this.isNativeVault = chain_config.native_vaults.some(vault => vault.contract == this.asset.address);
+        this.isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
+        this.isWrappedNative = chain_config.wrapped_native == this.asset.address;
 
-        if(isNativeVault) this.zapTypes.push('native-vault');
-        if("nativeVaultPositionManager" in this.market.plugins && isNativeVault) this.leverageTypes.push('native-vault');
-        if(isWrappedNative) this.zapTypes.push('native-simple');
+        if(this.isNativeVault) this.zapTypes.push('native-vault');
+        if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
+        if(this.isWrappedNative) this.zapTypes.push('native-simple');
         
-        // if(isVault) this.zapTypes.push('vault');
-        // if("vaultPositionManager" in this.market.plugins && isVault) this.leverageTypes.push('vault');
+        if(this.isVault) this.zapTypes.push('vault');
+        if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
 
-        // if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
-        // this.zapTypes.push('simple');
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -324,6 +328,17 @@ export class CToken extends Calldata<ICToken> {
         return Decimal(this.cache.collRatio).div(BPS) as Percentage;
     }
 
+    async getVaultAsset(asErc20: true): Promise<ERC20>;
+    async getVaultAsset(asErc20: false): Promise<address>;
+    async getVaultAsset(asErc20: boolean) {
+        if(!this.isVault) {
+            throw new Error("CToken does not use a vault asset as its underlying asset");
+        }
+
+        const erc4626 = new ERC4626(this.provider, this.getAsset(false));
+        return erc4626.fetchAsset(asErc20);
+    }
+
     getAsset(asErc20: true): ERC20;
     getAsset(asErc20: false): address;
     getAsset(asErc20: boolean) {
@@ -414,11 +429,12 @@ export class CToken extends Calldata<ICToken> {
         const plugin = this.getPluginAddress(instructions.type, 'zapper');
 
         const allowance = await asset.allowance(signer.address as address, plugin!);
+        console.log('Allowance', {addresss: asset.address, allowance, owner: signer.address, spender: plugin });
         const isApproved = allowance >= amount;
 
         if(!isApproved) {
             const symbol = await asset.fetchSymbol();
-            throw new Error(`Plugin needs to be approved for the asset: ${symbol}`);
+            throw new Error(`Plugin(${plugin}) needs to be approved for the asset: ${symbol}`);
         }
 
         return isApproved;
@@ -617,7 +633,7 @@ export class CToken extends Calldata<ICToken> {
         return tx;
     }
 
-    getZapBalance(zap: ZapperInstructions): Promise<bigint> {
+    async getZapBalance(zap: ZapperInstructions): Promise<bigint> {
         const signer = validateProviderAsSigner(this.provider);
         let asset: ERC20 | NativeToken;
 
@@ -630,6 +646,7 @@ export class CToken extends Calldata<ICToken> {
         } else {
             switch (zap) {
                 case 'none': asset = this.getAsset(true); break;
+                case 'vault': asset = await this.getVaultAsset(true); break;
                 case 'native-vault': asset = new NativeToken(setup_config.chain, this.provider); break;
                 case 'native-simple': asset = new NativeToken(setup_config.chain, this.provider); break;
                 default: throw new Error("Unsupported zap type for balance fetch");
@@ -737,6 +754,15 @@ export class CToken extends Calldata<ICToken> {
             }
         }
 
+        if(this.zapTypes.includes('vault')) {
+            const vault_asset = await this.getVaultAsset(true);
+            tokens.push({
+                interface: vault_asset,
+                type: 'vault'
+            });
+            tokens_exclude.push(vault_asset.address.toLocaleLowerCase());
+        }
+
         if(this.zapTypes.includes('simple')) {
             let dexAggSearch = await chain_config[setup_config.chain].dexAgg.getAvailableTokens(this.provider, search);
             tokens = tokens.concat(dexAggSearch.filter(token => !tokens_exclude.includes(token.interface.address.toLocaleLowerCase())));
@@ -796,6 +822,7 @@ export class CToken extends Calldata<ICToken> {
         const { borrowAmount } = this.previewLeverageUp(newLeverage, borrow);
 
         switch(type) {
+            case 'vault':
             case 'simple': {
                 const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
                     signer.address as address,
@@ -898,7 +925,7 @@ export class CToken extends Calldata<ICToken> {
         borrow: BorrowableCToken,
         borrowAmount: TokenInput,
         type: PositionManagerTypes,
-        slippage_: TokenInput = Decimal(0.5)
+        slippage_: Percentage = Decimal(0.005)
     ) {
         depositAmount = await this.ensureUnderlyingAmount(depositAmount, 'none');
         const signer = validateProviderAsSigner(this.provider);
@@ -908,9 +935,10 @@ export class CToken extends Calldata<ICToken> {
         let calldata: bytes;
 
         switch(type) {
+            case 'vault':
             case 'simple':
                 const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
-                    signer.address as address,
+                    manager.address,
                     borrow.asset.address,
                     this.asset.address,
                     borrow.convertTokenInput(borrowAmount),
@@ -974,7 +1002,7 @@ export class CToken extends Calldata<ICToken> {
         let type_of_zap: ZapperTypes;
 
         if(typeof zap == 'object') {
-            slippage = zap.slippage;
+            slippage = BigInt(zap.slippage.mul(BPS).toString());
             inputToken = zap.inputToken;
             type_of_zap = zap.type;
         } else {
@@ -992,6 +1020,7 @@ export class CToken extends Calldata<ICToken> {
         }
 
         switch(type_of_zap) {
+            case 'vault':
             case 'simple':
                 if(inputToken == null) throw new Error("Input token must be provided for simple zap");
                 calldata = await zapper.getSimpleZapCalldata(this, inputToken, this.asset.address, assets, collateralize, slippage);

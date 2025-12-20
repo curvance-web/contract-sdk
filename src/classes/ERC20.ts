@@ -1,5 +1,5 @@
 import { TransactionResponse } from "ethers";
-import { contractSetup, toBigInt, toDecimal, UINT256_MAX, WAD } from "../helpers";
+import { contractSetup, toBigInt, toDecimal, UINT256_MAX, validateProviderAsSigner, WAD } from "../helpers";
 import { Contract } from "ethers";
 import { StaticMarketAsset } from "./ProtocolReader";
 import { address, curvance_provider, TokenInput, USD } from "../types";
@@ -70,6 +70,7 @@ export class ERC20 {
     async approve(spender: address, amount: TokenInput | null) {
         const decimals = this.decimals ?? await this.fetchDecimals();
         const tokens = amount == null ? UINT256_MAX : toBigInt(amount, decimals);
+        console.log('Approving', {address: this.address, owner: validateProviderAsSigner(this.provider).address, spender, tokens});
         return this.contract.approve(spender, tokens);
     }
 

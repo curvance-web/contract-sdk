@@ -5,7 +5,7 @@ import { Swap } from "./Zapper";
 import { contractSetup, EMPTY_ADDRESS } from "../helpers";
 import abi from '../abis/SimplePositionManager.json';
 
-export type PositionManagerTypes = 'native-vault' | 'simple';
+export type PositionManagerTypes = 'native-vault' | 'simple' | 'vault';
 export interface LeverageAction {
     borrowableCToken: address;
     borrowAssets: bigint;

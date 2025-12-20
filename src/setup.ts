@@ -6,6 +6,7 @@ import { ProtocolReader } from "./classes/ProtocolReader";
 import { OracleManager } from "./classes/OracleManager";
 import { wrapProviderWithRetries } from "./retry-provider";
 import { Kuru } from "./classes/DexAggregators/Kuru";
+import { KyberSwap } from "./classes/DexAggregators";
 
 export type IncentiveResponse = {
     market: address,
@@ -37,7 +38,7 @@ export let setup_config: {
 };
 
 const monad_mainnet_config = {
-    dexAgg: new Kuru(),
+    dexAgg: new KyberSwap(),
     provider: new JsonRpcProvider("https://rpc-mainnet.monadinfra.com/rpc/yXdhejk7tio3mpBmpTyzQCdIQjDXsuAk"),
     native_symbol: 'MON',
     wrapped_native: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A" as address,

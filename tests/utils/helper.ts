@@ -1,6 +1,8 @@
 import { JsonRpcProvider, toBeHex, Wallet } from 'ethers';
 import { Block } from 'ethers';
 import { ChainRpcPrefix } from '../../src/helpers';
+import { TestFramework } from './TestFramework';
+import { setupChain } from '../../src/setup';
 
 export const MARKET_HOLD_PERIOD_SECS = 1200; // 20 minutes
 
@@ -35,6 +37,19 @@ export async function setNativeBalance(provider: JsonRpcProvider, targetAddress:
     const haxAmount = toBeHex(amount);
     await provider.send("anvil_setBalance", [targetAddress, haxAmount]);
     await mineBlock(provider);
+}
+
+export const getTestSetupFramework = async (private_key: string, chain: ChainRpcPrefix) => {
+    const provider = new JsonRpcProvider(process.env.TEST_RPC);
+    const wallet = new Wallet(private_key, provider);
+    const nonce_manager = new NonceManagerSigner(wallet, await wallet.getNonce('latest'));
+
+    return new TestFramework(
+        provider, 
+        nonce_manager, 
+        chain, 
+        await setupChain(chain, nonce_manager, true)
+    );
 }
 
 export const getTestSetup = async (private_key: string) => {
