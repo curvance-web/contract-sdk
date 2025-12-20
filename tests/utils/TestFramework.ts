@@ -1,23 +1,25 @@
 import { JsonRpcProvider } from "ethers";
-import { setNativeBalance } from "./helper";
+import { getTestSetup, NonceManagerSigner, setNativeBalance } from "./helper";
 import { address, BorrowableCToken, ChainRpcPrefix, curvance_signer, ERC20, Market, setupChain } from "../../src";
 import Decimal from "decimal.js";
 
 export class TestFramework {
+    private_key: string;
     provider: JsonRpcProvider;
-    signer: curvance_signer
+    signer: NonceManagerSigner
     chain: ChainRpcPrefix;
     curvance: Awaited<ReturnType<typeof setupChain>>;
-    snapshot_id: number | null = null;
+    snapshot_id: number | undefined;
 
-    constructor(provider: JsonRpcProvider, signer: curvance_signer, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>) {
+    constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>) {
+        this.private_key = private_key;
         this.provider = provider;
         this.signer = signer;
         this.chain = chain;
         this.curvance = curvance;
     }
 
-    async init({
+    static async init(private_key: string, chain: ChainRpcPrefix, {
         seedNativeBalance = true,
         seedLiquidity = true,
         snapshot = true,
@@ -26,13 +28,34 @@ export class TestFramework {
         seedLiquidity?: boolean,
         snapshot?: boolean,
     }) {
-        await this.seedNativeBalance();
-        await this.seedLiquidity();
-        await this.snapshot();
+        const setup = await getTestSetup(private_key);
+        const framework = new TestFramework(
+            private_key,
+            setup.provider,
+            setup.signer,
+            chain,
+            await setupChain(chain, setup.signer, true)
+        );
+
+        await framework.seedNativeBalance();
+        await framework.seedLiquidity();
+        await framework.snapshot();
+
+        return framework;
     }
 
     get account(): address {
         return this.signer.address as address;
+    }
+
+    async reset() {
+        await this.revertToLastSnapshot();
+        await this.snapshot();
+
+        const setup = await getTestSetup(this.private_key);
+        this.provider = setup.provider;
+        this.signer = setup.signer;
+        this.curvance = await setupChain(this.chain, this.signer, true);
     }
 
     async seedLiquidity() {
@@ -72,7 +95,6 @@ export class TestFramework {
         }
 
         await this.provider.send("evm_revert", [this.snapshot_id]);
-        // Snapshot is now consumed, but we'll create a new one in the test
     }
     
     async getMarket(findMarketName: string): Promise<[Market, BorrowableCToken, BorrowableCToken]> {

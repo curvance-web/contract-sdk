@@ -39,19 +39,6 @@ export async function setNativeBalance(provider: JsonRpcProvider, targetAddress:
     await mineBlock(provider);
 }
 
-export const getTestSetupFramework = async (private_key: string, chain: ChainRpcPrefix) => {
-    const provider = new JsonRpcProvider(process.env.TEST_RPC);
-    const wallet = new Wallet(private_key, provider);
-    const nonce_manager = new NonceManagerSigner(wallet, await wallet.getNonce('latest'));
-
-    return new TestFramework(
-        provider, 
-        nonce_manager, 
-        chain, 
-        await setupChain(chain, nonce_manager, true)
-    );
-}
-
 export const getTestSetup = async (private_key: string) => {
     const provider = new JsonRpcProvider(process.env.TEST_RPC);
     const wallet = new Wallet(private_key, provider);

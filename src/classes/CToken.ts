@@ -429,7 +429,6 @@ export class CToken extends Calldata<ICToken> {
         const plugin = this.getPluginAddress(instructions.type, 'zapper');
 
         const allowance = await asset.allowance(signer.address as address, plugin!);
-        console.log('Allowance', {addresss: asset.address, allowance, owner: signer.address, spender: plugin });
         const isApproved = allowance >= amount;
 
         if(!isApproved) {
@@ -782,7 +781,8 @@ export class CToken extends Calldata<ICToken> {
     }
 
     previewLeverageUp(newLeverage: Decimal, borrow: BorrowableCToken) {
-        if(this.getLeverage() == null || this.getLeverage() != null && newLeverage.lte(this.getLeverage() as Decimal)) {
+        const currentLeverage = this.getLeverage() ?? Decimal(0);
+        if(newLeverage.lte(currentLeverage)) {
             throw new Error("New leverage must be more than current leverage");
         }
 
@@ -812,7 +812,7 @@ export class CToken extends Calldata<ICToken> {
         borrow: BorrowableCToken,
         newLeverage: Decimal,
         type: PositionManagerTypes,
-        slippage_: TokenInput = Decimal(0.05)
+        slippage_: TokenInput = Decimal(0.005)
     ) {
         const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
@@ -825,7 +825,7 @@ export class CToken extends Calldata<ICToken> {
             case 'vault':
             case 'simple': {
                 const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
-                    signer.address as address,
+                    manager.address,
                     borrow.asset.address,
                     this.asset.address,
                     borrow.convertTokenInput(borrowAmount, false),
@@ -873,7 +873,7 @@ export class CToken extends Calldata<ICToken> {
         currentLeverage: Decimal,
         newLeverage: Decimal,
         type: PositionManagerTypes,
-        slippage_: Percentage = Decimal(0.05)
+        slippage_: Percentage = Decimal(0.005)
     ) {
         if(newLeverage.gte(currentLeverage)) {
             throw new Error("New leverage must be less than current leverage");
@@ -888,9 +888,10 @@ export class CToken extends Calldata<ICToken> {
         const { collateralAssetReduction, leverageDiff } = this.previewLeverageDown(newLeverage, currentLeverage);
 
         switch(type) {
+            case 'vault':
             case 'simple': {
                 const { action, quote } = await config.dexAgg.quoteAction(
-                    signer.address,
+                    manager.address,
                     this.asset.address,
                     borrowToken.asset.address,
                     collateralAssetReduction,

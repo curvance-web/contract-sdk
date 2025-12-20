@@ -1,8 +1,7 @@
 import { config } from 'dotenv';
 config({ quiet: true });
-import { test, describe, before, afterEach, beforeEach } from 'node:test';
+import { test, describe, before, afterEach } from 'node:test';
 import { address } from '../src/types';
-import { getTestSetupFramework } from './utils/helper';
 import Decimal from 'decimal.js';
 import { TestFramework } from './utils/TestFramework';
 
@@ -11,19 +10,16 @@ describe('Leverage', () => {
     let framework: TestFramework;
 
     before(async () => {
-        framework = await getTestSetupFramework(process.env.DEPLOYER_PRIVATE_KEY as string, 'monad-mainnet');
-        account = framework.account;
-
-        await framework.init({
+        framework = await TestFramework.init(process.env.DEPLOYER_PRIVATE_KEY as string, 'monad-mainnet', {
             seedNativeBalance: true,
             seedLiquidity: true,
             snapshot: true,
         });
+        account = framework.account;
     })
 
-    beforeEach(async () => {
-        await framework.revertToLastSnapshot();
-        await framework.snapshot();
+    afterEach(async () => {
+        await framework.reset();
     });
 
     test('Simple deposit and leverage', async function() {
@@ -34,16 +30,17 @@ describe('Leverage', () => {
         await earnAUSD.depositAndLeverage(depositAmount, AUSD, Decimal(3_000), 'simple', Decimal(0.005));
     });
 
-    test('Simple leverage up', async function() {
+    test('Simple leverage up & down', async function() {
         const [ market, earnAUSD, AUSD ] = await framework.getMarket('earnAUSD | AUSD');
 
         const depositAmount = Decimal(1_000);
-        await AUSD.approvePlugin('simple', 'zapper');
-        await AUSD.approveUnderlying(depositAmount, AUSD.getPluginAddress('simple', 'zapper'));
-        await earnAUSD.deposit(depositAmount, {
-            type: 'simple',
-            inputToken: AUSD.asset.address,
-            slippage: Decimal(0.005),
-        });
+        await earnAUSD.approveUnderlying(depositAmount);
+        await earnAUSD.depositAsCollateral(depositAmount);
+        await earnAUSD.approvePlugin('simple', 'positionManager');
+        await earnAUSD.leverageUp(AUSD, Decimal(3), 'simple', Decimal(0.005));
+        
+        console.log(`Current leverage is: ${earnAUSD.getLeverage()}`);
+
+        // await earnAUSD.leverageDown(AUSD, earnAUSD.getLeverage() as Decimal, Decimal(1.5), 'simple', Decimal(0.005));
     });
 });

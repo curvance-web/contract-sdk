@@ -60,7 +60,7 @@ export class Zapper extends Calldata<IZapper> {
 
     async getSimpleZapCalldata(ctoken: CToken, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint) {
         const config = getChainConfig();
-        const quote = await config.dexAgg.quote(this.provider.address, inputToken, outputToken, amount, slippage);
+        const quote = await config.dexAgg.quote(this.address, inputToken, outputToken, amount, slippage);
 
         const swap: Swap = {
             inputToken: inputToken,
