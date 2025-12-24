@@ -10,23 +10,68 @@ export class TestFramework {
     chain: ChainRpcPrefix;
     curvance: Awaited<ReturnType<typeof setupChain>>;
     snapshot_id: number | undefined;
+    init_snapshot_id: number | undefined;
+    log: boolean = false;
 
-    constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>) {
+    // Token storage slot configuration - maps chain to token addresses to balance mapping slots
+    private static tokenStorageSlots: {[chain: string]: {[tokenAddress: string]: number}} = {
+        'monad-mainnet': {
+            "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c": 5, // WBTC - try slot 5
+            "0x1B68626dCa36c7fE922fD2d55E4f631d962dE19c": 3, // shMON
+            "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A": 3, // WMON 
+            "0x336D414754967C6682B5A665C7DAF6F1409E63e8": 0, // muBOND
+            "0xD793c04B87386A6bb84ee61D98e0065FdE7fdA5E": 7, // sAUSD
+            "0x754704Bc059F8C67012fEd69BC8A327a5aafb603": 9, // USDC
+
+
+
+        },
+        'monad-testnet': {
+            // Add testnet token slots here if needed
+        },
+        'local-monad-mainnet': {
+            // Add local mainnet token slots here if needed
+        }
+    };
+
+    private static seedByHolder: {[chain: string]: {[tokenAddress: string]: address}} = {
+        'monad-mainnet': {
+            "0x8498312A6B3CbD158bf0c93AbdCF29E6e4F55081": "0xd60F5cFAeEe229dcEa029323AD36CA76625D5F2C", // gMON
+            "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a": "0xA02318f858128c8D2048eF47171249E9B4a0DedA", // AUSD
+            "0x9c82eB49B51F7Dc61e22Ff347931CA32aDc6cd90": "0x567713Ae76857Ecd5F5A1AC0D7EEfED6CebB4AD9", // loAZND
+            "0x2416092f143378750bb29b79eD961ab195CcEea5": "0x12959F938A6ab2D0F10e992470b6e19807a95477", // ezETH
+            "0xEE8c0E9f1BFFb4Eb878d8f15f368A02a35481242": "0x3d4567d5482527179207d838Af18feD493C46AE5", // wETH
+            "0x0c65A0BC65a5D819235B71F554D210D3F80E0852": "0x5e777D229de19b47252E079Af2B0B4AedC959269", // aprMON
+            "0xA3227C5969757783154C60bF0bC1944180ed81B9": "0x32BAe06Ec52B5f59BC3c5eC8C3d8C666c600b388", // sMON
+            "0x103222f020e98Bba0AD9809A011FDF8e6F067496": "0x85402dCB299A003797705Ee6C4D8b3af62010120", // earnAUSD
+        },
+        'monad-testnet': {},
+        'local-monad-mainnet': {}
+    };  
+
+    constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>, log: boolean = false) {
         this.private_key = private_key;
         this.provider = provider;
         this.signer = signer;
         this.chain = chain;
         this.curvance = curvance;
+        this.log = log;
+        
+        this.snapshot().then((id) => {
+            this.init_snapshot_id = id;
+        });
     }
 
     static async init(private_key: string, chain: ChainRpcPrefix, {
         seedNativeBalance = true,
-        seedLiquidity = true,
+        seedUnderlying = true,
         snapshot = true,
+        log = false,
     }: {
         seedNativeBalance?: boolean,
-        seedLiquidity?: boolean,
+        seedUnderlying?: boolean,
         snapshot?: boolean,
+        log?: boolean,
     }) {
         const setup = await getTestSetup(private_key);
         const framework = new TestFramework(
@@ -34,18 +79,25 @@ export class TestFramework {
             setup.provider,
             setup.signer,
             chain,
-            await setupChain(chain, setup.signer, true)
+            await setupChain(chain, setup.signer, true),
+            log
         );
 
-        await framework.seedNativeBalance();
-        await framework.seedLiquidity();
-        await framework.snapshot();
+        if(seedNativeBalance) await framework.seedNativeBalance();
+        if(seedUnderlying) await framework.seedUnderlying();
+        if(snapshot) await framework.snapshot();
 
         return framework;
     }
 
     get account(): address {
         return this.signer.address as address;
+    }
+
+    async destroy() {
+        if(this.init_snapshot_id != null) {
+            await this.provider.send("evm_revert", [this.init_snapshot_id]);
+        }
     }
 
     async reset() {
@@ -84,29 +136,93 @@ export class TestFramework {
         ]);
     }
 
-    async seedLiquidity() {
-        const seed_configs = {
-            'monad-mainnet': [
-                {holder: "0xA02318f858128c8D2048eF47171249E9B4a0DedA", target: "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a"}, //Has about $12m AUSD
-                {holder: "0x85402dCB299A003797705Ee6C4D8b3af62010120", target: "0x103222f020e98Bba0AD9809A011FDF8e6F067496"}, //Has about $9m earnAUSD
-            ],
-            'monad-testnet': [],
-            'local-monad-mainnet': []
-        };
+    async seedUnderlying() {
+        const processedAddresses = new Set<string>();
+        
+        for(const market of this.curvance.markets) {
+            for(const token of market.tokens) {
+                const tokenAddress = token.asset.address.toLowerCase();
+                
+                // Skip if we've already processed this token address
+                if (processedAddresses.has(tokenAddress)) {
+                    continue;
+                }
+                
+                // Mark this address as processed
+                processedAddresses.add(tokenAddress);
 
-        for(const liquidity_source of seed_configs[this.chain] || []) {
-            await this.provider.send("anvil_impersonateAccount", [liquidity_source.holder]);
-            const impersonatedSigner = await this.provider.getSigner(liquidity_source.holder);
+                if(TestFramework.seedByHolder[this.chain]?.hasOwnProperty(token.asset.address)) {
+                    const holder = TestFramework.seedByHolder[this.chain]![token.asset.address];
+                    // Impersonate the holder account to transfer tokens
+                    await this.provider.send("anvil_impersonateAccount", [holder]);
+                    const holderSigner = await this.provider.getSigner(holder);
 
-            const erc20 = new ERC20(impersonatedSigner, liquidity_source.target as address);
-            console.log('Supplying test liquidity from ', liquidity_source.holder, ' for token ', await erc20.fetchSymbol());
-            await erc20.transfer(this.account, Decimal(1_000_000));
-            
-            await this.provider.send("anvil_stopImpersonatingAccount", [liquidity_source.holder]);
+                    const erc20 = new ERC20(holderSigner as curvance_signer, token.asset.address);
+                    const holderBalance = await erc20.balanceOf(holderSigner.address as address);
+
+                    // Transfer a large amount from the holder to our test account
+                    const transferAmount = holderBalance / 10n;
+                    try {
+                        const tx = await erc20.rawTransfer(this.account, transferAmount);
+                        await tx.wait();
+                        if(this.log) {
+                            const readableAmount = Decimal(transferAmount.toString()).div(Decimal(10).pow(token.getAsset(true).decimals || 18));
+                            console.log(`✅ Transferred ${readableAmount} of ${token.getAsset(true).symbol} from holder ${holder} to test account ${this.account}`);
+                        }
+                    } catch (transferError) {
+                        console.log(`❌ Failed to transfer ${token.getAsset(true).symbol} from holder ${holder} to test account ${this.account}. Error: ${transferError}`);
+                    }
+
+                    // Stop impersonating the holder account
+                    await this.provider.send("anvil_stopImpersonatingAccount", [holder]);
+                    continue; // Skip direct balance setting if we used a holder
+                }
+                
+                // Get the storage slot from chain-specific config, default to 0
+                const chainSlots = TestFramework.tokenStorageSlots[this.chain] || {};
+                const storageSlot = chainSlots[token.asset.address] || 0;
+                
+                await this.setERC20Balance(token.asset.address, this.account, BigInt(100000000e18), storageSlot);
+
+                // Verify the balance was set correctly
+                const erc20 = new ERC20(this.signer, token.asset.address);
+                try {
+                    const actualBalance = await erc20.balanceOf(this.account);
+                    const expectedBalance = BigInt(100000000e18);
+                    
+                    if (actualBalance < expectedBalance) {
+                        console.log(`❌ Failed to set balance for ${token.getAsset(true).symbol} (${token.asset.address}). Expected: ${expectedBalance}, Actual: ${actualBalance}, Slot: ${storageSlot}`);
+                    } else if(this.log) {
+                        console.log(`✅ Set ${token.getAsset(true).symbol} balance to 100m-e18 using slot ${storageSlot} for account ${this.account}`);
+                    }
+                } catch (balanceError) {
+                    console.log(`❌ Failed to verify balance for ${token.getAsset(true).symbol} (${token.asset.address}), Slot: ${storageSlot}. Error: ${balanceError}`);
+                }
+            }
         }
     }
+
+    async setERC20Balance(tokenAddress: address, account: address, balance: bigint, balanceSlot: number = 0) {
+        // Calculate the storage slot for the balance mapping
+        // Most ERC20 tokens store balances in a mapping at slot 0, but some may use different slots
+        const slot = ethers.keccak256(
+            ethers.AbiCoder.defaultAbiCoder().encode(
+                ['address', 'uint256'], 
+                [account, balanceSlot]
+            )
+        );
+
+        // Convert balance to 32-byte hex string (pad to 64 hex characters)
+        const value = "0x" + balance.toString(16).padStart(64, '0');
+        
+        await this.provider.send("anvil_setStorageAt", [
+            tokenAddress,
+            slot,
+            value
+        ]);
+    }
     
-    async seedNativeBalance(amount: bigint = 10000000000000000000n) {
+    async seedNativeBalance(amount: bigint = 100000000000000000000000000n) {
         await setNativeBalance(this.provider, this.account, amount);
     }
 

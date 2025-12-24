@@ -1,9 +1,9 @@
 import { error } from "console";
-import { address, bytes, curvance_provider } from "../../types";
+import { address, bytes, curvance_provider, Percentage, TokenInput } from "../../types";
 import { ZapToken } from "../CToken";
 import IDexAgg from "./IDexAgg";
 import { Swap } from "../Zapper";
-import { fromBpsToWad, WAD } from "../..";
+import { all_markets, ERC20, fromBpsToWad, toBigInt, toBps, validateProviderAsSigner, WAD } from "../..";
 
 export interface KyperSwapErrorResponse {
     code: number;
@@ -101,12 +101,28 @@ export class KyberSwap implements IDexAgg {
         this.api = `${api}/${this.chain}`;
     }
     
-    async getAvailableTokens(provider: curvance_provider, query: string | null = null) {
-        let tokens: ZapToken[] = [];
-
-        // https://ks-setting.kyberswap.com/api/v1/tokens?query=chog&chainIds=143&page=1&pageSize=20
+    async getAvailableTokens(provider: curvance_provider, query: string | null = null, page: number = 1, pageSize: number = 25): Promise<ZapToken[]> {
+        let zap_tokens: ZapToken[] = [];
         
-        return tokens;
+        for(const market of all_markets) {
+            for(const token of market.tokens) {
+                zap_tokens.push({
+                    interface: token.getAsset(true),
+                    type: 'simple',
+                    quote: async (tokenIn: string, tokenOut: string, amount: TokenInput, slippage: Percentage) => {
+                        const signer = validateProviderAsSigner(provider);
+                        const erc20in = new ERC20(provider, tokenIn as address);
+                        const decimals = erc20in.decimals ?? await erc20in.contract.decimals();
+                        const amount_bigint = toBigInt(amount, decimals);
+                        
+                        return await this.quote(signer.address, tokenIn, tokenOut, amount_bigint, toBps(slippage));
+                    }
+                });
+            }
+        }
+
+        // https://ks-setting.kyberswap.com/api/v1/tokens?chainIds=143&page=1&pageSize=25&isWhitelisted=true
+        return zap_tokens;
     }
 
     async quoteAction(wallet: string, tokenIn: string, tokenOut: string, amount: bigint, slippage: bigint) {

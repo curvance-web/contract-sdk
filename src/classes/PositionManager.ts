@@ -1,9 +1,10 @@
 import { Contract, TransactionResponse } from "ethers";
-import { address, bytes, curvance_signer } from "../types";
+import { address, bytes, curvance_signer, TokenInput } from "../types";
 import { Calldata } from "./Calldata";
 import { Swap } from "./Zapper";
 import { contractSetup, EMPTY_ADDRESS } from "../helpers";
 import abi from '../abis/SimplePositionManager.json';
+import { CToken } from "./CToken";
 
 export type PositionManagerTypes = 'native-vault' | 'simple' | 'vault';
 export interface LeverageAction {
@@ -53,6 +54,15 @@ export class PositionManager extends Calldata<IPositionManager> {
             slippage: 0n,
             call: "0x"
         }
+    }
+
+    static async getVaultExpectedShares(deposit_ctoken: CToken, borrow_ctoken: CToken, borrow_amount: TokenInput) {
+        const borrow_amount_as_bn = borrow_ctoken.convertTokenInput(borrow_amount);
+
+        const underlying_vault = await deposit_ctoken.getUnderlyingVault();
+        const vault_shares     = await underlying_vault.previewDeposit(borrow_amount_as_bn);
+        
+        return deposit_ctoken.convertToShares(vault_shares);
     }
 
     getDeleverageCalldata(action: DeleverageAction, slippage: bigint) {

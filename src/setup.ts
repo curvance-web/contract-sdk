@@ -37,6 +37,8 @@ export let setup_config: {
     api_url: string | null;
 };
 
+export let all_markets: Market[] = [];
+
 const monad_mainnet_config = {
     dexAgg: new KyberSwap(),
     provider: new JsonRpcProvider("https://rpc-mainnet.monadinfra.com/rpc/yXdhejk7tio3mpBmpTyzQCdIQjDXsuAk"),
@@ -47,8 +49,7 @@ const monad_mainnet_config = {
         { name: "shMON", contract: "0x1B68626dCa36c7fE922fD2d55E4f631d962dE19c" as address },
     ],
     vaults: [
-        { name: "sAUSD", contract: "0xD793c04B87386A6bb84ee61D98e0065FdE7fdA5E" as address, underlying: "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as address },
-        { name: "earnAUSD", contract: "0x103222f020e98Bba0AD9809A011FDF8e6F067496" as address, underlying: "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as address },
+        { name: "sAUSD", contract: "0xD793c04B87386A6bb84ee61D98e0065FdE7fdA5E" as address, underlying: "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as address }
     ]
 };
 export const chain_config = {
@@ -124,9 +125,11 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
             incentives[market]!.push(incentive);
         }
     }
-    
+
+    all_markets = await Market.getAll(reader, oracle_manager, setup_config.provider, milestones, incentives);
+
     return {
-        markets: await Market.getAll(reader, oracle_manager, setup_config.provider, milestones, incentives),
+        markets: all_markets,
         reader,
         dexAgg: chain_config[chain].dexAgg,
         global_milestone: milestones['global'] ?? null

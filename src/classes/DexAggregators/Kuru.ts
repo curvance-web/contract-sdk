@@ -173,14 +173,14 @@ export class Kuru implements IDexAgg {
             tokens.push({
                 interface: erc20,
                 type: 'simple',
-                quote: async(tokenIn: string, tokenOut: string, amount: TokenInput, slippage: bigint) => {
-                    const raw_amount = toBigInt(amount, 18n);
-                    const data = await this.quote(signer.address, tokenIn, tokenOut, raw_amount, slippage);
-                    return {
-                        out: toDecimal(BigInt(data.out ?? 0), BigInt(token.decimals ?? 18)),
-                        min_out: toDecimal(BigInt(data.min_out ?? 0), BigInt(token.decimals ?? 18)),
-                    };
-                }
+                // quote: async(tokenIn: string, tokenOut: string, amount: TokenInput, slippage: bigint) => {
+                //     const raw_amount = toBigInt(amount, 18n);
+                //     const data = await this.quote(signer.address, tokenIn, tokenOut, raw_amount, slippage);
+                //     return {
+                //         out: toDecimal(BigInt(data.out ?? 0), BigInt(token.decimals ?? 18)),
+                //         min_out: toDecimal(BigInt(data.min_out ?? 0), BigInt(token.decimals ?? 18)),
+                //     };
+                // }
             });
         }
 

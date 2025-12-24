@@ -49,7 +49,7 @@ export class Zapper extends Calldata<IZapper> {
     }
 
     async nativeZap(ctoken: CToken, amount: bigint, collateralize: boolean) {
-        const calldata = this.getNativeZapCalldata(ctoken, amount, collateralize);
+        const calldata = await this.getNativeZapCalldata(ctoken, amount, collateralize);
         return this.executeCallData(calldata, { value: amount });
     }
 
@@ -83,7 +83,41 @@ export class Zapper extends Calldata<IZapper> {
         ]);
     }
 
-    getNativeZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean, wrapped: boolean = false) {
+    async getVaultZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean, wrapped: boolean = false) {
+        const { underlying_address, expected_shares } = await this.getZapVaultData(ctoken, amount);
+
+        const swap: Swap = {
+            inputToken: underlying_address,
+            inputAmount: amount,
+            outputToken: underlying_address,
+            target: EMPTY_ADDRESS,
+            slippage: 0n,
+            call: EMPTY_BYTES
+        };
+
+        return this.getCallData("swapAndDeposit", [
+            ctoken.address,
+            wrapped,
+            swap,
+            expected_shares,
+            collateralize,
+            this.provider.address as address
+        ]);
+    }
+
+    async getZapVaultData(ctoken: CToken, amount: bigint) {
+        const vault = await ctoken.getUnderlyingVault();
+        const vault_underlying = await vault.fetchAsset(false);
+        const expected_shares = await ctoken.convertToShares(await vault.previewDeposit(amount));
+
+        return {
+            underlying_address: vault_underlying,
+            expected_shares: expected_shares
+        }
+    }
+
+    async getNativeZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean, wrapped: boolean = false) {
+        const { underlying_address, expected_shares } = await this.getZapVaultData(ctoken, amount);
         const config = getChainConfig();
 
         const swap: Swap = {
@@ -99,7 +133,7 @@ export class Zapper extends Calldata<IZapper> {
             ctoken.address,
             wrapped,
             swap,
-            0n,
+            expected_shares,
             collateralize,
             this.provider.address as address
         ]);

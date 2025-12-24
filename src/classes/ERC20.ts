@@ -67,6 +67,10 @@ export class ERC20 {
         return this.contract.transfer(to, tokens);
     }
 
+    async rawTransfer(to: address, amount: bigint) {
+        return this.contract.transfer(to, amount);
+    }
+
     async approve(spender: address, amount: TokenInput | null) {
         const decimals = this.decimals ?? await this.fetchDecimals();
         const tokens = amount == null ? UINT256_MAX : toBigInt(amount, decimals);

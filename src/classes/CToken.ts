@@ -14,6 +14,7 @@ import { PositionManager, PositionManagerTypes } from "./PositionManager";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { NativeToken } from "./NativeToken";
 import { ERC4626 } from "./ERC4626";
+import { Quote } from "./DexAggregators/IDexAgg";
 
 export interface AccountSnapshot {
     asset: address;
@@ -32,10 +33,7 @@ export interface MulticallAction {
 export interface ZapToken {
     interface: NativeToken | ERC20;
     type: ZapperTypes;
-    quote?: (tokenIn: string, tokenOut: string, amount: TokenInput, slippage: bigint) => Promise<{
-        out: TokenInput,
-        min_out: TokenInput
-    }>;
+    quote?: (tokenIn: string, tokenOut: string, amount: TokenInput, slippage: Percentage) => Promise<Quote>;
 }
 
 export type ZapperInstructions =  'none' | 'native-vault' | 'vault' | 'native-simple' | {
@@ -328,15 +326,18 @@ export class CToken extends Calldata<ICToken> {
         return Decimal(this.cache.collRatio).div(BPS) as Percentage;
     }
 
-    async getVaultAsset(asErc20: true): Promise<ERC20>;
-    async getVaultAsset(asErc20: false): Promise<address>;
-    async getVaultAsset(asErc20: boolean) {
-        if(!this.isVault) {
+    getUnderlyingVault() {
+        if(!this.isVault && !this.isNativeVault) {
             throw new Error("CToken does not use a vault asset as its underlying asset");
         }
 
-        const erc4626 = new ERC4626(this.provider, this.getAsset(false));
-        return erc4626.fetchAsset(asErc20);
+        return new ERC4626(this.provider, this.getAsset(false));
+    }
+
+    async getVaultAsset(asErc20: true): Promise<ERC20>;
+    async getVaultAsset(asErc20: false): Promise<address>;
+    async getVaultAsset(asErc20: boolean) {
+        return asErc20 ? await this.getUnderlyingVault().fetchAsset(true) : await this.getUnderlyingVault().fetchAsset(false);
     }
 
     getAsset(asErc20: true): ERC20;
@@ -726,8 +727,9 @@ export class CToken extends Calldata<ICToken> {
 
     /** @returns A list of tokens mapped to their respective zap options */
     async getDepositTokens(search: string | null = null) {
+        const underlying = this.getAsset(true);
         let tokens: ZapToken[] = [{
-            interface: this.getAsset(true),
+            interface: underlying,
             type: 'none'
         }];
         let tokens_exclude = [this.asset.address.toLocaleLowerCase()];
@@ -822,7 +824,6 @@ export class CToken extends Calldata<ICToken> {
         const { borrowAmount } = this.previewLeverageUp(newLeverage, borrow);
 
         switch(type) {
-            case 'vault':
             case 'simple': {
                 const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
                     manager.address,
@@ -845,13 +846,36 @@ export class CToken extends Calldata<ICToken> {
                 break;
             }
 
+            
+            case 'vault': {
+                calldata = manager.getLeverageCalldata(
+                    {
+                        borrowableCToken: borrow.address,
+                        borrowAssets    : borrow.convertTokenInput(borrowAmount),
+                        cToken          : this.address,
+                        expectedShares  : await PositionManager.getVaultExpectedShares(
+                            this,
+                            borrow,
+                            borrowAmount
+                        ),
+                        swapAction      : PositionManager.emptySwapAction(),
+                        auxData         : "0x",
+                    },
+                    fromBpsToWad(slippage));
+                break;
+            }
+
             case 'native-vault': {
                 calldata = manager.getLeverageCalldata(
                     {
                         borrowableCToken: borrow.address,
                         borrowAssets    : borrow.convertTokenInput(borrowAmount),
                         cToken          : this.address,
-                        expectedShares  : borrow.convertTokenInput(borrowAmount),
+                        expectedShares  : await PositionManager.getVaultExpectedShares(
+                            this,
+                            borrow,
+                            borrowAmount
+                        ),
                         swapAction      : PositionManager.emptySwapAction(),
                         auxData         : "0x",
                     },
@@ -888,7 +912,6 @@ export class CToken extends Calldata<ICToken> {
         const { collateralAssetReduction, leverageDiff } = this.previewLeverageDown(newLeverage, currentLeverage);
 
         switch(type) {
-            case 'vault':
             case 'simple': {
                 const { action, quote } = await config.dexAgg.quoteAction(
                     manager.address,
@@ -897,7 +920,8 @@ export class CToken extends Calldata<ICToken> {
                     collateralAssetReduction,
                     slippage
                 );
-                const minRepay = leverageDiff.equals(1) ? 0 : quote.min_out;
+
+                const minRepay = leverageDiff.equals(1) ? 0 : quote.out - (BigInt(Decimal(quote.out).mul(.05).toFixed(0)));
 
                 calldata = manager.getDeleverageCalldata({
                     cToken: this.address,
@@ -936,8 +960,7 @@ export class CToken extends Calldata<ICToken> {
         let calldata: bytes;
 
         switch(type) {
-            case 'vault':
-            case 'simple':
+            case 'simple': {
                 const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
                     manager.address,
                     borrow.asset.address,
@@ -958,7 +981,27 @@ export class CToken extends Calldata<ICToken> {
                     },
                     fromBpsToWad(slippage));
                 break;
-                
+            }
+
+            case 'vault': {
+                calldata = manager.getDepositAndLeverageCalldata(
+                    this.convertTokenInput(depositAmount),
+                    {
+                        borrowableCToken: borrow.address,
+                        borrowAssets: borrow.convertTokenInput(borrowAmount),
+                        cToken: this.address,
+                        expectedShares: await PositionManager.getVaultExpectedShares(
+                            this,
+                            borrow,
+                            borrowAmount
+                        ),
+                        swapAction: PositionManager.emptySwapAction(),
+                        auxData: "0x",
+                    },
+                    fromBpsToWad(slippage));
+                break;
+            }
+
             case 'native-vault': {
                 calldata = manager.getDepositAndLeverageCalldata(
                     this.convertTokenInput(depositAmount),
@@ -966,15 +1009,12 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets: borrow.convertTokenInput(borrowAmount),
                         cToken: this.address,
-                        expectedShares: borrow.convertTokenInput(borrowAmount),
-                        swapAction: {
-                            inputToken: EMPTY_ADDRESS,
-                            inputAmount: 0n,
-                            outputToken: EMPTY_ADDRESS,
-                            target: EMPTY_ADDRESS,
-                            slippage: 0n,
-                            call: "0x"
-                        },
+                        expectedShares: await PositionManager.getVaultExpectedShares(
+                            this,
+                            borrow,
+                            borrowAmount
+                        ),
+                        swapAction: PositionManager.emptySwapAction(),
                         auxData: "0x",
                     },
                     fromBpsToWad(slippage));
@@ -1021,18 +1061,21 @@ export class CToken extends Calldata<ICToken> {
         }
 
         switch(type_of_zap) {
-            case 'vault':
             case 'simple':
                 if(inputToken == null) throw new Error("Input token must be provided for simple zap");
                 calldata = await zapper.getSimpleZapCalldata(this, inputToken, this.asset.address, assets, collateralize, slippage);
                 calldata_overrides = { to: zapper.address };
                 break;
+            case 'vault':
+                calldata = await zapper.getVaultZapCalldata(this, assets, collateralize);
+                calldata_overrides = { to: zapper.address };
+                break;
             case 'native-vault':
-                calldata = zapper.getNativeZapCalldata(this, assets, collateralize);
+                calldata = await zapper.getNativeZapCalldata(this, assets, collateralize);
                 calldata_overrides = { value: assets, to: zapper.address };
                 break;
             case 'native-simple':
-                calldata = zapper.getNativeZapCalldata(this, assets, collateralize, true);
+                calldata = await zapper.getNativeZapCalldata(this, assets, collateralize, true);
                 calldata_overrides = { value: assets, to: zapper.address };
                 break;
             default:
