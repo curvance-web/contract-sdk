@@ -11,9 +11,9 @@
     "KyberSwapChecker": "0x206639D34bB079C1AD334c958c3ED3feC85Fbfff"
   },
   "zappers": {
-    "nativeVaultZapper": "0xbfE3612D3Db96dc58F2210e2e7FDfe9F4B8c5Ec0",
-    "vaultZapper": "0x9cb6cc5029c23140662636A50c4E8Dc618cC13F1",
-    "simpleZapper": "0x91da3583924263ee0da81a06d01946E95FFFB22E"
+    "nativeVaultZapper": "0x792451D679542B660E8a2284d458Ed1b5657dE88",
+    "vaultZapper": "0x53634af626c728Cd857b807bA290F70d5B656A6D",
+    "simpleZapper": "0xc148ff6ac9DbEBc287f923E2ECd62D7dbC34160d"
   },
   "VaultAggregator-AUSD-sAUSD": "0x73Af3E1848636D4DE6A61050D5487d6f09A7A1Be",
   "StaticPriceAggregator-loAZND": "0x6eCb16faf9b0c0F7098204e0FE685D2960b4C0Ba",
@@ -26,7 +26,7 @@
         "AUSD": "0x2B4e0232F46E6DB4af35474c140B968EeFCB09Ec"
       },
       "plugins": {
-        "simplePositionManager": "0x89e78797Df12a90FF77dD4e65cB939b8d8289FDE"
+        "simplePositionManager": "0xA3d212D4705caf42C35d6EaE0C85E94c4cd329E4"
       },
       "AUSD-DynamicIRM": "0x08DcB6Ad285217ef29816Ac0F813C21C54c48Cd5"
     },
@@ -38,7 +38,7 @@
         "AUSD": "0xDaDbB2D8f9802DC458F5D7F133D053087Ba8983d"
       },
       "plugins": {
-        "simplePositionManager": "0xa2f921Ba3b87c37Bd59c272A97bE13b84599664C"
+        "simplePositionManager": "0x9e4638fd67bE15360bfebC5e07AECfF33dfda917"
       },
       "AUSD-DynamicIRM": "0xf4E19DEdB240FFd9ECEDbfad88A91C34aC3095AA"
     },
@@ -50,7 +50,7 @@
         "WETH": "0xa206D51C02c0202a2Eed8E6A757b49Ab13930227"
       },
       "plugins": {
-        "simplePositionManager": "0x81CFe77628F90Bc70B86a70B514e3387cC2a50d5"
+        "simplePositionManager": "0xd8d3E46E52C3AB8FD98D04143984C763B4Bbc584"
       },
       "WETH-DynamicIRM": "0xf23d194e151069d09c927E8CD8ae3e14922F2a23"
     },
@@ -62,8 +62,8 @@
         "WMON": "0x0fcEd51b526BfA5619F83d97b54a57e3327eB183"
       },
       "plugins": {
-        "nativeVaultPositionManager": "0x5E5601Fd4dE04ceB596253ad3D6258f774BBBd8b",
-        "simplePositionManager": "0x8f103d523e4D6149AE3D022B84A60CffEfde93Cc"
+        "nativeVaultPositionManager": "0x2fAA792502aC5a329DcCc1580C5308fCc0a772fe",
+        "simplePositionManager": "0x7E8705a164DA7Cc5a4119C750b1F79837AD89D5E"
       },
       "WMON-DynamicIRM": "0x963E8aFc1a60E470EB2381896F75853bF6C1FeD2"
     },
@@ -75,8 +75,8 @@
         "WMON": "0xF32B334042DC1EB9732454cc9bc1a06205d184f2"
       },
       "plugins": {
-        "nativeVaultPositionManager": "0xF5fB490E4850D52D5Ab6B13a1E6859eA56048b8c",
-        "simplePositionManager": "0xC18e3C65ae92CE43dc786FC6282AF4d1B00f486b"
+        "nativeVaultPositionManager": "0x82f88A810E86a730699231F5fBF5686c643467C8",
+        "simplePositionManager": "0x669786FF3da7544c98FE74eE1006D787118d1770"
       },
       "WMON-DynamicIRM": "0x309d475e84b7C99C98031006F491e20280a1A768"
     },
@@ -88,7 +88,7 @@
         "WMON": "0xebE45A6ceA7760a71D8e0fa5a0AE80a75320D708"
       },
       "plugins": {
-        "simplePositionManager": "0x040044C2EDe453A3f474a455c618b8d34CBC1497"
+        "simplePositionManager": "0x3d6ba6C90E1738cb01C46E72F284C7Bd57eB11EC"
       },
       "WMON-DynamicIRM": "0x16cB8A09f2a17E30273b749ed178954FE63bb1BC"
     },
@@ -100,8 +100,8 @@
         "AUSD": "0xfD493ce1A0ae986e09d17004B7E748817a47d73c"
       },
       "plugins": {
-        "simplePositionManager": "0x0a1F0F6a250462111451966516FEA022205c458f",
-        "vaultPositionManager": "0x66997860522898B34274423aEF686f96F0705616"
+        "simplePositionManager": "0x491e8712885E4e0b98864F13393ced8c1a61FD57",
+        "vaultPositionManager": "0xe94AC990873C3B59A417d25C1ec1398807FB41A1"
       },
       "AUSD-DynamicIRM": "0x22dCF7dd5518F5F08ec05c59606d84698FFF07BB"
     },
@@ -113,7 +113,7 @@
         "AUSD": "0xAd4AA2a713fB86FBb6b60dE2aF9E32a11DB6Abf2"
       },
       "plugins": {
-        "simplePositionManager": "0x709D7574172c27B82c0C2856e7189a144D4A60Ca"
+        "simplePositionManager": "0xd807efC94376618B4d9CE6eAaf89607006d3B881"
       },
       "AUSD-DynamicIRM": "0x46e2bA1D6CFfB180Efa17d4D5A726b599ED8B904"
     },
@@ -125,7 +125,7 @@
         "AUSD": "0x6E182EB501800C555bd5E662E6D350D627F504D8"
       },
       "plugins": {
-        "simplePositionManager": "0xD1fCdC264c97F2eA17335ec622fe931e956b340B"
+        "simplePositionManager": "0x2619BB5Acfe51317c4C36a63578FD56148e68C74"
       },
       "AUSD-DynamicIRM": "0x72cb6a15E050427e1a6047614A47659A2C94d1bA"
     },
@@ -137,7 +137,7 @@
         "USDC": "0x8EE9FC28B8Da872c38A496e9dDB9700bb7261774"
       },
       "plugins": {
-        "simplePositionManager": "0x057e7D8c47dfbec41DB8f60E39bf55209988A85A"
+        "simplePositionManager": "0x960c49E523e6A87282D2bC5032d0AeCb35Dc20ef"
       },
       "USDC-DynamicIRM": "0x1622D77E311638C77779e6D9B212E3e7D73AaFB4"
     },
@@ -149,7 +149,7 @@
         "USDC": "0x7C9d4f1695C6282Da5e5509Aa51fC9fb417C6f1d"
       },
       "plugins": {
-        "simplePositionManager": "0xF39F437630e85F9D9Fb5553582082D8E21771B13"
+        "simplePositionManager": "0x8cA51d155C07e91B206Cf11C8D52d5aB082657F6"
       },
       "USDC-DynamicIRM": "0x9F57957F2CA8d0DB433e4623f8bd248293b01e86"
     },
@@ -161,7 +161,7 @@
         "USDC": "0x21aDBb60a5fB909e7F1fB48aACC4569615CD97b5"
       },
       "plugins": {
-        "simplePositionManager": "0xdc13938dd3F47d9d0c7318d1D0A6DA15f4B0b205"
+        "simplePositionManager": "0x3A1B2Dc11a81Fe106eC667BaB4056fC72498ff73"
       },
       "USDC-DynamicIRM": "0x034f1a014946Fe4d4ea3bD36A315F775a8C1aB26"
     },
@@ -173,12 +173,13 @@
         "WMON": "0xf473568b26B8C5aadCa9fbC0eA17E1728d5ec925"
       },
       "plugins": {
-        "simplePositionManager": "0x8B38ACD27d83B938B2c897c28cC9c11Ee8414b16"
+        "simplePositionManager": "0x77B90040E6dFE8A62293Cd91CAeE35296EC266Ee"
       },
       "WMON-DynamicIRM": "0x034Cb4152B6506c445f18d564b3Ce86B0DE05C7B"
     }
   },
   "ProtocolReader": "0x878cDfc2F3D96a49A5CbD805FAF4F3080768a6d2",
   "CombinedAggregator-ezETH": "0xd5F84C4497621768f3F08b65ad7019BdF183b1fd",
-  "CombinedAggregator-earnAUSD": "0xf80CC9965d260d7cD96E41b9734F031279dCDf2f"
+  "CombinedAggregator-earnAUSD": "0xf80CC9965d260d7cD96E41b9734F031279dCDf2f",
+  "DAOTimelock": "0x2677738657F27e1A3591E00AD7E5a78807688C08"
 }

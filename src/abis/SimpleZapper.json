@@ -406,7 +406,12 @@
   },
   {
     "type": "error",
-    "name": "BaseZapper__InsufficientToRepay",
+    "name": "BaseZapper__InsufficientAssetsForRepayment",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BaseZapper__InvalidRepaymentAmount",
     "inputs": []
   },
   {
