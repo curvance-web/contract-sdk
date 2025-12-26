@@ -104,8 +104,14 @@ export class KyberSwap implements IDexAgg {
     async getAvailableTokens(provider: curvance_provider, query: string | null = null, page: number = 1, pageSize: number = 25): Promise<ZapToken[]> {
         let zap_tokens: ZapToken[] = [];
         
+        let tokens_set = new Set<string>();
         for(const market of all_markets) {
             for(const token of market.tokens) {
+                if(tokens_set.has(token.address)) {
+                    continue;
+                }
+                tokens_set.add(token.address);
+                
                 zap_tokens.push({
                     interface: token.getAsset(true),
                     type: 'simple',
