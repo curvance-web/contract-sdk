@@ -12,6 +12,7 @@ export class TestFramework {
     snapshot_id: number | undefined;
     init_snapshot_id: number | undefined;
     log: boolean = false;
+    impersonated_storage: {original_curvance: Awaited<ReturnType<typeof setupChain>> | null} = {original_curvance: null};
 
     // Token storage slot configuration - maps chain to token addresses to balance mapping slots
     private static tokenStorageSlots: {[chain: string]: {[tokenAddress: string]: number}} = {
@@ -98,6 +99,10 @@ export class TestFramework {
         if(this.init_snapshot_id != null) {
             await this.provider.send("evm_revert", [this.init_snapshot_id]);
         }
+
+        if(this.impersonated_storage.original_curvance != null) {
+            await this.impersonateStop();
+        }
     }
 
     async reset() {
@@ -134,6 +139,20 @@ export class TestFramework {
             slot,
             value
         ]);
+    }
+
+    async impersonateStart(account: address) {
+        this.impersonated_storage.original_curvance = Object.assign({}, this.curvance);
+        await this.provider.send("anvil_impersonateAccount", [account]);
+
+        const impersonatedSigner = await this.provider.getSigner(account);
+        this.curvance = await setupChain(this.chain, impersonatedSigner, true);
+    }
+
+    async impersonateStop() {
+        await this.provider.send("anvil_stopImpersonatingAccount", [this.account]);
+        this.curvance = this.impersonated_storage.original_curvance!;
+        this.impersonated_storage.original_curvance = null;
     }
 
     async seedUnderlying() {

@@ -782,13 +782,13 @@ export class CToken extends Calldata<ICToken> {
         )
     }
 
-    previewLeverageUp(newLeverage: Decimal, borrow: BorrowableCToken) {
+    previewLeverageUp(newLeverage: Decimal, borrow: BorrowableCToken, depositAmount?: bigint) {
         const currentLeverage = this.getLeverage() ?? Decimal(0);
         if(newLeverage.lte(currentLeverage)) {
             throw new Error("New leverage must be more than current leverage");
         }
 
-        const collateralAvail = this.cache.userCollateral;
+        const collateralAvail = this.cache.userCollateral + (depositAmount ? depositAmount : BigInt(0));
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
         const newPosition = collateralInUsd.mul(newLeverage);
         const newDebt = newPosition.sub(this.market.userDebt).sub(collateralInUsd);
@@ -948,7 +948,7 @@ export class CToken extends Calldata<ICToken> {
     async depositAndLeverage(
         depositAmount: TokenInput,
         borrow: BorrowableCToken,
-        borrowAmount: TokenInput,
+        leverageTarget: Decimal,
         type: PositionManagerTypes,
         slippage_: Percentage = Decimal(0.005)
     ) {
@@ -958,24 +958,29 @@ export class CToken extends Calldata<ICToken> {
         const manager = this.getPositionManager(type);
 
         let calldata: bytes;
+        const { borrowAmount } = this.previewLeverageUp(
+            leverageTarget, 
+            borrow, 
+            this.convertTokenInput(depositAmount, true, true)
+        );
 
         switch(type) {
             case 'simple': {
-                const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
+                 const { action, quote } = await chain_config[setup_config.chain].dexAgg.quoteAction(
                     manager.address,
                     borrow.asset.address,
                     this.asset.address,
                     borrow.convertTokenInput(borrowAmount),
                     slippage
                 );
-                
+                    
                 calldata = manager.getDepositAndLeverageCalldata(
                     this.convertTokenInput(depositAmount),
                     {
                         borrowableCToken: borrow.address,
                         borrowAssets: borrow.convertTokenInput(borrowAmount),
                         cToken: this.address,
-                        expectedShares: BigInt(quote.min_out),
+                        expectedShares: await PositionManager.getExpectedShares(this, BigInt(quote.min_out)),
                         swapAction: action,
                         auxData: "0x",
                     },

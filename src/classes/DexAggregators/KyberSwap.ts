@@ -195,13 +195,22 @@ export class KyberSwap implements IDexAgg {
         }
         const build_data = await build_response.json() as KyperSwapBuildResponse;
 
-        // I need to figure out what min_out is by applying the slippage which is in bps to build_data.amountOut
         const min_out = BigInt(build_data.data.amountOut) * BigInt(10000n - slippage) / BigInt(10000);
 
         if(build_data.data.routerAddress != this.router) {
             throw new Error(`KyberSwap returned unexpected router address: ${build_data.data.routerAddress}`);
         }
 
+        // Check for excessive slippage by comparing USD values
+        // const amountInUsd = parseFloat(build_data.data.amountInUsd);
+        // const amountOutUsd = parseFloat(build_data.data.amountOutUsd);
+        // const actualSlippageBps = Math.round((amountInUsd - amountOutUsd) / amountInUsd * 10000);
+        
+        // if (actualSlippageBps > Number(slippage)) {
+        //     console.log(build_data);
+        //     throw new Error(`Slippage exceeds maximum tolerance (${build_data.requestId}): actual ${(actualSlippageBps / 100).toFixed(2)}% > max ${(Number(slippage) / 100).toFixed(2)}%`);
+        // }
+        
         return {
             to: build_data.data.routerAddress as address,
             calldata: build_data.data.data as bytes,

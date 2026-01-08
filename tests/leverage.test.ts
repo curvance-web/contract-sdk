@@ -15,7 +15,7 @@ describe('Leverage', () => {
             seedNativeBalance: true,
             seedUnderlying: true,
             snapshot: true,
-            log: false,
+            log: true,
         });
         account = framework.account;
     })
@@ -33,7 +33,7 @@ describe('Leverage', () => {
         const depositAmount = Decimal(1_000);
         await cshMON.approvePlugin('native-vault', 'positionManager');
         await cshMON.approveUnderlying(depositAmount, cshMON.getPluginAddress('native-vault', 'positionManager'));
-        await cshMON.depositAndLeverage(depositAmount, cWMON, Decimal(3_000), 'native-vault', Decimal(0.01));
+        await cshMON.depositAndLeverage(depositAmount, cWMON, Decimal(3), 'native-vault', Decimal(0.01));
     });
 
     test('Native vault leverage up & down', async function() {
@@ -55,7 +55,7 @@ describe('Leverage', () => {
         const depositAmount = Decimal(1_000);
         await csAUSD.approvePlugin('vault', 'positionManager');
         await csAUSD.approveUnderlying(depositAmount, csAUSD.getPluginAddress('vault', 'positionManager'));
-        await csAUSD.depositAndLeverage(depositAmount, cAUSD, Decimal(3_000), 'vault', Decimal(0.005));
+        await csAUSD.depositAndLeverage(depositAmount, cAUSD, Decimal(3), 'vault', Decimal(0.005));
     });
 
     test('Vault leverage up & down', async function() {
@@ -78,7 +78,7 @@ describe('Leverage', () => {
         const depositAmount = Decimal(1_000);
         await cearnAUSD.approvePlugin('simple', 'positionManager');
         await cearnAUSD.approveUnderlying(depositAmount, cearnAUSD.getPluginAddress('simple', 'positionManager'));
-        await cearnAUSD.depositAndLeverage(depositAmount, cAUSD, Decimal(3_000), 'simple', Decimal(0.005));
+        await cearnAUSD.depositAndLeverage(depositAmount, cAUSD, Decimal(3), 'simple', Decimal(0.005));
     });
 
     test('Simple leverage up & down', async function() {

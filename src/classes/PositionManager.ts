@@ -56,6 +56,10 @@ export class PositionManager extends Calldata<IPositionManager> {
         }
     }
 
+    static async getExpectedShares(deposit_ctoken: CToken, amount: bigint) {
+        return deposit_ctoken.convertToShares(amount);
+    }
+
     static async getVaultExpectedShares(deposit_ctoken: CToken, borrow_ctoken: CToken, borrow_amount: TokenInput) {
         const borrow_amount_as_bn = borrow_ctoken.convertTokenInput(borrow_amount);
 
@@ -74,6 +78,7 @@ export class PositionManager extends Calldata<IPositionManager> {
     }
 
     getDepositAndLeverageCalldata(assets: bigint, action: LeverageAction, slippage: bigint) {
+        console.log([assets, action, slippage]);
         return this.getCallData("depositAndLeverage", [assets, action, slippage]);
     }
 }
