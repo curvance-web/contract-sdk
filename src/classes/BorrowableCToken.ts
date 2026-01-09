@@ -124,7 +124,19 @@ export class BorrowableCToken extends CToken {
         const irm_addr = await this.contract.IRM();
         return contractSetup<IDynamicIRM>(this.provider, irm_addr, irm_abi);
     }
-    
+
+    async fetchUtilizationRateChange(assets: TokenInput, direction: 'add' | 'remove'): Promise<Percentage>;
+    async fetchUtilizationRateChange(assets: TokenInput, direction: 'add' | 'remove', inPercentage: false ): Promise<bigint>;
+    async fetchUtilizationRateChange(assets: TokenInput, direction: 'add' | 'remove', inPercentage: true ): Promise<Percentage>;
+    async fetchUtilizationRateChange(assets: TokenInput, direction: 'add' | 'remove', inPercentage = true ): Promise<Percentage | bigint> {
+        const assets_as_bn = this.convertTokenInput(assets);
+        const irm = await this.dynamicIRM();
+        const assets_held = direction == 'add' ? this.cache.liquidity + assets_as_bn : this.cache.liquidity - assets_as_bn;
+        const newRate = await irm.utilizationRate(assets_held, this.cache.debt);
+
+        return inPercentage ? Decimal(newRate).div(WAD) : newRate;
+    }
+
     async fetchDebtBalanceAtTimestamp(): Promise<USD>;
     async fetchDebtBalanceAtTimestamp(timestamp: bigint): Promise<USD>;
     async fetchDebtBalanceAtTimestamp(timestamp: bigint, asUSD: true): Promise<USD>;

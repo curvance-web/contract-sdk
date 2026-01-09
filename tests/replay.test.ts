@@ -31,6 +31,6 @@ describe('Replay', () => {
         
         const [ market, cearnAUSD, cAUSD ] = await framework.getMarket('earnAUSD | AUSD');
 
-        console.log(await cAUSD.fetchDebtBalanceAtTimestamp(0n));
+        console.log(cAUSD.getUtilizationRate(true), await cAUSD.fetchUtilizationRateChange(Decimal(1000000), 'add'));
     });
 });
