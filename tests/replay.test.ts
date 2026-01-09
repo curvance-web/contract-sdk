@@ -29,9 +29,8 @@ describe('Replay', () => {
     test('test', async function() {
         await framework.impersonateStart("0xe2165a834F93C39483123Ac31533780b9c679ed4");
         
-        const [ market, cWMON, cAUSD ] = await framework.getMarket('WMON | AUSD');
-        await cWMON.approvePlugin('simple', 'positionManager');
-        await cWMON.approveUnderlying(Decimal(600), cWMON.getPluginAddress('simple', 'positionManager'));
-        await cWMON.depositAndLeverage(Decimal(600), cAUSD, Decimal(5), 'simple', Decimal(0.005));
+        const [ market, cearnAUSD, cAUSD ] = await framework.getMarket('earnAUSD | AUSD');
+
+        console.log(await cAUSD.fetchDebtBalanceAtTimestamp(0n));
     });
 });

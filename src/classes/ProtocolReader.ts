@@ -127,6 +127,7 @@ export interface IProtocolReader {
     hypotheticalRedemptionOf(account: address, ctoken: address, redeemShares: bigint, bufferTime: bigint): Promise<[bigint, bigint, boolean, boolean]>;
     hypotheticalBorrowOf(account: address, borrowableCToken: address, borrowAssets: bigint, bufferTime: bigint): Promise<[bigint, bigint, boolean, boolean]>;
     maxRedemptionOf(account: address, ctoken: address, bufferTime: bigint): Promise<[bigint, bigint, boolean]>;
+    debtBalanceAtTimestamp(account: address, borrowableCtoken: address, timestamp: bigint): Promise<bigint>;
 }
 
 export class ProtocolReader {
@@ -287,6 +288,10 @@ export class ProtocolReader {
 
     async marketMultiCooldown(markets: address[], account: address) {
         return await this.contract.marketMultiCooldown(markets, account);
+    }
+
+    async debtBalanceAtTimestamp(account: address, borrowableCtoken: address, timestamp: bigint) {
+        return await this.contract.debtBalanceAtTimestamp(account, borrowableCtoken, timestamp);
     }
 
     async getStaticMarketData(use_api = true) {

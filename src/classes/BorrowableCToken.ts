@@ -124,6 +124,16 @@ export class BorrowableCToken extends CToken {
         const irm_addr = await this.contract.IRM();
         return contractSetup<IDynamicIRM>(this.provider, irm_addr, irm_abi);
     }
+    
+    async fetchDebtBalanceAtTimestamp(): Promise<USD>;
+    async fetchDebtBalanceAtTimestamp(timestamp: bigint): Promise<USD>;
+    async fetchDebtBalanceAtTimestamp(timestamp: bigint, asUSD: true): Promise<USD>;
+    async fetchDebtBalanceAtTimestamp(timestamp: bigint, asUSD: false): Promise<bigint>;
+    async fetchDebtBalanceAtTimestamp(timestamp: bigint = 0n, asUSD: boolean = true): Promise<USD | bigint> {
+        const signer = validateProviderAsSigner(this.provider);
+        const debt = await this.market.reader.debtBalanceAtTimestamp(signer.address as address, this.address, timestamp);
+        return asUSD ? this.fetchConvertTokensToUsd(debt) : debt;
+    }
 
     async fetchBorrowRate() {
         const irm = await this.dynamicIRM();
