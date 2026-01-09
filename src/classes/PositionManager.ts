@@ -78,7 +78,6 @@ export class PositionManager extends Calldata<IPositionManager> {
     }
 
     getDepositAndLeverageCalldata(assets: bigint, action: LeverageAction, slippage: bigint) {
-        console.log([assets, action, slippage]);
         return this.getCallData("depositAndLeverage", [assets, action, slippage]);
     }
 }

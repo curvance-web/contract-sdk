@@ -107,10 +107,11 @@ export class KyberSwap implements IDexAgg {
         let tokens_set = new Set<string>();
         for(const market of all_markets) {
             for(const token of market.tokens) {
-                if(tokens_set.has(token.address)) {
+                const asset = token.getAsset(true);
+                if(tokens_set.has(asset.address)) {
                     continue;
                 }
-                tokens_set.add(token.address);
+                tokens_set.add(asset.address);
                 
                 zap_tokens.push({
                     interface: token.getAsset(true),
