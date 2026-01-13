@@ -128,7 +128,7 @@ export class Market {
         if (this.cache.user.positionHealth == UINT256_MAX) {
             return null;
         }
-        
+
         return this.formatPositionHealth(this.cache.user.positionHealth);
     }
 
@@ -416,7 +416,7 @@ export class Market {
             deposit_ctoken,
             borrow_ctoken,
             false,
-            deposit_ctoken.convertBigInt(collateralAssetReduction, false, true), 
+            deposit_ctoken.convertBigInt(collateralAssetReduction, false, true),
             true,
             repayTokens
         );
@@ -432,7 +432,7 @@ export class Market {
             deposit_ctoken,
             borrow_ctoken,
             false,
-            Decimal(0), 
+            Decimal(0),
             false,
             borrowAmount
         );
@@ -450,12 +450,12 @@ export class Market {
      * @returns a position health decimal or null if infinity
      */
     async previewPositionHealth(
-        deposit_ctoken: CToken | null = null, 
-        borrow_ctoken: BorrowableCToken | null = null, 
-        isDeposit: boolean = false, 
-        collateral_amount: TokenInput = Decimal(0), 
-        isRepay: boolean = false, 
-        debt_amount: TokenInput = Decimal(0), 
+        deposit_ctoken: CToken | null = null,
+        borrow_ctoken: BorrowableCToken | null = null,
+        isDeposit: boolean = false,
+        collateral_amount: TokenInput = Decimal(0),
+        isRepay: boolean = false,
+        debt_amount: TokenInput = Decimal(0),
         bufferTime: bigint = 0n
     ) {
         const provider = validateProviderAsSigner(this.provider);
@@ -660,7 +660,7 @@ export class Market {
 
             const market_address = staticData.address;
             let deploy_data: DeployData | undefined;
-            
+
             for(const obj_key of deploy_keys) {
                 const data = (setup_config.contracts.markets as any)[obj_key];
 

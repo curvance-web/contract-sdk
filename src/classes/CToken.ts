@@ -108,7 +108,7 @@ export class CToken extends Calldata<ICToken> {
         if(this.isNativeVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
         if(this.isWrappedNative) this.zapTypes.push('native-simple');
-        
+
         if(this.isVault) this.zapTypes.push('vault');
         if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
 
@@ -132,14 +132,14 @@ export class CToken extends Calldata<ICToken> {
     get canLeverage() { return this.leverageTypes.length > 0; }
     get liquidationPrice(): USD | null {
         if (this.cache.liquidationPrice == UINT256_MAX) return null;
-        return toDecimal(this.cache.liquidationPrice, 18n); 
+        return toDecimal(this.cache.liquidationPrice, 18n);
     }
 
     getLeverage() {
         if(this.getUserCollateral(true).equals(0)) {
             return null;
         }
-        
+
         const leverage = this.getUserCollateral(true).div(this.getUserCollateral(true).sub(this.market.userDebt));
         return leverage.eq(1) ? null : leverage;
     }
@@ -424,7 +424,7 @@ export class CToken extends Calldata<ICToken> {
         if(instructions == 'none' || typeof instructions != 'object') {
             return true;
         }
-        
+
         const signer = validateProviderAsSigner(this.provider);
         const asset =  new ERC20(signer, instructions.inputToken);
         const plugin = this.getPluginAddress(instructions.type, 'zapper');
@@ -639,7 +639,7 @@ export class CToken extends Calldata<ICToken> {
 
         if(typeof zap === 'object') {
             if(zap.type === 'native-vault' || zap.type === 'native-simple') {
-                asset = new NativeToken(setup_config.chain, this.provider); 
+                asset = new NativeToken(setup_config.chain, this.provider);
             } else {
                 asset = new ERC20(this.provider, zap.inputToken);
             }
@@ -652,7 +652,7 @@ export class CToken extends Calldata<ICToken> {
                 default: throw new Error("Unsupported zap type for balance fetch");
             }
         }
-        
+
         return asset.balanceOf(signer.address as address, false);
     }
 
@@ -662,12 +662,12 @@ export class CToken extends Calldata<ICToken> {
 
         if(this.convertTokenInput(amount) > balance) {
             console.warn('[WARNING] Detected higher deposit amount then underlying balance, changing to the underlying balance. Diff: ', {
-                raw: this.convertTokenInput(amount) - balance, 
+                raw: this.convertTokenInput(amount) - balance,
                 formatted: this.convertBigInt(this.convertTokenInput(amount) - balance)
             });
             return this.convertBigInt(balance);
         }
-        
+
         return amount;
     }
 
@@ -846,7 +846,7 @@ export class CToken extends Calldata<ICToken> {
                 break;
             }
 
-            
+
             case 'vault': {
                 calldata = manager.getLeverageCalldata(
                     {
@@ -959,8 +959,8 @@ export class CToken extends Calldata<ICToken> {
 
         let calldata: bytes;
         const { borrowAmount } = this.previewLeverageUp(
-            leverageTarget, 
-            borrow, 
+            leverageTarget,
+            borrow,
             this.convertTokenInput(depositAmount, true, true)
         );
 
@@ -973,7 +973,7 @@ export class CToken extends Calldata<ICToken> {
                     borrow.convertTokenInput(borrowAmount),
                     slippage
                 );
-                    
+
                 calldata = manager.getDepositAndLeverageCalldata(
                     this.convertTokenInput(depositAmount),
                     {
@@ -1096,7 +1096,7 @@ export class CToken extends Calldata<ICToken> {
         if(receiver == null) receiver = signer.address as address;
         const assets = this.convertTokenInput(amount);
         const zapType = typeof zap == 'object' ? zap.type : zap;
-        const isNative = zapType == 'native-simple' || zapType == 'native-vault' || zapType == 'none'; 
+        const isNative = zapType == 'native-simple' || zapType == 'native-vault' || zapType == 'none';
 
         const default_calldata = this.getCallData("deposit", [assets, receiver]);
         const { calldata, calldata_overrides } = await this.zap(assets, zap, false, default_calldata);
