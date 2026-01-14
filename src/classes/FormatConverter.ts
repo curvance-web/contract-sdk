@@ -12,6 +12,38 @@ export default class FormatConverter {
     }
 
     /**
+     * Return the Decimal representation of a USD value given price and decimals.
+     * @param value - USD value of tokens
+     * @param price - Price of single token in USD (Decimal or bigint)
+     * @param decimals - Number of decimals for the token
+     * @returns - The Decimal representation of the token amount
+     */
+    static usdToDecimalTokens(value: USD, price: USD | bigint, decimals: number | bigint): Decimal {
+        if(!Decimal.isDecimal(price)) {
+            price = this.bigIntToUsd(price);
+        }
+
+        if (typeof decimals === 'bigint') {
+            decimals = Number(decimals);
+        }
+
+        return value.div(price).toDecimalPlaces(decimals, Decimal.ROUND_DOWN);
+    }
+    /**
+     * Return the bigint representation of a USD value given price and decimals.
+     * @param value - USD value of tokens
+     * @param price - Price of single token in USD (Decimal or bigint)
+     * @param decimals - Number of decimals for the token
+     * @returns The bigint representation of the token amount
+     */
+    static usdToBigIntTokens(value: USD, price: USD | bigint, decimals: number | bigint): bigint {
+        return FormatConverter.decimalToBigInt(
+            FormatConverter.usdToDecimalTokens(value, price, decimals),
+            decimals
+        );
+    }
+
+    /**
      * Formats a bigint value into Decimal with the given amount of precision.
      * @param value The bigint value to convert
      * @param decimals The number of decimal places
@@ -24,7 +56,7 @@ export default class FormatConverter {
 
         const decimalValue = new Decimal(value.toString());
         const scale = new Decimal(10).pow(decimals);
-        return decimalValue.div(scale).toDecimalPlaces(decimals);
+        return decimalValue.div(scale).toDecimalPlaces(decimals, Decimal.ROUND_DOWN);
     }
 
     /**

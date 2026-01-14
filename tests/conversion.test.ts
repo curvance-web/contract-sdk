@@ -7,10 +7,28 @@ import { Decimal } from 'decimal.js';
 
 
 describe('Conversions', () => {
-    test('Bigint to usd', function() {
-        const test_bigint = BigInt(500e18);
-        const usd_value = FormatConverter.bigIntToUsd(test_bigint);
+    test('Bigint to USD', function() {
+        const usd_bigint = BigInt(500e18);
+        const usd_value = FormatConverter.bigIntToUsd(usd_bigint);
         assert.strictEqual(usd_value.toFixed(2), '500.00');
+    });
+
+    test('USD to bigint', function() {
+        const usd_value = Decimal(12);
+        const usd_price = Decimal(0.22);
+        const decimals = 6;
+
+        const usd_bigint = FormatConverter.usdToBigIntTokens(usd_value, usd_price, decimals);
+        assert.strictEqual(usd_bigint.toString(), '54545454');
+    });
+
+    test('USD to token input', function() {
+        const usd_value = Decimal(12);
+        const usd_price = Decimal(0.22);
+        const decimals = 6;
+
+        const token_input = FormatConverter.usdToDecimalTokens(usd_value, usd_price, decimals);
+        assert.strictEqual(token_input.toFixed(6), '54.545454');
     });
 
     test('Bigint to token input', function() {
