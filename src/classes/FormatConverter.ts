@@ -11,6 +11,21 @@ export default class FormatConverter {
         return FormatConverter.bigIntToDecimal(value, 18);
     }
 
+    static bigIntTokensToUsd(tokens: bigint, price: bigint, decimals: number | bigint): USD {
+        if (typeof decimals === 'bigint') {
+            decimals = Number(decimals);
+        }
+
+        const decimalTokens = FormatConverter.bigIntToDecimal(tokens, decimals);
+        const decimalPrice = FormatConverter.bigIntToUsd(price);
+
+        return decimalTokens.mul(decimalPrice).toDecimalPlaces(decimals, Decimal.ROUND_DOWN);
+    }
+
+    static decimalTokensToUsd(tokens: Decimal, price: Decimal): USD {
+        return tokens.mul(price).toDecimalPlaces(18, Decimal.ROUND_DOWN);
+    }
+
     /**
      * Return the Decimal representation of a USD value given price and decimals.
      * @param value - USD value of tokens

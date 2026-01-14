@@ -31,6 +31,23 @@ describe('Conversions', () => {
         assert.strictEqual(token_input.toFixed(6), '54.545454');
     });
 
+    test('BigInt Tokens to USD', function() {
+        const tokens = BigInt(1000e6);
+        const price = BigInt(0.75 * 1e18);
+        const decimals = 6;
+
+        const usd_value = FormatConverter.bigIntTokensToUsd(tokens, price, decimals);
+        assert.strictEqual(usd_value.toFixed(2), '750.00');
+    })
+
+    test('Decimal Tokens to USD', function() {
+        const tokens = new Decimal('1000.50');
+        const price = new Decimal('0.75');
+
+        const usd_value = FormatConverter.decimalTokensToUsd(tokens, price);
+        assert.strictEqual(usd_value.toFixed(2), '750.38');
+    });
+
     test('Bigint to token input', function() {
         const tokens = BigInt(1000e6);
         const decimals = 6;
