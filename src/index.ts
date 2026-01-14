@@ -12,6 +12,7 @@ export * from './classes/NativeToken';
 export * from './classes/PositionManager';
 export * from './classes/CVE';
 export * from './classes/DexAggregators';
+export * from './classes/FormatConverter';
 export * from './helpers';
 export * from './setup';
 export * from './types';

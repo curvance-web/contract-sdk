@@ -6,6 +6,7 @@ import { ERC20 } from "./ERC20";
 export interface IERC4626 {
     asset(): Promise<address>;
     convertToShares(assets: bigint): Promise<bigint>;
+    convertToAssets(assets: bigint): Promise<bigint>;
     previewDeposit(assets: bigint): Promise<bigint>;
 }
 
@@ -14,6 +15,7 @@ export class ERC4626 extends ERC20 {
         return contractSetup<IERC4626>(this.provider, this.address, [
             "function asset() view returns (address)",
             "function convertToShares(uint256) view returns (uint256)",
+            "function convertToAssets(uint256) view returns (uint256)",
             "function previewDeposit(uint256) view returns (uint256)"
         ]);
     }
@@ -29,6 +31,9 @@ export class ERC4626 extends ERC20 {
         return this.get4626Contract().convertToShares(assets);
     }
 
+    async convertToAssets(shares: bigint) {
+        return this.get4626Contract().convertToAssets(shares);
+    }
 
     async previewDeposit(assets: bigint ): Promise<bigint>
     async previewDeposit(assets: bigint, asTokenInput: false ): Promise<bigint>
