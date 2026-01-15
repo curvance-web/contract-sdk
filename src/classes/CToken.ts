@@ -111,15 +111,15 @@ export class CToken extends Calldata<ICToken> {
             return;
         }
 
-        // if(this.isNativeVault) this.zapTypes.push('native-vault');
-        // if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
-        // if(this.isWrappedNative) this.zapTypes.push('native-simple');
+        if(this.isNativeVault) this.zapTypes.push('native-vault');
+        if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
+        if(this.isWrappedNative) this.zapTypes.push('native-simple');
 
-        // if(this.isVault) this.zapTypes.push('vault');
-        // if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
+        if(this.isVault) this.zapTypes.push('vault');
+        if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
 
-        // if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
-        // this.zapTypes.push('simple');
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
