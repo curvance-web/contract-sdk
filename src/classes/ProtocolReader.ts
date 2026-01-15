@@ -64,7 +64,9 @@ export interface StaticMarketData {
 
 export interface DynamicMarketToken {
     address: address;
+    exchangeRate: bigint;
     totalSupply: bigint;
+    totalAssets: bigint;
     collateral: bigint;
     debt: bigint;
     sharePrice: bigint;
@@ -89,7 +91,6 @@ export interface UserMarketToken {
     userShareBalance: bigint;
     userUnderlyingBalance: bigint;
     userCollateral: bigint;
-    exchangeRate: bigint;
     userDebt: bigint;
     liquidationPrice: bigint;
 }
@@ -185,14 +186,14 @@ export class ProtocolReader {
     }
 
     async getPositionHealth(
-        market: address, 
-        account: address, 
-        ctoken: address, 
-        borrowableCToken: address, 
-        isDeposit: boolean, 
-        collateralAssets: bigint, 
-        isRepayment: boolean, 
-        debtAssets: bigint, 
+        market: address,
+        account: address,
+        ctoken: address,
+        borrowableCToken: address,
+        isDeposit: boolean,
+        collateralAssets: bigint,
+        isRepayment: boolean,
+        debtAssets: bigint,
         bufferTime: bigint
     ) {
         const data = await this.contract.getPositionHealth(market, account, ctoken, borrowableCToken, isDeposit, collateralAssets, isRepayment, debtAssets, bufferTime);
@@ -201,7 +202,7 @@ export class ProtocolReader {
             errorCodeHit: data[1]
         }
     }
-    
+
     async getDynamicMarketData(use_api = true) {
         // TODO: Implement API call
         const data = await this.contract.getDynamicMarketData();
@@ -210,6 +211,8 @@ export class ProtocolReader {
             tokens: market.tokens.map((token: any) => ({
                 address: token._address,
                 totalSupply: BigInt(token.totalSupply),
+                totalAssets: BigInt(token.totalAssets),
+                exchangeRate: BigInt(token.exchangeRate),
                 collateral: BigInt(token.collateral),
                 debt: BigInt(token.debt),
                 sharePrice: BigInt(token.sharePrice),
@@ -230,7 +233,7 @@ export class ProtocolReader {
 
     async getUserData(account: address) {
         const data = await this.contract.getUserData(account);
-        
+
         const typedData: UserData = {
             locks: data.locks.map((lock: any) => ({
                 lockIndex: BigInt(lock.lockIndex),
@@ -251,7 +254,6 @@ export class ProtocolReader {
                     userShareBalance: BigInt(token.userShareBalance),
                     userUnderlyingBalance: BigInt(token.userUnderlyingBalance),
                     userCollateral: BigInt(token.userCollateral),
-                    exchangeRate: BigInt(token.exchangeRate),
                     userDebt: BigInt(token.userDebt),
                     liquidationPrice: BigInt(token.liquidationPrice)
                 }))
@@ -271,14 +273,14 @@ export class ProtocolReader {
 
     async hypotheticalLeverageOf(account: address, depositCToken: MarketToken, borrowableCToken: MarketToken, deposit_amount: TokenInput) {
         const assets = depositCToken.convertTokenInput(deposit_amount, false);
-        const [ 
-            currentLeverage, 
+        const [
+            currentLeverage,
             adjustMaxLeverage,
             maxLeverage,
-            maxDebtBorrowable 
+            maxDebtBorrowable
         ] = await this.contract.hypotheticalLeverageOf(account, depositCToken.address, borrowableCToken.address, assets, 0n);
 
-        return { 
+        return {
             currentLeverage: Decimal(currentLeverage).div(WAD),
             adjustMaxLeverage: Decimal(adjustMaxLeverage).div(WAD),
             maxLeverage: Decimal(maxLeverage).div(WAD),

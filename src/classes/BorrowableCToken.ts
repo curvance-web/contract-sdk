@@ -149,7 +149,7 @@ export class BorrowableCToken extends CToken {
 
     async fetchBorrowRate() {
         const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
+        const assetsHeld = this.totalAssets
         const debt = await this.contract.marketOutstandingDebt();
         const borrowRate = (await irm.borrowRate(assetsHeld, debt));
         this.cache.borrowRate = borrowRate;
@@ -158,7 +158,7 @@ export class BorrowableCToken extends CToken {
 
     async fetchPredictedBorrowRate() {
         const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
+        const assetsHeld = this.totalAssets
         const debt = await this.contract.marketOutstandingDebt();
         const predictedBorrowRate = (await irm.predictedBorrowRate(assetsHeld, debt));
         this.cache.predictedBorrowRate = predictedBorrowRate;
@@ -167,7 +167,7 @@ export class BorrowableCToken extends CToken {
 
     async fetchUtilizationRate() {
         const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
+        const assetsHeld = this.totalAssets
         const debt = await this.contract.marketOutstandingDebt();
         const utilizationRate = (await irm.utilizationRate(assetsHeld, debt));
         this.cache.utilizationRate = utilizationRate;
@@ -176,7 +176,7 @@ export class BorrowableCToken extends CToken {
 
     async fetchSupplyRate() {
         const irm = await this.dynamicIRM();
-        const assetsHeld = await this.totalAssets();
+        const assetsHeld = this.totalAssets
         const debt = await this.contract.marketOutstandingDebt();
         const fee = await this.contract.interestFee();
         const supplyRate = (await irm.supplyRate(assetsHeld, debt, fee));
@@ -185,7 +185,7 @@ export class BorrowableCToken extends CToken {
     }
 
     async fetchLiquidity() {
-        const assetsHeld = await this.contract.totalAssets();
+        const assetsHeld = this.totalAssets;
         const debt = await this.contract.marketOutstandingDebt();
         const liquidity = assetsHeld - debt;
         this.cache.liquidity = liquidity;

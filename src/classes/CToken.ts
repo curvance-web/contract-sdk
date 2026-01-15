@@ -130,9 +130,19 @@ export class CToken extends Calldata<ICToken> {
     get canZap() { return this.zapTypes.length > 0; }
     get maxLeverage() { return Decimal(this.cache.maxLeverage / BPS); }
     get canLeverage() { return this.leverageTypes.length > 0; }
+    get totalAssets() { return this.cache.totalAssets; }
+    get totalSupply() { return this.cache.totalSupply; }
     get liquidationPrice(): USD | null {
         if (this.cache.liquidationPrice == UINT256_MAX) return null;
         return toDecimal(this.cache.liquidationPrice, 18n);
+    }
+
+    virtualConvertToAssets(shares: bigint): bigint {
+        return (shares * this.totalAssets) / this.totalSupply;
+    }
+
+    virtualConvertToShares(assets: bigint): bigint {
+        return (assets * this.totalSupply) / this.totalAssets;
     }
 
     getLeverage() {
@@ -378,7 +388,7 @@ export class CToken extends Calldata<ICToken> {
     async fetchTvl(inUSD: true): Promise<USD>;
     async fetchTvl(inUSD: false): Promise<bigint>;
     async fetchTvl(inUSD = true): Promise<USD | bigint> {
-        const tvl = await this.totalSupply();
+        const tvl = await this.fetchTotalSupply();
         this.cache.totalSupply = tvl;
         return inUSD ? this.getTvl(true) : this.getTvl(false);
     }
@@ -575,11 +585,11 @@ export class CToken extends Calldata<ICToken> {
         return price;
     }
 
-    async totalSupply() {
+    async fetchTotalSupply() {
         return this.contract.totalSupply();
     }
 
-    async totalAssets() {
+    async fetchTotalAssets() {
         return this.contract.totalAssets();
     }
 

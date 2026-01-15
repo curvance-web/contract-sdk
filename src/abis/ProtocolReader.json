@@ -128,6 +128,16 @@
                 "internalType": "uint256"
               },
               {
+                "name": "exchangeRate",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "totalAssets",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
                 "name": "collateral",
                 "type": "uint256",
                 "internalType": "uint256"
@@ -292,11 +302,6 @@
                     "name": "liquidationPrice",
                     "type": "uint256",
                     "internalType": "uint256"
-                  },
-                  {
-                    "name": "exchangeRate",
-                    "type": "uint256",
-                    "internalType": "uint256"
                   }
                 ]
               }
@@ -334,6 +339,16 @@
               },
               {
                 "name": "totalSupply",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "exchangeRate",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "totalAssets",
                 "type": "uint256",
                 "internalType": "uint256"
               },
@@ -869,11 +884,6 @@
                   },
                   {
                     "name": "liquidationPrice",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "exchangeRate",
                     "type": "uint256",
                     "internalType": "uint256"
                   }

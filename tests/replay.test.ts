@@ -28,9 +28,16 @@ describe('Replay', () => {
 
     test('test', async function() {
         await framework.impersonateStart("0xe2165a834F93C39483123Ac31533780b9c679ed4");
-        
-        const [ market, cearnAUSD, cAUSD ] = await framework.getMarket('earnAUSD | AUSD');
 
-        console.log(cAUSD.getUtilizationRate(true), await cAUSD.fetchUtilizationRateChange(Decimal(1000000), 'add'));
+        const [ market, cWMON, cAUSD ] = await framework.getMarket('WMON | AUSD');
+
+        console.log('Shares', await cWMON.convertToShares(BigInt(500e18)));
+        console.log('Exchange rate', cWMON.exchangeRate);
+        console.log('Fetch Total supply', await cWMON.fetchTotalSupply());
+        console.log('Fetch Total assets', await cWMON.fetchTotalAssets());
+
+        console.log('Total supply', cWMON.totalSupply);
+        console.log('Total assets', cWMON.totalAssets);
+        console.log('Virtual convert to shares', await cWMON.virtualConvertToShares(BigInt(500e18)));
     });
 });

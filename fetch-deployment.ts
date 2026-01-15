@@ -5,7 +5,7 @@ const getAbi = (contract_name: string) => {
     const repo = process.env.CONTRACT_REPO_PATH as string;
     const path = `${repo}/artifacts`;
     const abiPath = `${path}/${contract_name}.sol/${contract_name}.json`;
-    
+
     if (!fs.existsSync(abiPath)) {
         throw new Error(`ABI for contract ${contract_name} not found at ${abiPath}`);
     }
