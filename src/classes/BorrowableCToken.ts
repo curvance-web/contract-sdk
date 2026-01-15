@@ -3,11 +3,11 @@ import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from
 import { CToken, ICToken, ZapperInstructions } from "./CToken";
 import { DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { Market } from "./Market";
-import { BPS, ChangeRate, contractSetup, getRateSeconds, SECONDS_PER_YEAR, validateProviderAsSigner, WAD } from "../helpers";
+import { ChangeRate, contractSetup, getRateSeconds, SECONDS_PER_YEAR, validateProviderAsSigner, WAD } from "../helpers";
 import borrowable_ctoken_abi from '../abis/BorrowableCToken.json';
 import irm_abi from '../abis/IDynamicIRM.json';
 import Decimal from "decimal.js";
-import { ZapperTypes } from "./Zapper";
+import FormatConverter from "./FormatConverter";
 
 export interface IBorrowableCToken extends ICToken {
     borrow(amount: bigint, receiver: address): Promise<TransactionResponse>;
@@ -96,7 +96,7 @@ export class BorrowableCToken extends CToken {
 
     async hypotheticalBorrowOf(amount: TokenInput) {
         const signer = validateProviderAsSigner(this.provider);
-        const assets = this.convertTokenInput(amount);
+        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
         return this.market.reader.hypotheticalBorrowOf(
             signer.address as address,
             this,
@@ -113,8 +113,8 @@ export class BorrowableCToken extends CToken {
 
     async borrow(amount: TokenInput, receiver: address | null = null) {
         const signer = validateProviderAsSigner(this.provider);
-        if(receiver == null) receiver = signer.address as address;
-        const assets = this.convertTokenInput(amount);
+        receiver ??= signer.address as address;
+        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
 
         const calldata = this.getCallData("borrow", [ assets, receiver ]);
         return this.oracleRoute(calldata);
@@ -129,7 +129,7 @@ export class BorrowableCToken extends CToken {
     async fetchUtilizationRateChange(assets: TokenInput, direction: 'add' | 'remove', inPercentage: false ): Promise<bigint>;
     async fetchUtilizationRateChange(assets: TokenInput, direction: 'add' | 'remove', inPercentage: true ): Promise<Percentage>;
     async fetchUtilizationRateChange(assets: TokenInput, direction: 'add' | 'remove', inPercentage = true ): Promise<Percentage | bigint> {
-        const assets_as_bn = this.convertTokenInput(assets);
+        const assets_as_bn = FormatConverter.decimalToBigInt(assets, this.asset.decimals);
         const irm = await this.dynamicIRM();
         const assets_held = direction == 'add' ? this.cache.liquidity + assets_as_bn : this.cache.liquidity - assets_as_bn;
         const newRate = await irm.utilizationRate(assets_held, this.cache.debt);
@@ -193,7 +193,7 @@ export class BorrowableCToken extends CToken {
     }
 
     async repay(amount: TokenInput) {
-        const assets = this.convertTokenInput(amount);
+        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
         const calldata = this.getCallData("repay", [ assets ]);
         return this.oracleRoute(calldata);
     }

@@ -30,6 +30,10 @@ describe('Leverage', () => {
 
     test('Native vault deposit and leverage', async function() {
         const [ market, cshMON, cWMON ] = await framework.getMarket('shMON | WMON');
+
+        await cWMON.approveUnderlying();
+        await cWMON.deposit(Decimal(5000)); // Seed borrow
+
         const depositAmount = Decimal(1_000);
         await cshMON.approvePlugin('native-vault', 'positionManager');
         await cshMON.approveUnderlying(depositAmount, cshMON.getPluginAddress('native-vault', 'positionManager'));
@@ -38,6 +42,9 @@ describe('Leverage', () => {
 
     test('Native vault leverage up & down', async function() {
         const [ market, cshMON, cWMON ] = await framework.getMarket('shMON | WMON');
+
+        await cWMON.approveUnderlying();
+        await cWMON.deposit(Decimal(5000)); // Seed borrow
 
         const depositAmount = Decimal(1_000);
         await cshMON.approveUnderlying(depositAmount);
@@ -52,6 +59,10 @@ describe('Leverage', () => {
 
     test('Vault deposit and leverage', async function() {
         const [ market, csAUSD, cAUSD ] = await framework.getMarket('sAUSD | AUSD');
+
+        await cAUSD.approveUnderlying();
+        await cAUSD.deposit(Decimal(5000)); // Seed borrow
+
         const depositAmount = Decimal(1_000);
         await csAUSD.approvePlugin('vault', 'positionManager');
         await csAUSD.approveUnderlying(depositAmount, csAUSD.getPluginAddress('vault', 'positionManager'));
@@ -60,6 +71,9 @@ describe('Leverage', () => {
 
     test('Vault leverage up & down', async function() {
         const [ market, csAUSD, cAUSD ] = await framework.getMarket('sAUSD | AUSD');
+
+        await cAUSD.approveUnderlying();
+        await cAUSD.deposit(Decimal(5000)); // Seed borrow
 
         const depositAmount = Decimal(1_000);
         await csAUSD.approveUnderlying(depositAmount);
@@ -75,6 +89,10 @@ describe('Leverage', () => {
 
     test('Simple deposit and leverage', async function() {
         const [ market, cearnAUSD, cAUSD ] = await framework.getMarket('earnAUSD | AUSD');
+
+        await cAUSD.approveUnderlying();
+        await cAUSD.deposit(Decimal(5000)); // Seed borrow
+
         const depositAmount = Decimal(1_000);
         await cearnAUSD.approvePlugin('simple', 'positionManager');
         await cearnAUSD.approveUnderlying(depositAmount, cearnAUSD.getPluginAddress('simple', 'positionManager'));
@@ -83,6 +101,9 @@ describe('Leverage', () => {
 
     test('Simple leverage up & down', async function() {
         const [ market, cearnAUSD, cAUSD ] = await framework.getMarket('earnAUSD | AUSD');
+
+        await cAUSD.approveUnderlying();
+        await cAUSD.deposit(Decimal(5000)); // Seed borrow
 
         const depositAmount = Decimal(1_000);
         await cearnAUSD.approveUnderlying(depositAmount);

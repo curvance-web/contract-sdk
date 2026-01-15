@@ -1,9 +1,9 @@
-import { error } from "console";
 import { address, bytes, curvance_provider, Percentage, TokenInput } from "../../types";
 import { ZapToken } from "../CToken";
 import IDexAgg from "./IDexAgg";
 import { Swap } from "../Zapper";
-import { all_markets, ERC20, fromBpsToWad, toBigInt, toBps, validateProviderAsSigner, WAD } from "../..";
+import { all_markets, ERC20, toBigInt, validateProviderAsSigner } from "../..";
+import FormatConverter from "../FormatConverter";
 
 export interface KyperSwapErrorResponse {
     code: number;
@@ -92,7 +92,7 @@ export class KyberSwap implements IDexAgg {
     ) {
         // KyberSwap uses 'monad' instead of 'monad-mainnet' like other providers, so we adjust here
         if(chain == "monad-mainnet") {
-            chain = 'monad'; 
+            chain = 'monad';
         }
 
         this.dao = dao;
@@ -100,10 +100,10 @@ export class KyberSwap implements IDexAgg {
         this.chain = chain;
         this.api = `${api}/${this.chain}`;
     }
-    
+
     async getAvailableTokens(provider: curvance_provider, query: string | null = null, page: number = 1, pageSize: number = 25): Promise<ZapToken[]> {
         let zap_tokens: ZapToken[] = [];
-        
+
         let tokens_set = new Set<string>();
         for(const market of all_markets) {
             for(const token of market.tokens) {
@@ -112,7 +112,7 @@ export class KyberSwap implements IDexAgg {
                     continue;
                 }
                 tokens_set.add(asset.address);
-                
+
                 zap_tokens.push({
                     interface: token.getAsset(true),
                     type: 'simple',
@@ -121,8 +121,8 @@ export class KyberSwap implements IDexAgg {
                         const erc20in = new ERC20(provider, tokenIn as address);
                         const decimals = erc20in.decimals ?? await erc20in.contract.decimals();
                         const amount_bigint = toBigInt(amount, decimals);
-                        
-                        return await this.quote(signer.address, tokenIn, tokenOut, amount_bigint, toBps(slippage));
+
+                        return await this.quote(signer.address, tokenIn, tokenOut, amount_bigint, FormatConverter.percentageToBps(slippage));
                     }
                 });
             }
@@ -139,7 +139,7 @@ export class KyberSwap implements IDexAgg {
             inputAmount: BigInt(amount),
             outputToken: tokenOut,
             target: quote.to,
-            slippage: slippage ? fromBpsToWad(slippage) : 0n,
+            slippage: slippage ? FormatConverter.bpsToBpsWad(slippage) : 0n,
             call: quote.calldata
         } as Swap;
 
@@ -150,7 +150,7 @@ export class KyberSwap implements IDexAgg {
         const quote = await this.quote(wallet, tokenIn, tokenOut, amount, slippage);
         return quote.out;
     }
-    
+
     async quote(wallet: string, tokenIn: string, tokenOut: string, amount: bigint, slippage: bigint) {
         const params = new URLSearchParams({
             tokenIn,
@@ -161,7 +161,7 @@ export class KyberSwap implements IDexAgg {
             // isInBps
             // feeReceiver
         });
-        
+
         const quote_response = await fetch(`${this.api}/api/v1/routes?${params.toString()}`, {
             method: 'GET',
             headers: {
@@ -202,18 +202,8 @@ export class KyberSwap implements IDexAgg {
             throw new Error(`KyberSwap returned unexpected router address: ${build_data.data.routerAddress}`);
         }
 
-        // Check for excessive slippage by comparing USD values
-        // const amountInUsd = parseFloat(build_data.data.amountInUsd);
-        // const amountOutUsd = parseFloat(build_data.data.amountOutUsd);
-        // const actualSlippageBps = Math.round((amountInUsd - amountOutUsd) / amountInUsd * 10000);
-        
-        // if (actualSlippageBps > Number(slippage)) {
-        //     console.log(build_data);
-        //     throw new Error(`Slippage exceeds maximum tolerance (${build_data.requestId}): actual ${(actualSlippageBps / 100).toFixed(2)}% > max ${(Number(slippage) / 100).toFixed(2)}%`);
-        // }
-        
         return {
-            to: build_data.data.routerAddress as address,
+            to: build_data.data.routerAddress,
             calldata: build_data.data.data as bytes,
             min_out: min_out,
             out: BigInt(build_data.data.amountOut),

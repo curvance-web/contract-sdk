@@ -8,6 +8,7 @@ import { MarketToken } from "./Market";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { CToken } from "./CToken";
 import { error } from "console";
+import FormatConverter from "./FormatConverter";
 
 export enum AdaptorTypes {
     CHAINLINK = 1,
@@ -123,7 +124,7 @@ export interface IProtocolReader {
     getStaticMarketData(): Promise<StaticMarketData[]>;
     marketMultiCooldown(markets: address[], account: address): Promise<bigint[]>;
     previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, new_collateral: bigint, new_debt: bigint): Promise<[bigint, bigint]>;
-    hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint, bufferTime: bigint): [ bigint, bigint, bigint, bigint ];
+    hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint, bufferTime: bigint): Promise<[ bigint, bigint, bigint, bigint ]>;
     getPositionHealth(market: address, account: address, ctoken: address, borrowableCToken: address, isDeposit: boolean, collateralAssets: bigint, isRepayment: boolean, debtAssets: bigint, bufferTime: bigint): Promise<[bigint, boolean]>;
     hypotheticalRedemptionOf(account: address, ctoken: address, redeemShares: bigint, bufferTime: bigint): Promise<[bigint, bigint, boolean, boolean]>;
     hypotheticalBorrowOf(account: address, borrowableCToken: address, borrowAssets: bigint, bufferTime: bigint): Promise<[bigint, bigint, boolean, boolean]>;
@@ -272,7 +273,7 @@ export class ProtocolReader {
     }
 
     async hypotheticalLeverageOf(account: address, depositCToken: MarketToken, borrowableCToken: MarketToken, deposit_amount: TokenInput) {
-        const assets = depositCToken.convertTokenInput(deposit_amount, false);
+        const assets = FormatConverter.decimalToBigInt(deposit_amount, depositCToken.asset.decimals);
         const [
             currentLeverage,
             adjustMaxLeverage,

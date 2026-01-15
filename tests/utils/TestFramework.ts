@@ -19,7 +19,7 @@ export class TestFramework {
         'monad-mainnet': {
             "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c": 5, // WBTC - try slot 5
             "0x1B68626dCa36c7fE922fD2d55E4f631d962dE19c": 3, // shMON
-            "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A": 3, // WMON 
+            "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A": 3, // WMON
             "0x336D414754967C6682B5A665C7DAF6F1409E63e8": 0, // muBOND
             "0xD793c04B87386A6bb84ee61D98e0065FdE7fdA5E": 7, // sAUSD
             "0x754704Bc059F8C67012fEd69BC8A327a5aafb603": 9, // USDC
@@ -38,7 +38,7 @@ export class TestFramework {
     private static seedByHolder: {[chain: string]: {[tokenAddress: string]: address}} = {
         'monad-mainnet': {
             "0x8498312A6B3CbD158bf0c93AbdCF29E6e4F55081": "0xd60F5cFAeEe229dcEa029323AD36CA76625D5F2C", // gMON
-            "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a": "0xA02318f858128c8D2048eF47171249E9B4a0DedA", // AUSD
+            "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a": "0xC6dc74D5CB5a711bc29Da0D3c9D3E6F320b540A6", // AUSD
             "0x9c82eB49B51F7Dc61e22Ff347931CA32aDc6cd90": "0x567713Ae76857Ecd5F5A1AC0D7EEfED6CebB4AD9", // loAZND
             "0x2416092f143378750bb29b79eD961ab195CcEea5": "0x12959F938A6ab2D0F10e992470b6e19807a95477", // ezETH
             "0xEE8c0E9f1BFFb4Eb878d8f15f368A02a35481242": "0x3d4567d5482527179207d838Af18feD493C46AE5", // wETH
@@ -48,7 +48,7 @@ export class TestFramework {
         },
         'monad-testnet': {},
         'local-monad-mainnet': {}
-    };  
+    };
 
     constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>, log: boolean = false) {
         this.private_key = private_key;
@@ -57,7 +57,7 @@ export class TestFramework {
         this.chain = chain;
         this.curvance = curvance;
         this.log = log;
-        
+
         this.snapshot().then((id) => {
             this.init_snapshot_id = id;
         });
@@ -123,7 +123,7 @@ export class TestFramework {
         const getStorageSlot = () => {
             const mappingSlot = ethers.keccak256(
                 ethers.AbiCoder.defaultAbiCoder().encode(
-                    ['address', 'uint256'], 
+                    ['address', 'uint256'],
                     [account, ACCOUNT_ASSETS_SLOT]
                 )
             );
@@ -157,16 +157,16 @@ export class TestFramework {
 
     async seedUnderlying() {
         const processedAddresses = new Set<string>();
-        
+
         for(const market of this.curvance.markets) {
             for(const token of market.tokens) {
                 const tokenAddress = token.asset.address.toLowerCase();
-                
+
                 // Skip if we've already processed this token address
                 if (processedAddresses.has(tokenAddress)) {
                     continue;
                 }
-                
+
                 // Mark this address as processed
                 processedAddresses.add(tokenAddress);
 
@@ -196,11 +196,11 @@ export class TestFramework {
                     await this.provider.send("anvil_stopImpersonatingAccount", [holder]);
                     continue; // Skip direct balance setting if we used a holder
                 }
-                
+
                 // Get the storage slot from chain-specific config, default to 0
                 const chainSlots = TestFramework.tokenStorageSlots[this.chain] || {};
                 const storageSlot = chainSlots[token.asset.address] || 0;
-                
+
                 await this.setERC20Balance(token.asset.address, this.account, BigInt(100000000e18), storageSlot);
 
                 // Verify the balance was set correctly
@@ -208,7 +208,7 @@ export class TestFramework {
                 try {
                     const actualBalance = await erc20.balanceOf(this.account);
                     const expectedBalance = BigInt(100000000e18);
-                    
+
                     if (actualBalance < expectedBalance) {
                         console.log(`❌ Failed to set balance for ${token.getAsset(true).symbol} (${token.asset.address}). Expected: ${expectedBalance}, Actual: ${actualBalance}, Slot: ${storageSlot}`);
                     } else if(this.log) {
@@ -226,21 +226,21 @@ export class TestFramework {
         // Most ERC20 tokens store balances in a mapping at slot 0, but some may use different slots
         const slot = ethers.keccak256(
             ethers.AbiCoder.defaultAbiCoder().encode(
-                ['address', 'uint256'], 
+                ['address', 'uint256'],
                 [account, balanceSlot]
             )
         );
 
         // Convert balance to 32-byte hex string (pad to 64 hex characters)
         const value = "0x" + balance.toString(16).padStart(64, '0');
-        
+
         await this.provider.send("anvil_setStorageAt", [
             tokenAddress,
             slot,
             value
         ]);
     }
-    
+
     async seedNativeBalance(amount: bigint = 100000000000000000000000000n) {
         await setNativeBalance(this.provider, this.account, amount);
     }
@@ -257,7 +257,7 @@ export class TestFramework {
 
         await this.provider.send("evm_revert", [this.snapshot_id]);
     }
-    
+
     async getMarket(findMarketName: string): Promise<[Market, BorrowableCToken, BorrowableCToken]> {
         let market: Market | undefined;
         let tokenA: BorrowableCToken | undefined;

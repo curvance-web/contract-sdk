@@ -1,5 +1,5 @@
 import { Contract, TransactionResponse } from "ethers";
-import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, toBigInt, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps, NATIVE_ADDRESS, UINT256_MAX, fromBpsToWad } from "../helpers";
+import { contractSetup, BPS, ChangeRate, getRateSeconds, validateProviderAsSigner, WAD, getChainConfig, EMPTY_ADDRESS, toDecimal, SECONDS_PER_YEAR, toBps, NATIVE_ADDRESS, UINT256_MAX } from "../helpers";
 import { AdaptorTypes, DynamicMarketToken, StaticMarketToken, UserMarketToken } from "./ProtocolReader";
 import { ERC20 } from "./ERC20";
 import { Market, PluginTypes } from "./Market";
@@ -15,6 +15,7 @@ import { BorrowableCToken } from "./BorrowableCToken";
 import { NativeToken } from "./NativeToken";
 import { ERC4626 } from "./ERC4626";
 import { Quote } from "./DexAggregators/IDexAgg";
+import FormatConverter from "./FormatConverter";
 
 export interface AccountSnapshot {
     asset: address;
@@ -159,7 +160,7 @@ export class CToken extends Calldata<ICToken> {
     getRemainingCollateral(formatted: false): bigint;
     getRemainingCollateral(formatted: boolean = true): USD | bigint {
         const diff = this.cache.collateralCap - this.cache.collateral;
-        return formatted ? this.convertTokensToUsd(diff) as USD : diff as bigint;
+        return formatted ? this.convertTokensToUsd(diff) : diff;
     }
 
     /** @returns Remaining Debt cap */
@@ -167,7 +168,7 @@ export class CToken extends Calldata<ICToken> {
     getRemainingDebt(formatted: false): bigint;
     getRemainingDebt(formatted:boolean = true): USD | bigint {
         const diff = this.cache.debtCap - this.cache.debt;
-        return formatted ? this.convertTokensToUsd(diff) as USD : diff as bigint;
+        return formatted ? this.convertTokensToUsd(diff) : diff;
     }
 
     /** @returns Collateral Ratio in BPS or bigint */
@@ -300,7 +301,7 @@ export class CToken extends Calldata<ICToken> {
     getUserCollateral(inUSD: true): USD;
     getUserCollateral(inUSD: false): TokenInput;
     getUserCollateral(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral, false) : this.convertBigInt(this.cache.userCollateral, true);
+        return inUSD ? this.convertTokensToUsd(this.cache.userCollateral, false) : FormatConverter.bigIntToDecimal(this.cache.userCollateral, this.decimals);
     }
 
     fetchUserCollateral(): Promise<bigint>;
@@ -332,8 +333,8 @@ export class CToken extends Calldata<ICToken> {
      * Grabs the collateralization ratio and converts it to a Percentage.
      * @returns Percentage representation of the LTV (e.g. 0.75 for 75% LTV)
      */
-    ltv() {
-        return Decimal(this.cache.collRatio).div(BPS) as Percentage;
+    ltv(): Percentage {
+        return Decimal(this.cache.collRatio).div(BPS);
     }
 
     getUnderlyingVault() {
@@ -367,7 +368,7 @@ export class CToken extends Calldata<ICToken> {
             price = asset ? this.cache.assetPriceLower : this.cache.sharePriceLower;
         }
 
-        return formatted ? Decimal(price).div(WAD) as USD : price as USD_WAD;
+        return formatted ? Decimal(price).div(WAD): price;
     }
 
     getApy(): Percentage;
@@ -612,23 +613,23 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async transfer(receiver: address, amount: TokenInput) {
-        const shares = this.convertTokenInput(amount, true, true);
+        const shares = this.convertTokenInputToShares(amount);
         return this.contract.transfer(receiver, shares);
     }
 
     async redeemCollateral(amount: Decimal, receiver: address | null = null, owner: address | null = null) {
         const signer = validateProviderAsSigner(this.provider);
-        if(receiver == null) receiver = signer.address as address;
-        if(owner == null) owner = signer.address as address;
+        receiver ??= signer.address as address;
+        owner ??= signer.address as address;
 
-        const shares = this.convertTokenInput(amount, true, true);
+        const shares = this.convertTokenInputToShares(amount);
         const calldata = this.getCallData("redeemCollateral", [shares, receiver, owner]);
         return this.oracleRoute(calldata);
     }
 
     async postCollateral(amount: TokenInput) {
         const signer = validateProviderAsSigner(this.provider);
-        const shares = this.convertTokenInput(amount, true, true);
+        const shares = this.convertTokenInputToShares(amount);
         const balance = await this.balanceOf(signer.address as address);
         const collateral = await this.fetchUserCollateral();
         const available_shares = balance - collateral;
@@ -669,20 +670,22 @@ export class CToken extends Calldata<ICToken> {
     // TODO: Hack to remove
     async ensureUnderlyingAmount(amount: TokenInput, zap: ZapperInstructions) : Promise<TokenInput> {
         const balance = await this.getZapBalance(zap);
+        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
 
-        if(this.convertTokenInput(amount) > balance) {
+        if(assets > balance) {
             console.warn('[WARNING] Detected higher deposit amount then underlying balance, changing to the underlying balance. Diff: ', {
-                raw: this.convertTokenInput(amount) - balance,
-                formatted: this.convertBigInt(this.convertTokenInput(amount) - balance)
+                raw: assets - balance,
+                formatted: FormatConverter.bigIntToDecimal(assets - balance, this.asset.decimals)
             });
-            return this.convertBigInt(balance);
+
+            return FormatConverter.bigIntToDecimal(balance, this.asset.decimals);
         }
 
         return amount;
     }
 
     async removeCollateral(amount: TokenInput) {
-        const shares = this.convertTokenInput(amount, true, true);
+        const shares = this.convertTokenInputToShares(amount);
         const current_shares = await this.fetchUserCollateral();
         const max_shares = current_shares < shares ? current_shares : shares;
 
@@ -695,8 +698,10 @@ export class CToken extends Calldata<ICToken> {
         return tx;
     }
 
-    async convertToAssets(shares: bigint) {
-        return this.contract.convertToAssets(shares);
+    convertTokenInputToShares(amount: TokenInput) {
+        return this.virtualConvertToShares(
+            FormatConverter.decimalToBigInt(amount, this.asset.decimals)
+        );
     }
 
     async convertToShares(assets: bigint) {
@@ -718,21 +723,8 @@ export class CToken extends Calldata<ICToken> {
 
         if(in_shares) return all_shares;
 
-        const all_assets = await this.convertToAssets(all_shares);
-        return this.convertBigInt(all_assets, true) as TokenInput;
-    }
-
-    convertBigInt(amount: bigint, inShares = false, use_exchange_rate = false) {
-        const decimals = inShares ? this.decimals : this.asset.decimals;
-        const raw_amount = use_exchange_rate ? (amount * this.exchangeRate) / WAD : amount;
-        return toDecimal(raw_amount, decimals);
-    }
-
-    convertTokenInput(amount: TokenInput, inShares = false, use_exchange_rate = false) {
-        const decimals = inShares ? this.decimals : this.asset.decimals;
-        const newAmount = toBigInt(amount, decimals);
-
-        return use_exchange_rate ? (newAmount * this.exchangeRate) / WAD : newAmount;
+        const all_assets = this.virtualConvertToAssets(all_shares);
+        return FormatConverter.bigIntToDecimal(all_assets, this.asset.decimals);
     }
 
     /** @returns A list of tokens mapped to their respective zap options */
@@ -749,8 +741,7 @@ export class CToken extends Calldata<ICToken> {
                 interface: new NativeToken(setup_config.chain, this.provider),
                 type: 'native-vault'
             });
-            tokens_exclude.push(EMPTY_ADDRESS);
-            tokens_exclude.push(NATIVE_ADDRESS);
+            tokens_exclude.push(EMPTY_ADDRESS, NATIVE_ADDRESS);
         }
 
         if(this.zapTypes.includes('native-simple')) {
@@ -760,8 +751,7 @@ export class CToken extends Calldata<ICToken> {
             });
 
             if(!this.zapTypes.includes('native-vault')) {
-                tokens_exclude.push(EMPTY_ADDRESS);
-                tokens_exclude.push(NATIVE_ADDRESS);
+                tokens_exclude.push(EMPTY_ADDRESS, NATIVE_ADDRESS);
             }
         }
 
@@ -784,7 +774,7 @@ export class CToken extends Calldata<ICToken> {
 
     async hypotheticalRedemptionOf(amount: TokenInput) {
         const signer = validateProviderAsSigner(this.provider);
-        const shares = this.convertTokenInput(amount, true, true);
+        const shares = this.convertTokenInputToShares(amount);
         return this.market.reader.hypotheticalRedemptionOf(
             signer.address as address,
             this,
@@ -800,11 +790,13 @@ export class CToken extends Calldata<ICToken> {
 
         const collateralAvail = this.cache.userCollateral + (depositAmount ? depositAmount : BigInt(0));
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
-        const newPosition = collateralInUsd.mul(newLeverage);
-        const newDebt = newPosition.sub(this.market.userDebt).sub(collateralInUsd);
+        const newCollateralInUsd = collateralInUsd.mul(newLeverage);
+        const newDebt = newCollateralInUsd.sub(this.market.userDebt).sub(collateralInUsd);
         const borrowPrice = borrow.getPrice(true);
         const borrowAmount = newDebt.div(borrowPrice);
-        return { borrowAmount, newDebt, newPosition };
+        const newCollateral = this.convertUsdToTokens(newCollateralInUsd, false);
+
+        return { borrowAmount, newDebt, newCollateral };
     }
 
     previewLeverageDown(newLeverage: Decimal, currentLeverage: Decimal) {
@@ -826,8 +818,8 @@ export class CToken extends Calldata<ICToken> {
         type: PositionManagerTypes,
         slippage_: TokenInput = Decimal(0.005)
     ) {
-        const signer = validateProviderAsSigner(this.provider);
-        const slippage = toBps(slippage_);
+        validateProviderAsSigner(this.provider);
+        const slippage = FormatConverter.percentageToBps(slippage_);
         const manager = this.getPositionManager(type);
 
         let calldata: bytes;
@@ -839,29 +831,29 @@ export class CToken extends Calldata<ICToken> {
                     manager.address,
                     borrow.asset.address,
                     this.asset.address,
-                    borrow.convertTokenInput(borrowAmount, false),
+                    FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                     slippage
                 );
 
                 calldata = manager.getLeverageCalldata(
                     {
                         borrowableCToken: borrow.address,
-                        borrowAssets    : borrow.convertTokenInput(borrowAmount),
+                        borrowAssets    : FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                         cToken          : this.address,
                         expectedShares  : BigInt(quote.min_out),
                         swapAction      : action,
                         auxData         : "0x",
                     },
-                    fromBpsToWad(slippage));
+                    FormatConverter.bpsToBpsWad(slippage));
                 break;
             }
 
-
+            case 'native-vault':
             case 'vault': {
                 calldata = manager.getLeverageCalldata(
                     {
                         borrowableCToken: borrow.address,
-                        borrowAssets    : borrow.convertTokenInput(borrowAmount),
+                        borrowAssets    : FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                         cToken          : this.address,
                         expectedShares  : await PositionManager.getVaultExpectedShares(
                             this,
@@ -871,25 +863,7 @@ export class CToken extends Calldata<ICToken> {
                         swapAction      : PositionManager.emptySwapAction(),
                         auxData         : "0x",
                     },
-                    fromBpsToWad(slippage));
-                break;
-            }
-
-            case 'native-vault': {
-                calldata = manager.getLeverageCalldata(
-                    {
-                        borrowableCToken: borrow.address,
-                        borrowAssets    : borrow.convertTokenInput(borrowAmount),
-                        cToken          : this.address,
-                        expectedShares  : await PositionManager.getVaultExpectedShares(
-                            this,
-                            borrow,
-                            borrowAmount
-                        ),
-                        swapAction      : PositionManager.emptySwapAction(),
-                        auxData         : "0x",
-                    },
-                    fromBpsToWad(slippage));
+                    FormatConverter.bpsToBpsWad(slippage));
                 break;
             }
 
@@ -940,7 +914,7 @@ export class CToken extends Calldata<ICToken> {
                     repayAssets: BigInt(minRepay),
                     swapActions: [ action ],
                     auxData: "0x",
-                }, fromBpsToWad(slippage));
+                }, FormatConverter.bpsToBpsWad(slippage));
 
                 break;
             }
@@ -963,7 +937,6 @@ export class CToken extends Calldata<ICToken> {
         slippage_: Percentage = Decimal(0.005)
     ) {
         depositAmount = await this.ensureUnderlyingAmount(depositAmount, 'none');
-        const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
 
@@ -971,7 +944,7 @@ export class CToken extends Calldata<ICToken> {
         const { borrowAmount } = this.previewLeverageUp(
             leverageTarget,
             borrow,
-            this.convertTokenInput(depositAmount, true, true)
+            this.convertTokenInputToShares(depositAmount)
         );
 
         switch(type) {
@@ -980,30 +953,31 @@ export class CToken extends Calldata<ICToken> {
                     manager.address,
                     borrow.asset.address,
                     this.asset.address,
-                    borrow.convertTokenInput(borrowAmount),
+                    FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                     slippage
                 );
 
                 calldata = manager.getDepositAndLeverageCalldata(
-                    this.convertTokenInput(depositAmount),
+                    FormatConverter.decimalToBigInt(depositAmount, this.asset.decimals),
                     {
                         borrowableCToken: borrow.address,
-                        borrowAssets: borrow.convertTokenInput(borrowAmount),
+                        borrowAssets: FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                         cToken: this.address,
                         expectedShares: await PositionManager.getExpectedShares(this, BigInt(quote.min_out)),
                         swapAction: action,
                         auxData: "0x",
                     },
-                    fromBpsToWad(slippage));
+                    FormatConverter.bpsToBpsWad(slippage));
                 break;
             }
 
+            case 'native-vault':
             case 'vault': {
                 calldata = manager.getDepositAndLeverageCalldata(
-                    this.convertTokenInput(depositAmount),
+                    FormatConverter.decimalToBigInt(depositAmount, this.asset.decimals),
                     {
                         borrowableCToken: borrow.address,
-                        borrowAssets: borrow.convertTokenInput(borrowAmount),
+                        borrowAssets: FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                         cToken: this.address,
                         expectedShares: await PositionManager.getVaultExpectedShares(
                             this,
@@ -1013,26 +987,7 @@ export class CToken extends Calldata<ICToken> {
                         swapAction: PositionManager.emptySwapAction(),
                         auxData: "0x",
                     },
-                    fromBpsToWad(slippage));
-                break;
-            }
-
-            case 'native-vault': {
-                calldata = manager.getDepositAndLeverageCalldata(
-                    this.convertTokenInput(depositAmount),
-                    {
-                        borrowableCToken: borrow.address,
-                        borrowAssets: borrow.convertTokenInput(borrowAmount),
-                        cToken: this.address,
-                        expectedShares: await PositionManager.getVaultExpectedShares(
-                            this,
-                            borrow,
-                            borrowAmount
-                        ),
-                        swapAction: PositionManager.emptySwapAction(),
-                        auxData: "0x",
-                    },
-                    fromBpsToWad(slippage));
+                    FormatConverter.bpsToBpsWad(slippage));
                 break;
             }
 
@@ -1041,7 +996,7 @@ export class CToken extends Calldata<ICToken> {
 
         await this._checkErc20Approval(
             this.asset.address,
-            this.convertTokenInput(depositAmount),
+            FormatConverter.decimalToBigInt(depositAmount, this.asset.decimals),
             manager.address
         );
         await this._checkPositionManagerApproval(manager);
@@ -1094,7 +1049,7 @@ export class CToken extends Calldata<ICToken> {
                 calldata_overrides = { value: assets, to: zapper.address };
                 break;
             default:
-                throw new Error("This zap type is not supported: " + zap);
+                throw new Error("This zap type is not supported: " + type_of_zap);
         }
 
         return { calldata, calldata_overrides, zapper };
@@ -1103,8 +1058,8 @@ export class CToken extends Calldata<ICToken> {
     async deposit(amount: TokenInput, zap: ZapperInstructions = 'none', receiver: address | null = null) {
         amount = await this.ensureUnderlyingAmount(amount, zap);
         const signer = validateProviderAsSigner(this.provider);
-        if(receiver == null) receiver = signer.address as address;
-        const assets = this.convertTokenInput(amount);
+        receiver ??= signer.address as address;
+        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
         const zapType = typeof zap == 'object' ? zap.type : zap;
         const isNative = zapType == 'native-simple' || zapType == 'native-vault' || zapType == 'none';
 
@@ -1124,8 +1079,8 @@ export class CToken extends Calldata<ICToken> {
     async depositAsCollateral(amount: Decimal, zap: ZapperInstructions = 'none',  receiver: address | null = null) {
         amount = await this.ensureUnderlyingAmount(amount, zap);
         const signer = validateProviderAsSigner(this.provider);
-        if(receiver == null) receiver = signer.address as address;
-        const assets = this.convertTokenInput(amount);
+        receiver ??= signer.address as address;
+        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
 
         const collateralCapError = "There is not enough collateral left in this tokens collateral cap for this deposit.";
         const remainingCollateral = this.getRemainingCollateral(false);
@@ -1150,7 +1105,7 @@ export class CToken extends Calldata<ICToken> {
         const owner    = signer.address as address;
 
         const max_shares = await this.maxRedemption(true);
-        const converted_shares = this.convertTokenInput(amount, true, true);
+        const converted_shares = this.convertTokenInputToShares(amount);
         const shares = max_shares < converted_shares ? max_shares : converted_shares;
 
         const calldata = this.getCallData("redeem", [shares, receiver, owner]);
@@ -1186,6 +1141,11 @@ export class CToken extends Calldata<ICToken> {
         }
     }
 
+    convertTokensToUsd(tokenAmount: bigint, asset = true) : USD {
+        const price = this.getPrice(asset, false, false);
+        return FormatConverter.bigIntTokensToUsd(tokenAmount, price, this.decimals);
+    }
+
     async fetchConvertTokensToUsd(tokenAmount: bigint, asset = true) {
         // Reload cache
         await this.fetchPrice(asset);
@@ -1196,13 +1156,22 @@ export class CToken extends Calldata<ICToken> {
 
     convertUsdToTokens(usdAmount: USD, asset = true, lower = false) {
         const price = this.getPrice(asset, lower);
-        return usdAmount.div(price) as TokenInput;
+        return usdAmount.div(price);
     }
 
-    convertTokensToUsd(tokenAmount: bigint, asset = true, use_exchange_rate = false) {
-        const raw_amount = use_exchange_rate ? (tokenAmount * this.exchangeRate) / WAD : tokenAmount;
-        const tokenAmountDecimal = toDecimal(raw_amount, asset ? this.asset.decimals : this.decimals);
-        return this.getPrice(asset).mul(tokenAmountDecimal);
+    convertAssetsToUsd(tokenAmount: bigint): USD {
+        const price = this.getPrice(true, false, false);
+        const decimals = this.decimals;
+
+        return FormatConverter.bigIntTokensToUsd(tokenAmount, price, decimals);
+    }
+
+    async convertSharesToUsd(tokenAmount: bigint): Promise<USD> {
+        tokenAmount = await this.convertToShares(tokenAmount);
+        const price = this.getPrice(false, false, false);
+        const decimals = this.decimals;
+
+        return FormatConverter.bigIntTokensToUsd(tokenAmount, price, decimals);
     }
 
     buildMultiCallAction(calldata: bytes) {

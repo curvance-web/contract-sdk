@@ -8,6 +8,7 @@ import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from
 import { OracleManager } from "./OracleManager";
 import { IncentiveResponse, Incentives, MilestoneResponse, Milestones, setup_config } from "../setup";
 import { BorrowableCToken } from "./BorrowableCToken";
+import FormatConverter from "./FormatConverter";
 
 export type MarketToken = CToken | BorrowableCToken;
 export type PluginTypes = 'zapper' | 'positionManager';
@@ -416,7 +417,7 @@ export class Market {
             deposit_ctoken,
             borrow_ctoken,
             false,
-            deposit_ctoken.convertBigInt(collateralAssetReduction, false, true),
+            FormatConverter.bigIntToDecimal(collateralAssetReduction, deposit_ctoken.asset.decimals),
             true,
             repayTokens
         );
@@ -461,8 +462,8 @@ export class Market {
         const provider = validateProviderAsSigner(this.provider);
         const user = provider.address as address;
 
-        const onchain_collateral_amount = deposit_ctoken ? deposit_ctoken.convertTokenInput(collateral_amount, true) : 0n;
-        const onchain_debt_amount = borrow_ctoken ? borrow_ctoken.convertTokenInput(debt_amount, true) : 0n;
+        const onchain_collateral_amount = deposit_ctoken ? deposit_ctoken.convertTokenInputToShares(collateral_amount) : 0n;
+        const onchain_debt_amount = borrow_ctoken ? borrow_ctoken.convertTokenInputToShares(debt_amount) : 0n;
 
         const data = await this.reader.getPositionHealth(
             this.address,
@@ -496,7 +497,7 @@ export class Market {
     async previewPositionHealthRedeem(ctoken: CToken, amount: TokenInput) {
         const provider = validateProviderAsSigner(this.provider);
         const user = provider.address as address;
-        const redeem_amount = await ctoken.convertToShares(toBigInt(amount, ctoken.decimals));
+        const redeem_amount = ctoken.convertTokenInputToShares(amount);
         const existing_collateral = ctoken.cache.userCollateral;
 
         if(redeem_amount > existing_collateral) {
