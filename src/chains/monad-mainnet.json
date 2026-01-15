@@ -176,9 +176,19 @@
         "simplePositionManager": "0x77B90040E6dFE8A62293Cd91CAeE35296EC266Ee"
       },
       "WMON-DynamicIRM": "0x034Cb4152B6506c445f18d564b3Ce86B0DE05C7B"
+    },
+    "syzUSD | AUSD": {
+      "address": "0x90fc1A4abC4ee5f8a9560dE069067D9606d2909C",
+      "syzUSD-DynamicIRM": "0x0A8c317C25A000000296673Bd75cA3f5c1E8C57c",
+      "tokens": {
+        "syzUSD": "0x7EdA3cb060Ff7B650eB227971dbfEBD3513b11D5",
+        "AUSD": "0x8E94704607E857eB3E10Bd21D90bf8C1Ecba0452"
+      },
+      "plugins": {},
+      "AUSD-DynamicIRM": "0xdCB32fc822eAe8794E48Ad005b50AA850529296D"
     }
   },
-  "ProtocolReader": "0x878cDfc2F3D96a49A5CbD805FAF4F3080768a6d2",
+  "ProtocolReader": "0x0c791636db1561E1f5aDD5Bf3994c95F14f272fF",
   "CombinedAggregator-ezETH": "0xd5F84C4497621768f3F08b65ad7019BdF183b1fd",
   "CombinedAggregator-earnAUSD": "0xf80CC9965d260d7cD96E41b9734F031279dCDf2f",
   "DAOTimelock": "0x2677738657F27e1A3591E00AD7E5a78807688C08"
