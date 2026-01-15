@@ -106,6 +106,11 @@ export class CToken extends Calldata<ICToken> {
         this.isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
         this.isWrappedNative = chain_config.wrapped_native == this.asset.address;
 
+        // TODO: Remove this, as a temporary disable for sAUSD
+        if(this.symbol == 'csAUSD') {
+            return;
+        }
+
         if(this.isNativeVault) this.zapTypes.push('native-vault');
         if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
         if(this.isWrappedNative) this.zapTypes.push('native-simple');
