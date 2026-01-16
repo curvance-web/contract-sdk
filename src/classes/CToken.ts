@@ -740,7 +740,6 @@ export class CToken extends Calldata<ICToken> {
         if(in_shares) return all_shares;
 
         const all_assets = this.virtualConvertToAssets(all_shares);
-        console.log({ all_shares, all_assets });
         return FormatConverter.bigIntToDecimal(all_assets, this.asset.decimals);
     }
 
@@ -823,8 +822,8 @@ export class CToken extends Calldata<ICToken> {
 
         const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
         const collateralAvail = this.cache.userCollateral;
-        const collateralAssetsAvail = collateralAvail * this.exchangeRate / WAD;
-        const collateralAssetReduction = BigInt(leverageDiff.mul(collateralAssetsAvail).toFixed(0));
+        const collateralAssetsAvail = this.virtualConvertToAssets(collateralAvail);
+        const collateralAssetReduction = collateralAssetsAvail * FormatConverter.decimalToBigInt(leverageDiff, 18n) / WAD;
 
         return { collateralAssetReduction, leverageDiff };
     }
@@ -833,7 +832,7 @@ export class CToken extends Calldata<ICToken> {
         borrow: BorrowableCToken,
         newLeverage: Decimal,
         type: PositionManagerTypes,
-        slippage_: TokenInput = Decimal(0.005)
+        slippage_: TokenInput = Decimal(0.05)
     ) {
         validateProviderAsSigner(this.provider);
         const slippage = FormatConverter.percentageToBps(slippage_);
@@ -898,19 +897,22 @@ export class CToken extends Calldata<ICToken> {
         currentLeverage: Decimal,
         newLeverage: Decimal,
         type: PositionManagerTypes,
-        slippage_: Percentage = Decimal(0.005)
+        slippage_: Percentage = Decimal(0.05)
     ) {
         if(newLeverage.gte(currentLeverage)) {
             throw new Error("New leverage must be less than current leverage");
         }
 
+        validateProviderAsSigner(this.provider);
+
         const config = getChainConfig();
-        const signer = validateProviderAsSigner(this.provider);
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
         let calldata: bytes;
 
         const { collateralAssetReduction, leverageDiff } = this.previewLeverageDown(newLeverage, currentLeverage);
+        const repay_balance = newLeverage.equals(1) ? await borrowToken.fetchDebtBalanceAtTimestamp(100n, false) : null;
+        const repay_balance_with_slippage = repay_balance ? repay_balance + (repay_balance * 5n / BPS) : null;
 
         switch(type) {
             case 'simple': {
@@ -918,15 +920,15 @@ export class CToken extends Calldata<ICToken> {
                     manager.address,
                     this.asset.address,
                     borrowToken.asset.address,
-                    collateralAssetReduction,
+                    newLeverage.equals(1) ? repay_balance_with_slippage as bigint : collateralAssetReduction,
                     slippage
                 );
 
-                const minRepay = leverageDiff.equals(1) ? 0 : quote.out - (BigInt(Decimal(quote.out).mul(.05).toFixed(0)));
+                const minRepay = newLeverage.equals(1) ? repay_balance as bigint : quote.out - (BigInt(Decimal(quote.out).mul(.05).toFixed(0)));
 
                 calldata = manager.getDeleverageCalldata({
                     cToken: this.address,
-                    collateralAssets: collateralAssetReduction,
+                    collateralAssets: newLeverage.equals(1) ? repay_balance_with_slippage as bigint : collateralAssetReduction,
                     borrowableCToken: borrowToken.address,
                     repayAssets: BigInt(minRepay),
                     swapActions: [ action ],
@@ -951,7 +953,7 @@ export class CToken extends Calldata<ICToken> {
         borrow: BorrowableCToken,
         leverageTarget: Decimal,
         type: PositionManagerTypes,
-        slippage_: Percentage = Decimal(0.005)
+        slippage_: Percentage = Decimal(0.05)
     ) {
         depositAmount = await this.ensureUnderlyingAmount(depositAmount, 'none');
         const slippage = toBps(slippage_);
