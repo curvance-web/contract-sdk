@@ -80,6 +80,15 @@ export class BorrowableCToken extends CToken {
         return amount.mul(rate_percent);
     }
 
+
+    async getMaxBorrowable(): Promise<TokenInput>;
+    async getMaxBorrowable(inUSD: false): Promise<TokenInput>;
+    async getMaxBorrowable(inUSD: true): Promise<USD>;
+    async getMaxBorrowable(inUSD: boolean = false): Promise<USD | TokenInput> {
+        const credit_usd = this.market.userRemainingCredit;
+        return inUSD ? credit_usd : this.convertUsdToTokens(credit_usd, true);
+    };
+
     override async depositAsCollateral(amount: TokenInput, zap: ZapperInstructions = 'none',  receiver: address | null = null) {
         if(this.cache.userDebt > 0) {
             throw new Error("Cannot deposit as collateral when there is outstanding debt");

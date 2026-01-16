@@ -1,7 +1,7 @@
-import Decimal from "decimal.js";
 import { contractSetup } from "../helpers";
 import { address, TokenInput } from "../types";
 import { ERC20 } from "./ERC20";
+import FormatConverter from "./FormatConverter";
 
 export interface IERC4626 {
     asset(): Promise<address>;
@@ -43,7 +43,7 @@ export class ERC4626 extends ERC20 {
 
         if(asTokenInput) {
             const token_decimals = this.decimals ?? await this.contract.decimals();
-            return Decimal(shares).div(Decimal(10).pow(token_decimals));
+            return FormatConverter.bigIntToDecimal(shares, token_decimals);
         } else {
             return shares;
         }

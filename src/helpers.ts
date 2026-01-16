@@ -3,6 +3,7 @@ import { Decimal } from "decimal.js";
 import { address, bytes, curvance_provider, curvance_signer, Percentage } from "./types";
 import { chains } from "./chains";
 import { chain_config, setup_config } from "./setup";
+import FormatConverter from "./classes/FormatConverter";
 
 // Set Decimal.js precision to handle large numbers
 Decimal.set({ precision: 50 });
@@ -48,25 +49,19 @@ export function getRateSeconds(rate: ChangeRate): bigint {
 }
 
 export function toDecimal(value: bigint, decimals: bigint): Decimal {
-    return new Decimal(value).div(new Decimal(10).pow(decimals));
+    return FormatConverter.bigIntToDecimal(value, decimals);
 }
 
 export function toBps(value: Percentage): bigint {
-    return BigInt(value.mul(Decimal(BPS)).toFixed(0));
+    return FormatConverter.percentageToBps(value);
 }
 
 export function fromBpsToWad(value: bigint): bigint {
-    return (value * WAD) / BPS;
+    return FormatConverter.bpsToBpsWad(value);
 }
 
 export function toBigInt(value: number | Decimal, decimals: bigint): bigint {
-    if(Decimal.isDecimal(value)) {
-        const scaled = value.mul(Decimal(10).pow(decimals));
-        // Use floor() to truncate, then toFixed() to avoid scientific notation
-        return BigInt(scaled.floor().toFixed(0));
-    }
-
-    return parseUnits(value.toString(), decimals);
+    return FormatConverter.decimalToBigInt(Decimal(value), decimals);
 }
 
 export function getChainConfig() {

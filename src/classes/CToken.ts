@@ -320,11 +320,11 @@ export class CToken extends Calldata<ICToken> {
         return formatted ? toDecimal(collateral, this.decimals) : collateral;
     }
 
-    /** @returns User Debt in USD or Tokens owed */
+    /** @returns User Debt in USD or Tokens owed (assets) */
     getUserDebt(inUSD: true): USD;
-    getUserDebt(inUSD: false): bigint;
-    getUserDebt(inUSD: boolean): USD | bigint {
-        return inUSD ? this.convertTokensToUsd(this.cache.userDebt) : this.cache.userDebt;
+    getUserDebt(inUSD: false): TokenInput;
+    getUserDebt(inUSD: boolean): USD | TokenInput {
+        return inUSD ? this.convertTokensToUsd(this.cache.userDebt) : FormatConverter.bigIntToDecimal(this.cache.userDebt, this.asset.decimals);
     }
 
     earnChange(amount: USD, rateType: ChangeRate) {
@@ -679,6 +679,11 @@ export class CToken extends Calldata<ICToken> {
 
         if(assets > balance) {
             console.warn('[WARNING] Detected higher deposit amount then underlying balance, changing to the underlying balance. Diff: ', {
+                balance: balance,
+                attempt: {
+                    raw: assets,
+                    formatted: amount
+                },
                 raw: assets - balance,
                 formatted: FormatConverter.bigIntToDecimal(assets - balance, this.asset.decimals)
             });
@@ -709,6 +714,10 @@ export class CToken extends Calldata<ICToken> {
         );
     }
 
+    async convertToAssets(shares: bigint) {
+        return this.contract.convertToAssets(shares);
+    }
+
     async convertToShares(assets: bigint) {
         return this.contract.convertToShares(assets);
     }
@@ -716,9 +725,11 @@ export class CToken extends Calldata<ICToken> {
     async maxRedemption(): Promise<TokenInput>;
     async maxRedemption(in_shares: true): Promise<bigint>;
     async maxRedemption(in_shares: false): Promise<TokenInput>;
-    async maxRedemption(in_shares: boolean = false): Promise<TokenInput | bigint> {
+    async maxRedemption(in_shares: true, bufferTime: bigint): Promise<bigint>;
+    async maxRedemption(in_shares: false, bufferTime: bigint): Promise<TokenInput>;
+    async maxRedemption(in_shares: boolean = false, bufferTime: bigint = 0n): Promise<TokenInput | bigint> {
         const signer = validateProviderAsSigner(this.provider);
-        const data = await this.market.reader.maxRedemptionOf(signer.address as address, this);
+        const data = await this.market.reader.maxRedemptionOf(signer.address as address, this, bufferTime);
 
         if(data.errorCodeHit) {
             throw new Error(`Error fetching max redemption. Possible stale price or other issues...`);
@@ -729,6 +740,7 @@ export class CToken extends Calldata<ICToken> {
         if(in_shares) return all_shares;
 
         const all_assets = this.virtualConvertToAssets(all_shares);
+        console.log({ all_shares, all_assets });
         return FormatConverter.bigIntToDecimal(all_assets, this.asset.decimals);
     }
 
@@ -1091,7 +1103,7 @@ export class CToken extends Calldata<ICToken> {
         const remainingCollateral = this.getRemainingCollateral(false);
         if(remainingCollateral == 0n) throw new Error(collateralCapError);
         if(remainingCollateral > 0n) {
-            const shares = await this.convertToShares(assets);
+            const shares = this.virtualConvertToShares(assets);
             if(shares > remainingCollateral) {
                 throw new Error(collateralCapError);
             }
@@ -1109,7 +1121,8 @@ export class CToken extends Calldata<ICToken> {
         const receiver = signer.address as address;
         const owner    = signer.address as address;
 
-        const max_shares = await this.maxRedemption(true);
+        const buffer = this.market.userDebt.greaterThan(0) ? 100n : 0n;
+        const max_shares = await this.maxRedemption(true, buffer);
         const converted_shares = this.convertTokenInputToShares(amount);
         const shares = max_shares < converted_shares ? max_shares : converted_shares;
 
@@ -1172,7 +1185,7 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async convertSharesToUsd(tokenAmount: bigint): Promise<USD> {
-        tokenAmount = await this.convertToShares(tokenAmount);
+        tokenAmount = this.virtualConvertToShares(tokenAmount);
         const price = this.getPrice(false, false, false);
         const decimals = this.decimals;
 

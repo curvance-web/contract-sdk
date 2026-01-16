@@ -5,4 +5,4 @@ output
 storage
 diff.diff
 test.ts
-./tests/replay.test.ts
+tests/replay.test.ts

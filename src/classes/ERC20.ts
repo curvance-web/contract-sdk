@@ -6,6 +6,7 @@ import { address, curvance_provider, TokenInput, USD } from "../types";
 import { setup_config } from "../setup";
 import { OracleManager } from "./OracleManager";
 import Decimal from "decimal.js";
+import FormatConverter from "./FormatConverter";
 
 export interface IERC20 {
     balanceOf(account: address): Promise<bigint>;
@@ -58,7 +59,7 @@ export class ERC20 {
         const amount = await this.contract.balanceOf(account);
 
         const decimals = this.decimals ?? await this.contract.decimals();
-        return in_token_input ? Decimal(amount).div(decimals) : amount;
+        return in_token_input ? FormatConverter.bigIntToDecimal(amount, decimals) : amount;
     }
 
     async transfer(to: address, amount: TokenInput) {

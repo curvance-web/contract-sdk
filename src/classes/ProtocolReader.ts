@@ -157,8 +157,8 @@ export class ProtocolReader {
         }
     }
 
-    async maxRedemptionOf(account: address, ctoken: CToken) {
-        const data = await this.contract.maxRedemptionOf(account, ctoken.address, 0n);
+    async maxRedemptionOf(account: address, ctoken: CToken, bufferTime: bigint = 0n) {
+        const data = await this.contract.maxRedemptionOf(account, ctoken.address, bufferTime);
         return {
             maxCollateralizedShares: BigInt(data[0]),
             maxUncollateralizedShares: BigInt(data[1]),
