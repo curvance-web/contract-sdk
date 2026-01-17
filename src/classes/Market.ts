@@ -504,14 +504,13 @@ export class Market {
             throw new Error(`Insufficient collateral: Existing (${existing_collateral}) < Redeem amount (${redeem_amount})`);
         }
 
-        const new_collateral = existing_collateral - redeem_amount;
         const data = await this.reader.getPositionHealth(
             this.address,
             user,
             ctoken.address,
             EMPTY_ADDRESS,
             false,
-            new_collateral,
+            redeem_amount,
             false,
             0n,
             0n
@@ -551,7 +550,7 @@ export class Market {
             false,
             0n,
             false,
-            toBigInt(amount, token.decimals),
+            FormatConverter.decimalToBigInt(amount, token.decimals),
             0n
         );
 
@@ -579,7 +578,7 @@ export class Market {
             false,
             0n,
             true,
-            toBigInt(amount, token.decimals),
+            FormatConverter.decimalToBigInt(amount, token.decimals),
             0n
         );
 
