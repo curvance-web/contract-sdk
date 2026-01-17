@@ -7,15 +7,14 @@ import { setup_config } from "../setup";
 import { MarketToken } from "./Market";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { CToken } from "./CToken";
-import { error } from "console";
 import FormatConverter from "./FormatConverter";
 
-export enum AdaptorTypes {
-    CHAINLINK = 1,
-    REDSTONE_CORE = 2,
-    REDSTONE_CLASSIC = 3,
-    MOCK = 1337
-}
+export const AdaptorTypes = {
+    CHAINLINK: 4146809896196834135992027840844413263297648946195754575888528621153937239424n,
+    REDSTONE_CLASSIC: 112276167558285217273674630712820450209078260760085898814947528017380798039930n,
+    REDSTONE_CORE: 2n,
+    MOCK: 1337n
+};
 
 export interface StaticMarketAsset {
     address: address;
@@ -34,7 +33,7 @@ export interface StaticMarketToken {
     name: string;
     symbol: string;
     decimals: bigint;
-    adapters: [AdaptorTypes, AdaptorTypes];
+    adapters: [bigint, bigint];
     isBorrowable: boolean;
     borrowPaused: boolean;
     collateralizationPaused: boolean;

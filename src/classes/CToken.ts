@@ -714,6 +714,27 @@ export class CToken extends Calldata<ICToken> {
         );
     }
 
+    convertTokenToToken(fromToken: CToken, toToken: CToken, amount: TokenInput, formatted: true): TokenInput;
+    convertTokenToToken(fromToken: CToken, toToken: CToken, amount: TokenInput, formatted: true, shares: boolean): TokenInput;
+    convertTokenToToken(fromToken: CToken, toToken: CToken, amount: TokenInput, formatted: false, shares: boolean): bigint
+    convertTokenToToken(fromToken: CToken, toToken: CToken, amount: TokenInput, formatted: false): bigint
+    convertTokenToToken(fromToken: CToken, toToken: CToken, amount: TokenInput, formatted: boolean, shares: boolean = false): TokenInput | bigint {
+        const fromData = {
+            price: fromToken.getPrice(shares ? false : true),
+            decimals: shares ? fromToken.decimals : fromToken.asset.decimals,
+            amount: amount
+        };
+
+        const toData = {
+            price: toToken.getPrice(shares ? false : true),
+            decimals: shares ? toToken.decimals : toToken.asset.decimals
+        };
+
+        return formatted
+            ? FormatConverter.tokensToTokens(fromData, toData, true)
+            : FormatConverter.tokensToTokens(fromData, toData, false);
+    }
+
     async convertToAssets(shares: bigint) {
         return this.contract.convertToAssets(shares);
     }
@@ -951,19 +972,25 @@ export class CToken extends Calldata<ICToken> {
     async depositAndLeverage(
         depositAmount: TokenInput,
         borrow: BorrowableCToken,
-        leverageTarget: Decimal,
+        multiplier: Decimal,
         type: PositionManagerTypes,
         slippage_: Percentage = Decimal(0.05)
     ) {
+        if(multiplier.lte(Decimal(1))) {
+            throw new Error("Multiplier must be greater than 1");
+        }
+
         depositAmount = await this.ensureUnderlyingAmount(depositAmount, 'none');
         const slippage = toBps(slippage_);
         const manager = this.getPositionManager(type);
 
         let calldata: bytes;
-        const { borrowAmount } = this.previewLeverageUp(
-            leverageTarget,
+
+        const borrowAmount = this.convertTokenToToken(
+            this,
             borrow,
-            this.convertTokenInputToShares(depositAmount)
+            depositAmount.mul(multiplier.sub(1)),
+            true
         );
 
         switch(type) {
@@ -1273,10 +1300,8 @@ export class CToken extends Calldata<ICToken> {
     }
 
     async getPriceUpdates(): Promise<MulticallAction[]> {
-        const adapter_enums = this.adapters.map(num => Number(num));
-
         let price_updates = [];
-        if(adapter_enums.includes(AdaptorTypes.REDSTONE_CORE)) {
+        if(this.adapters.includes(AdaptorTypes.REDSTONE_CORE)) {
             const redstone = await Redstone.buildMultiCallAction(this);
             price_updates.push(redstone);
         }

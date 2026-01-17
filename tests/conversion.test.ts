@@ -81,4 +81,20 @@ describe('Conversions', () => {
         const bps_wad = FormatConverter.bpsToBpsWad(bps);
         assert.strictEqual(bps_wad.toString(), '5000000000000000');
     });
+
+    test('Token as one token to another', function() {
+        const tokenA = {
+            price: new Decimal('2.00'),
+            decimals: 6n,
+            amount: new Decimal('150.50')
+        };
+
+        const tokenB = {
+            price: new Decimal('0.50'),
+            decimals: 18n
+        };
+
+        const tokenB_amount = FormatConverter.tokensToTokens(tokenA, tokenB, true);
+        assert.strictEqual(tokenB_amount.equals(new Decimal(602)), true);
+    });
 });

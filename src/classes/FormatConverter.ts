@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import { Percentage, TokenInput, USD } from "../types";
+import { CToken } from "./CToken";
 
 export default class FormatConverter {
     /**
@@ -22,6 +23,28 @@ export default class FormatConverter {
         return decimalTokens.mul(decimalPrice).toDecimalPlaces(decimals, Decimal.ROUND_DOWN);
     }
 
+    /**
+     * Converts an amount of a token to an equivalent amount of another token based on their USD prices.
+     * @param from_token - The token to convert from
+     * @param to_token - The token to convert to
+     * @param from_amount - The amount of the from_token to convert
+     * @param in_shares - Whether the from_amount is in shares (true) or underlying tokens (false)
+     * @returns The equivalent amount of the to_token
+     */
+    static tokensToTokens(from: { price: Decimal, decimals: bigint, amount: TokenInput }, to: { price: Decimal, decimals: bigint }, formatted: false): bigint;
+    static tokensToTokens(from: { price: Decimal, decimals: bigint, amount: TokenInput }, to: { price: Decimal, decimals: bigint }, formatted: true): Decimal;
+    static tokensToTokens(from: { price: Decimal, decimals: bigint, amount: TokenInput }, to: { price: Decimal, decimals: bigint }, formatted: boolean): Decimal | bigint {
+        const from_value_usd = FormatConverter.decimalTokensToUsd(from.amount, from.price);
+        const to_amount = FormatConverter.usdToDecimalTokens(from_value_usd, to.price, to.decimals);
+        return formatted ? to_amount : FormatConverter.decimalToBigInt(to_amount, to.decimals);
+    }
+
+    /**
+     * Convert Decimal representation of tokens to USD representation.
+     * @param tokens - The amount of tokens in Decimal representation
+     * @param price - The price of a single token in USD (Decimal representation)
+     * @returns The equivalent amount in USD
+     */
     static decimalTokensToUsd(tokens: Decimal, price: Decimal): USD {
         return tokens.mul(price).toDecimalPlaces(18, Decimal.ROUND_DOWN);
     }
