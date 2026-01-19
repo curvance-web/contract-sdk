@@ -13,6 +13,7 @@ export class TestFramework {
     init_snapshot_id: number | undefined;
     log: boolean = false;
     impersonated_storage: {original_curvance: Awaited<ReturnType<typeof setupChain>> | null} = {original_curvance: null};
+    apiUrl: string | null = null;
 
     // Token storage slot configuration - maps chain to token addresses to balance mapping slots
     private static tokenStorageSlots: {[chain: string]: {[tokenAddress: string]: number}} = {
@@ -50,13 +51,14 @@ export class TestFramework {
         'local-monad-mainnet': {}
     };
 
-    constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>, log: boolean = false) {
+    constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>, log: boolean = false, apiUrl: string | null = null) {
         this.private_key = private_key;
         this.provider = provider;
         this.signer = signer;
         this.chain = chain;
         this.curvance = curvance;
         this.log = log;
+        this.apiUrl = apiUrl;
 
         this.snapshot().then((id) => {
             this.init_snapshot_id = id;
@@ -68,11 +70,13 @@ export class TestFramework {
         seedUnderlying = true,
         snapshot = true,
         log = false,
+        apiUrl = null,
     }: {
         seedNativeBalance?: boolean,
         seedUnderlying?: boolean,
         snapshot?: boolean,
         log?: boolean,
+        apiUrl?: string | null,
     }) {
         const setup = await getTestSetup(private_key);
         const framework = new TestFramework(
@@ -80,8 +84,9 @@ export class TestFramework {
             setup.provider,
             setup.signer,
             chain,
-            await setupChain(chain, setup.signer, true),
-            log
+            await setupChain(chain, setup.signer, true, apiUrl),
+            log,
+            apiUrl
         );
 
         if(seedNativeBalance) await framework.seedNativeBalance();
@@ -112,7 +117,7 @@ export class TestFramework {
         const setup = await getTestSetup(this.private_key);
         this.provider = setup.provider;
         this.signer = setup.signer;
-        this.curvance = await setupChain(this.chain, this.signer, true);
+        this.curvance = await setupChain(this.chain, this.signer, true, this.apiUrl);
     }
 
     async skipMarketCooldown(market: address, account?: address | undefined) {
@@ -146,7 +151,7 @@ export class TestFramework {
         await this.provider.send("anvil_impersonateAccount", [account]);
 
         const impersonatedSigner = await this.provider.getSigner(account);
-        this.curvance = await setupChain(this.chain, impersonatedSigner, true);
+        this.curvance = await setupChain(this.chain, impersonatedSigner, true, this.apiUrl);
     }
 
     async impersonateStop() {

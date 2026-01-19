@@ -87,6 +87,7 @@ export class CToken extends Calldata<ICToken> {
     isVault: boolean = false;
     isNativeVault: boolean = false;
     isWrappedNative: boolean = false;
+    nativeYield = 0;
 
     constructor(
         provider: curvance_provider,

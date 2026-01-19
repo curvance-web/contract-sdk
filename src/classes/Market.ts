@@ -640,6 +640,39 @@ export class Market {
         return cooldowns;
     }
 
+    static async fetchNativeYields(): Promise<{ symbol: string, apy: number }[]> {
+        if(setup_config.api_url == null) {
+            console.error("You must have an API URL setup to fetch native yields.");
+            return [];
+        }
+
+        let chain: string = setup_config.chain;
+        if(chain == 'monad-mainnet') {
+            chain = 'monad';
+        }
+
+        try {
+            const res = await fetch(`${setup_config.api_url}/v1/${chain}/native_apy`);
+            const yields = await res.json() as {
+                "native_apy": {
+                    symbol: string,
+                    apy: number
+                }[]
+            };
+
+            // Add validation
+            if (!yields || !yields.native_apy || !Array.isArray(yields.native_apy)) {
+                console.error("Invalid API response structure for native yields");
+                return [];
+            }
+
+            return yields.native_apy;
+        } catch (error) {
+            console.error("Error fetching native yields:", error);
+            return [];
+        }
+
+    }
     /**
      * Grab all the markets available and set them up using the protocol reader efficient RPC calls / API cached calls
      * @param reader  - instace of the ProtocolReader class
@@ -651,6 +684,7 @@ export class Market {
         const user = "address" in provider ? provider.address : EMPTY_ADDRESS;
         const all_data = await reader.getAllMarketData(user as address);
         const deploy_keys: string[] = Object.keys(setup_config.contracts.markets) as (keyof typeof setup_config.contracts.markets)[];
+        const yields = await Market.fetchNativeYields();
 
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
@@ -703,6 +737,13 @@ export class Market {
             }
             if(incentives[market.address] != undefined) {
                 market.incentives = incentives[market.address]!;
+            }
+
+            for(const token of market.tokens) {
+                const api_yield = yields.find(y => y.symbol.toUpperCase() == token.asset.symbol.toUpperCase());
+                if(api_yield != undefined) {
+                    token.nativeYield = api_yield.apy;
+                }
             }
 
             markets.push(market);
