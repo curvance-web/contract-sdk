@@ -75,7 +75,7 @@ export const chain_config = {
     'local-monad-mainnet': {...monad_mainnet_config, provider: new JsonRpcProvider("http://localhost:8545")} //overwrite with mainnet
 };
 
-export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provider | null, approval_protection: boolean = false, api_url: string | null = null) {
+export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provider | null, approval_protection: boolean = false, api_url: string = "https://api.curvance.com") {
     if(!(chain in chain_config)) {
         throw new Error("Chain does not have a corresponding config");
     }

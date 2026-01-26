@@ -3,6 +3,7 @@ import { getTestSetup, NonceManagerSigner, setNativeBalance } from "./helper";
 import { address, BorrowableCToken, ChainRpcPrefix, curvance_signer, ERC20, Market, setupChain } from "../../src";
 import Decimal from "decimal.js";
 
+const DEFUALT_API_URL = "https://api.curvance.com";
 export class TestFramework {
     private_key: string;
     provider: JsonRpcProvider;
@@ -13,7 +14,7 @@ export class TestFramework {
     init_snapshot_id: number | undefined;
     log: boolean = false;
     impersonated_storage: {original_curvance: Awaited<ReturnType<typeof setupChain>> | null} = {original_curvance: null};
-    apiUrl: string | null = null;
+    apiUrl: string = DEFUALT_API_URL;
 
     // Token storage slot configuration - maps chain to token addresses to balance mapping slots
     private static tokenStorageSlots: {[chain: string]: {[tokenAddress: string]: number}} = {
@@ -51,7 +52,7 @@ export class TestFramework {
         'local-monad-mainnet': {}
     };
 
-    constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>, log: boolean = false, apiUrl: string | null = null) {
+    constructor(private_key: string, provider: JsonRpcProvider, signer: NonceManagerSigner, chain: ChainRpcPrefix, curvance: Awaited<ReturnType<typeof setupChain>>, log: boolean = false, apiUrl: string = DEFUALT_API_URL) {
         this.private_key = private_key;
         this.provider = provider;
         this.signer = signer;
@@ -70,13 +71,13 @@ export class TestFramework {
         seedUnderlying = true,
         snapshot = true,
         log = false,
-        apiUrl = null,
+        apiUrl = DEFUALT_API_URL,
     }: {
         seedNativeBalance?: boolean,
         seedUnderlying?: boolean,
         snapshot?: boolean,
         log?: boolean,
-        apiUrl?: string | null,
+        apiUrl?: string,
     }) {
         const setup = await getTestSetup(private_key);
         const framework = new TestFramework(
