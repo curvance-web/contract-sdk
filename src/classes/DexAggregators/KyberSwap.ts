@@ -122,7 +122,14 @@ export class KyberSwap implements IDexAgg {
                         const decimals = erc20in.decimals ?? await erc20in.contract.decimals();
                         const amount_bigint = toBigInt(amount, decimals);
 
-                        return await this.quote(signer.address, tokenIn, tokenOut, amount_bigint, FormatConverter.percentageToBps(slippage));
+                        const results = await this.quote(signer.address, tokenIn, tokenOut, amount_bigint, FormatConverter.percentageToBps(slippage));
+                        return {
+                            minOut_raw: results.min_out,
+                            output_raw: results.out,
+                            minOut: FormatConverter.bigIntToDecimal(results.min_out, decimals),
+                            output: FormatConverter.bigIntToDecimal(results.out, decimals),
+                            extra: results.raw
+                        }
                     }
                 });
             }

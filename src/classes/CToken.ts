@@ -34,7 +34,13 @@ export interface MulticallAction {
 export interface ZapToken {
     interface: NativeToken | ERC20;
     type: ZapperTypes;
-    quote?: (tokenIn: string, tokenOut: string, amount: TokenInput, slippage: Percentage) => Promise<Quote>;
+    quote?: (tokenIn: string, tokenOut: string, amount: TokenInput, slippage: Percentage) => Promise<{
+        minOut_raw: bigint;
+        output_raw: bigint;
+        minOut: Decimal;
+        output: Decimal;
+        extra?: any;
+    }>;
 }
 
 export type ZapperInstructions =  'none' | 'native-vault' | 'vault' | 'native-simple' | {
@@ -1152,9 +1158,14 @@ export class CToken extends Calldata<ICToken> {
         const owner    = signer.address as address;
 
         const buffer = this.market.userDebt.greaterThan(0) ? 100n : 0n;
+        const balance_avail = await this.balanceOf(signer.address as address);
         const max_shares = await this.maxRedemption(true, buffer);
         const converted_shares = this.convertTokenInputToShares(amount);
-        const shares = max_shares < converted_shares ? max_shares : converted_shares;
+        
+        let shares = max_shares < converted_shares ? max_shares : converted_shares;
+        if(balance_avail - shares <= 10n) {
+            shares = balance_avail;
+        }
 
         const calldata = this.getCallData("redeem", [shares, receiver, owner]);
         return this.oracleRoute(calldata);
