@@ -742,7 +742,7 @@ export class Market {
             for(const token of market.tokens) {
                 const api_yield = yields.find(y => y.symbol.toUpperCase() == token.asset.symbol.toUpperCase());
                 if(api_yield != undefined) {
-                    token.nativeYield = api_yield.apy;
+                    token.nativeYield = api_yield.apy / 100;
                 }
             }
 
