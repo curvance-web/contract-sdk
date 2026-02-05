@@ -186,6 +186,18 @@
       },
       "plugins": {},
       "AUSD-DynamicIRM": "0xdCB32fc822eAe8794E48Ad005b50AA850529296D"
+    },
+    "wsrUSD | AUSD": {
+      "address": "0x627a15859d09C1550e2934991AA95aFc6896e3Ef",
+      "tokens": {
+        "wsrUSD": "0x251B67Ae7e90fDc6a7B080Ee601913A8B2746A28",
+        "AUSD": "0x88e0994E8130EF72bf614CBBcF722839B167c8d1"
+      },
+      "plugins": {
+        "simplePositionManager": "0xF8613b7b4e8bFb5E7155fb4D3bc9f9B93d895C31"
+      },
+      "AUSD-DynamicIRM": "0xb785f9234d22bA56CCc117CFd3e9f460B8AB354e",
+      "wsrUSD-DynamicIRM": "0x89ed43d2ab0aE39beE492bA1Ee6117B07aFAA066"
     }
   },
   "ProtocolReader": "0x0c791636db1561E1f5aDD5Bf3994c95F14f272fF",
