@@ -755,12 +755,27 @@ export class CToken extends Calldata<ICToken> {
     async maxRedemption(in_shares: false): Promise<TokenInput>;
     async maxRedemption(in_shares: true, bufferTime: bigint): Promise<bigint>;
     async maxRedemption(in_shares: false, bufferTime: bigint): Promise<TokenInput>;
-    async maxRedemption(in_shares: boolean = false, bufferTime: bigint = 0n): Promise<TokenInput | bigint> {
+    async maxRedemption(in_shares: true, bufferTime: bigint, breakdown:true): Promise<{max_collateral: bigint, max_uncollateralized: bigint}>;
+    async maxRedemption(in_shares: false, bufferTime: bigint, breakdown:true): Promise<{max_collateral: TokenInput, max_uncollateralized: TokenInput}>;
+    async maxRedemption(in_shares: boolean = false, bufferTime: bigint = 0n, breakdown: boolean = false): Promise<(TokenInput | bigint) | {max_collateral: (TokenInput | bigint), max_uncollateralized: (TokenInput | bigint)}> {
         const signer = validateProviderAsSigner(this.provider);
         const data = await this.market.reader.maxRedemptionOf(signer.address as address, this, bufferTime);
 
         if(data.errorCodeHit) {
             throw new Error(`Error fetching max redemption. Possible stale price or other issues...`);
+        }
+
+        if(breakdown) {
+            return {
+                max_collateral: in_shares ? data.maxCollateralizedShares : FormatConverter.bigIntToDecimal(
+                    this.virtualConvertToAssets(data.maxCollateralizedShares),
+                    this.asset.decimals
+                ),
+                max_uncollateralized: in_shares ? data.maxUncollateralizedShares : FormatConverter.bigIntToDecimal(
+                    this.virtualConvertToAssets(data.maxUncollateralizedShares),
+                    this.asset.decimals
+                ),
+            };
         }
 
         const all_shares = data.maxCollateralizedShares + data.maxUncollateralizedShares;
