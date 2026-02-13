@@ -141,7 +141,7 @@ export class CToken extends Calldata<ICToken> {
     get isBorrowable() { return this.cache.isBorrowable; }
     get exchangeRate() { return this.cache.exchangeRate; }
     get canZap() { return this.zapTypes.length > 0; }
-    get maxLeverage() { return Decimal(this.cache.maxLeverage / BPS); }
+    get maxLeverage() { return Decimal(this.cache.maxLeverage).div(BPS); }
     get canLeverage() { return this.leverageTypes.length > 0; }
     get totalAssets() { return this.cache.totalAssets; }
     get totalSupply() { return this.cache.totalSupply; }
