@@ -126,18 +126,18 @@ export default class FormatConverter {
 
      Therefore, to convert BPS to BPS-WAD, we multiply by 1e18 and divide by 10,000.
 
-     1 BPS * (1e18 / 10,000) = 1e14
+     (1 BPS * 1e18) / 10,000 = 1e14
 
-     10,000 BPS * (1e18 / 10,000) = 1e18
+     (10,000 BPS * 1e18) / 10,000 = 1e18
 
      This confirms the conversion is correct.
 
      0.5% = 50 BPS
-     50 BPS in WAD = 50 * (1e18 / 10,000) = 5e15
+     50 BPS in WAD = (50 * 1e18) / 10,000 = 5e15
 
      * Example:
      * 50 BPS = 0.5%
-     * 50 BPS in WAD = 5,000,000,000,000,000
+     * 50 BPS in WAD = 5,000,000,000,000,000 (5e15)
      * @param value - value in BPS
      * @returns The BPS value in WAD format
      */

@@ -281,10 +281,10 @@ export class ProtocolReader {
         ] = await this.contract.hypotheticalLeverageOf(account, depositCToken.address, borrowableCToken.address, assets, 0n);
 
         return {
-            currentLeverage: Decimal(currentLeverage).div(WAD),
-            adjustMaxLeverage: Decimal(adjustMaxLeverage).div(WAD),
-            maxLeverage: Decimal(maxLeverage).div(WAD),
-            maxDebtBorrowable: toDecimal(maxDebtBorrowable, borrowableCToken.decimals)
+            currentLeverage: FormatConverter.bigIntToDecimal(currentLeverage, 18),
+            adjustMaxLeverage: FormatConverter.bigIntToDecimal(adjustMaxLeverage, 18),
+            maxLeverage: FormatConverter.bigIntToDecimal(maxLeverage, 18),
+            maxDebtBorrowable: FormatConverter.bigIntToDecimal(maxDebtBorrowable, borrowableCToken.decimals),
         };
     }
 

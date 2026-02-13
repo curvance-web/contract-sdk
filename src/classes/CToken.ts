@@ -846,16 +846,24 @@ export class CToken extends Calldata<ICToken> {
         if(newLeverage.lte(currentLeverage)) {
             throw new Error("New leverage must be more than current leverage");
         }
+        
+        if(newLeverage.gt(this.maxLeverage)) {
+            throw new Error(`New leverage must be less than max leverage of ${this.maxLeverage.toFixed(2)}x`);
+        }
 
         const collateralAvail = this.cache.userCollateral + (depositAmount ? depositAmount : BigInt(0));
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
-        const newCollateralInUsd = collateralInUsd.mul(newLeverage);
-        const newDebt = newCollateralInUsd.sub(this.market.userDebt).sub(collateralInUsd);
+        const currentDebt = this.market.userDebt;
+        const notional = collateralInUsd.sub(currentDebt);
+        const addedDebt = notional.mul(newLeverage).sub(notional);
         const borrowPrice = borrow.getPrice(true);
-        const borrowAmount = newDebt.div(borrowPrice);
-        const newCollateral = this.convertUsdToTokens(newCollateralInUsd, false);
+        const borrowAmount = addedDebt.div(borrowPrice);
 
-        return { borrowAmount, newDebt, newCollateral };
+        return { 
+            borrowAmount,
+            newDebt: currentDebt.add(addedDebt),
+            newCollateral: collateralInUsd.add(addedDebt)
+        };
     }
 
     previewLeverageDown(newLeverage: Decimal, currentLeverage: Decimal) {
@@ -863,10 +871,20 @@ export class CToken extends Calldata<ICToken> {
             throw new Error("New leverage must be less than current leverage");
         }
 
-        const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
+        if(newLeverage.lt(Decimal(1))) {
+            throw new Error("New leverage must be at least 1");
+        }
+            
+        
         const collateralAvail = this.cache.userCollateral;
-        const collateralAssetsAvail = this.virtualConvertToAssets(collateralAvail);
-        const collateralAssetReduction = collateralAssetsAvail * FormatConverter.decimalToBigInt(leverageDiff, 18n) / WAD;
+        const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
+        const currentDebt = this.market.userDebt;
+        const notional = collateralInUsd.sub(currentDebt);
+        const debtClosed = notional.mul(newLeverage);
+
+        const collateralAssetReductionUsd = debtClosed.div(this.getPrice(true));
+        const collateralAssetReduction = FormatConverter.decimalToBigInt(collateralAssetReductionUsd, this.asset.decimals);
+        const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
 
         return { collateralAssetReduction, leverageDiff };
     }
@@ -953,7 +971,7 @@ export class CToken extends Calldata<ICToken> {
         const manager = this.getPositionManager(type);
         let calldata: bytes;
 
-        const { collateralAssetReduction, leverageDiff } = this.previewLeverageDown(newLeverage, currentLeverage);
+        const { collateralAssetReduction } = this.previewLeverageDown(newLeverage, currentLeverage);
         const repay_balance = newLeverage.equals(1) ? await borrowToken.fetchDebtBalanceAtTimestamp(100n, false) : null;
         const repay_balance_with_slippage = repay_balance ? repay_balance + (repay_balance * 5n / BPS) : null;
 
