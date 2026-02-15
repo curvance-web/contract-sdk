@@ -198,10 +198,23 @@
       },
       "AUSD-DynamicIRM": "0xb785f9234d22bA56CCc117CFd3e9f460B8AB354e",
       "wsrUSD-DynamicIRM": "0x89ed43d2ab0aE39beE492bA1Ee6117B07aFAA066"
+    },
+    "YZM | AUSD": {
+      "address": "0x4409e2161B6f9A25ACbC471a37390654Ed272249",
+      "plugins": {
+        "simplePositionManager": "0xb85dEf309F7eEEb8f581909c7afB623dDf59AdD9"
+      },
+      "YZM-DynamicIRM": "0x9f39f4b61E89f78eE34780664afDc8D5bfAa74ca",
+      "tokens": {
+        "YZM": "0x8626B8f4F64CAeee9549Af8ebbFA591A7425e5ba",
+        "AUSD": "0xcdc9D2c4EaD8f2A9FD3D6F5a00bA4e6001ab7898"
+      },
+      "AUSD-DynamicIRM": "0xC813497D710CF30f7eEF73eF5dAC53c76fb821E6"
     }
   },
   "ProtocolReader": "0x0c791636db1561E1f5aDD5Bf3994c95F14f272fF",
   "CombinedAggregator-ezETH": "0xd5F84C4497621768f3F08b65ad7019BdF183b1fd",
   "CombinedAggregator-earnAUSD": "0xf80CC9965d260d7cD96E41b9734F031279dCDf2f",
-  "DAOTimelock": "0x2677738657F27e1A3591E00AD7E5a78807688C08"
+  "DAOTimelock": "0x2677738657F27e1A3591E00AD7E5a78807688C08",
+  "VaultAggregator-USDC-YZM": "0x7cB60D0Ca3B3dd08bA2aE5DF6686beAd289b1cF4"
 }
