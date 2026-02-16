@@ -107,10 +107,19 @@ export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provi
     let milestones: Milestones = {};
     let incentives: Incentives = {};
     if(setup_config.api_url != null) {
-        const rewards = await fetch(`${setup_config.api_url}/v1/rewards/active/${chain}`).then(res => res.json()) as {
-            milestones: Array<MilestoneResponse>
-            incentives: Array<IncentiveResponse>
-        };
+        let rewards;
+        try {
+            rewards = await fetch(`${setup_config.api_url}/v1/rewards/active/${chain}`).then(res => res.json()) as {
+                milestones: Array<MilestoneResponse>
+                incentives: Array<IncentiveResponse>
+            };
+        } catch(e) {
+            console.error("Failed to fetch rewards data from API:", e);
+            rewards = {
+                milestones: [],
+                incentives: []
+            };
+        }
 
         for(const milestone of rewards.milestones) {
             milestones[milestone.market] = milestone;
