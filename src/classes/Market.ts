@@ -693,6 +693,11 @@ export class Market {
             const userData    = all_data.userData.markets[i]!;
 
             const market_address = staticData.address;
+
+            if(market_address == '0x4409e2161B6f9A25ACbC471a37390654Ed272249') {
+                continue;
+            }
+
             let deploy_data: DeployData | undefined;
 
             for(const obj_key of deploy_keys) {

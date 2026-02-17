@@ -1,6 +1,6 @@
 {
   "name": "curvance",
-  "version": "3.4.5",
+  "version": "3.4.6",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
