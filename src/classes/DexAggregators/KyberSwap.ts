@@ -113,6 +113,13 @@ export class KyberSwap implements IDexAgg {
                 }
                 tokens_set.add(asset.address);
 
+                if(query) {
+                    const lowerQuery = query.toLowerCase();
+                    if(!token.name.toLowerCase().includes(lowerQuery) && !token.symbol.toLowerCase().includes(lowerQuery)) {
+                        continue;
+                    }
+                }
+
                 zap_tokens.push({
                     interface: token.getAsset(true),
                     type: 'simple',
