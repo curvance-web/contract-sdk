@@ -651,24 +651,28 @@ export class Market {
             chain = 'monad';
         }
 
-        try {
-            const res = await fetch(`${setup_config.api_url}/v1/${chain}/native_apy`);
-            const yields = await res.json() as {
-                "native_apy": {
-                    symbol: string,
-                    apy: number
-                }[]
-            };
-
-            // Add validation
-            if (!yields || !yields.native_apy || !Array.isArray(yields.native_apy)) {
-                console.error("Invalid API response structure for native yields");
+        if(['monad'].includes(chain)) {
+            try {
+                const res = await fetch(`${setup_config.api_url}/v1/${chain}/native_apy`);
+                const yields = await res.json() as {
+                    "native_apy": {
+                        symbol: string,
+                        apy: number
+                    }[]
+                };
+    
+                // Add validation
+                if (!yields || !yields.native_apy || !Array.isArray(yields.native_apy)) {
+                    console.error("Invalid API response structure for native yields");
+                    return [];
+                }
+    
+                return yields.native_apy;
+            } catch (error) {
+                console.error("Error fetching native yields:", error);
                 return [];
             }
-
-            return yields.native_apy;
-        } catch (error) {
-            console.error("Error fetching native yields:", error);
+        } else {
             return [];
         }
 

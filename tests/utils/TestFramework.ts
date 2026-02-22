@@ -118,7 +118,12 @@ export class TestFramework {
         const setup = await getTestSetup(this.private_key);
         this.provider = setup.provider;
         this.signer = setup.signer;
-        this.curvance = await setupChain(this.chain, this.signer, true, this.apiUrl);
+        try {
+            this.curvance = await setupChain(this.chain, this.signer, true, this.apiUrl);
+        } catch(e: any) {
+            console.error(`[reset] setupChain failed: ${e.message}`);
+            throw e;
+        }
     }
 
     async skipMarketCooldown(market: address, account?: address | undefined) {

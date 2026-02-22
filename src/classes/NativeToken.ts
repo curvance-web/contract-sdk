@@ -5,6 +5,7 @@ import { address, curvance_provider, TokenInput, USD } from "../types";
 import { OracleManager } from "./OracleManager";
 
 export class NativeToken {
+    name   : string;
     symbol  : string;
     provider: curvance_provider;
     address  = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as address;
@@ -13,6 +14,7 @@ export class NativeToken {
     constructor(chain: ChainRpcPrefix, provider: curvance_provider) {
         const config = chain_config[chain];
         this.symbol = config.native_symbol;
+        this.name = config.native_name || config.native_symbol;
         this.provider = provider;
     }
 
