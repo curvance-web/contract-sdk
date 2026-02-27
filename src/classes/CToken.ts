@@ -860,12 +860,11 @@ export class CToken extends Calldata<ICToken> {
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
         const currentDebt     = this.market.userDebt;
         const notional        = collateralInUsd.sub(currentDebt);
-        const addedDebt       = notional.mul(newLeverage).sub(notional);
+        const newDebtInUsd    = notional.mul(newLeverage).sub(notional);
         const borrowPrice     = borrow.getPrice(true);
-        const borrowAmount    = addedDebt.div(borrowPrice);
+        const borrowAmount    = newDebtInUsd.sub(currentDebt).div(borrowPrice);
 
-        const newCollateralInUsd = notional.add(addedDebt);
-        const newDebtInUsd       = addedDebt;
+        const newCollateralInUsd = notional.add(newDebtInUsd);
 
         return { 
             borrowAmount,
