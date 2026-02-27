@@ -117,7 +117,7 @@ export class Zapper extends Calldata<IZapper> {
     }
 
     async getNativeZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean, wrapped: boolean = false) {
-        const { underlying_address, expected_shares } = await this.getZapVaultData(ctoken, amount);
+        const expected_shares = await ctoken.convertToShares(amount);
         const config = getChainConfig();
 
         const swap: Swap = {

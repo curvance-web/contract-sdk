@@ -113,20 +113,26 @@ export class CToken extends Calldata<ICToken> {
         this.isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
         this.isWrappedNative = chain_config.wrapped_native == this.asset.address;
 
-        // TODO: Remove this, as a temporary disable for sAUSD
-        // if(this.symbol == 'csAUSD') {
-        //     return;
-        // }
+        if([
+            'csAUSD',
+            'cwsrUSD',
+            'cezETH',
+            'csyzUSD',
+            'cearnAUSD',
+            'cYZM'
+        ].includes(this.symbol)) {
+            return;
+        }
 
-        // if(this.isNativeVault) this.zapTypes.push('native-vault');
-        // if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
-        // if(this.isWrappedNative) this.zapTypes.push('native-simple');
+        if(this.isNativeVault) this.zapTypes.push('native-vault');
+        if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
+        if(this.isWrappedNative) this.zapTypes.push('native-simple');
 
-        // if(this.isVault) this.zapTypes.push('vault');
-        // if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
+        if(this.isVault) this.zapTypes.push('vault');
+        if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
 
-        // if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
-        // this.zapTypes.push('simple');
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -264,21 +270,21 @@ export class CToken extends Calldata<ICToken> {
     getUserShareBalance(inUSD: true): USD;
     getUserShareBalance(inUSD: false): TokenInput;
     getUserShareBalance(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, false) : toDecimal(this.cache.userShareBalance, this.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userShareBalance, false) : FormatConverter.bigIntToDecimal(this.cache.userShareBalance, this.decimals);
     }
 
     /** @returns User assets in USD (this is the raw balance that the token exchanges too) or token */
     getUserAssetBalance(inUSD: true): USD;
     getUserAssetBalance(inUSD: false): TokenInput;
     getUserAssetBalance(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : toDecimal(this.cache.userAssetBalance, this.asset.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userAssetBalance) : FormatConverter.bigIntToDecimal(this.cache.userAssetBalance, this.asset.decimals);
     }
 
     /** @returns User underlying assets in USD or token */
     getUserUnderlyingBalance(inUSD: true): USD;
     getUserUnderlyingBalance(inUSD: false): TokenInput;
     getUserUnderlyingBalance(inUSD: boolean): USD | TokenInput {
-        return inUSD ? this.convertTokensToUsd(this.cache.userUnderlyingBalance) : toDecimal(this.cache.userUnderlyingBalance, this.decimals);
+        return inUSD ? this.convertTokensToUsd(this.cache.userUnderlyingBalance) : FormatConverter.bigIntToDecimal(this.cache.userUnderlyingBalance, this.decimals);
     }
 
     /** @returns Token Collateral Cap in USD or USD WAD */
@@ -687,12 +693,11 @@ export class CToken extends Calldata<ICToken> {
         if(assets > balance) {
             console.warn('[WARNING] Detected higher deposit amount then underlying balance, changing to the underlying balance. Diff: ', {
                 balance: balance,
+                formatted: FormatConverter.bigIntToDecimal(balance, this.asset.decimals),
                 attempt: {
                     raw: assets,
                     formatted: amount
                 },
-                raw: assets - balance,
-                formatted: FormatConverter.bigIntToDecimal(assets - balance, this.asset.decimals)
             });
 
             return FormatConverter.bigIntToDecimal(balance, this.asset.decimals);
@@ -853,16 +858,21 @@ export class CToken extends Calldata<ICToken> {
 
         const collateralAvail = this.cache.userCollateral + (depositAmount ? depositAmount : BigInt(0));
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
-        const currentDebt = this.market.userDebt;
-        const notional = collateralInUsd.sub(currentDebt);
-        const addedDebt = notional.mul(newLeverage).sub(notional);
-        const borrowPrice = borrow.getPrice(true);
-        const borrowAmount = addedDebt.div(borrowPrice);
+        const currentDebt     = this.market.userDebt;
+        const notional        = collateralInUsd.sub(currentDebt);
+        const addedDebt       = notional.mul(newLeverage).sub(notional);
+        const borrowPrice     = borrow.getPrice(true);
+        const borrowAmount    = addedDebt.div(borrowPrice);
+
+        const newCollateralInUsd = notional.add(addedDebt);
+        const newDebtInUsd       = addedDebt;
 
         return { 
             borrowAmount,
-            newDebt: currentDebt.add(addedDebt),
-            newCollateral: collateralInUsd.add(addedDebt)
+            newDebt: newDebtInUsd,
+            newDebtInAssets: this.convertUsdToTokens(newDebtInUsd, true),
+            newCollateral: newCollateralInUsd,
+            newCollateralInAssets: this.convertUsdToTokens(newCollateralInUsd, true)
         };
     }
 
@@ -886,7 +896,11 @@ export class CToken extends Calldata<ICToken> {
         const collateralAssetReduction = FormatConverter.decimalToBigInt(collateralAssetReductionUsd, this.asset.decimals);
         const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
 
-        return { collateralAssetReduction, leverageDiff };
+        return { 
+            collateralAssetReduction,
+            collateralAssetReductionUsd,
+            leverageDiff 
+        };
     }
 
     async leverageUp(
