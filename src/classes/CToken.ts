@@ -930,7 +930,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets    : FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                         cToken          : this.address,
-                        expectedShares  : BigInt(quote.min_out),
+                        expectedShares  : await PositionManager.getExpectedShares(this, BigInt(quote.min_out)),
                         swapAction      : action,
                         auxData         : "0x",
                     },
