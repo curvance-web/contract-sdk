@@ -833,6 +833,14 @@ export class CToken extends Calldata<ICToken> {
             tokens = tokens.concat(dexAggSearch.filter(token => !tokens_exclude.includes(token.interface.address.toLocaleLowerCase())));
         }
 
+        if(search) {
+            const lowerSearch = search.toLowerCase();
+            tokens = tokens.filter(token =>
+                (token.interface.name ?? '').toLowerCase().includes(lowerSearch) ||
+                (token.interface.symbol ?? '').toLowerCase().includes(lowerSearch)
+            );
+        }
+
         return tokens;
     }
 
