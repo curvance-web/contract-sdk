@@ -721,9 +721,9 @@ export class CToken extends Calldata<ICToken> {
     }
 
     convertTokenInputToShares(amount: TokenInput) {
-        return this.virtualConvertToShares(
-            FormatConverter.decimalToBigInt(amount, this.asset.decimals)
-        );
+        const assets = Decimal(amount.toString()).mul(Decimal(10).pow(this.asset.decimals));
+        const shares = assets.mul(this.totalSupply.toString()).div(this.totalAssets.toString());
+        return BigInt(shares.floor().toFixed(0));
     }
 
     convertTokenToToken(fromToken: CToken, toToken: CToken, amount: TokenInput, formatted: true): TokenInput;
@@ -888,11 +888,11 @@ export class CToken extends Calldata<ICToken> {
         const collateralAvail = this.cache.userCollateral;
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
         const currentDebt = this.market.userDebt;
-        const notional = collateralInUsd.sub(currentDebt);
-        const debtClosed = notional.mul(newLeverage);
+        const equity = collateralInUsd.sub(currentDebt);
+        const targetCollateralUsd = equity.mul(newLeverage);
 
-        const collateralAssetReductionUsd = debtClosed.div(this.getPrice(true));
-        const collateralAssetReduction = FormatConverter.decimalToBigInt(collateralAssetReductionUsd, this.asset.decimals);
+        const collateralAssetReductionUsd = collateralInUsd.sub(targetCollateralUsd);
+        const collateralAssetReduction = FormatConverter.decimalToBigInt(collateralAssetReductionUsd.div(this.getPrice(true)), this.asset.decimals);
         const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
 
         return { 
