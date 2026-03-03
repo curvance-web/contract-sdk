@@ -52,7 +52,8 @@ describe('SDK-002: previewLeverageDown computes correct reduction', () => {
         assert(leverageAfterUp!.gte(Decimal(2.5)), `Expected leverage >= 2.5, got ${leverageAfterUp}`);
 
         // Verify previewLeverageDown returns a sane reduction amount
-        const preview = cWMON.previewLeverageDown(Decimal(1.5), leverageAfterUp!);
+        // Pass cUSDC as borrow so we get newDebtInAssets back
+        const preview = cWMON.previewLeverageDown(Decimal(1.5), leverageAfterUp!, cUSDC);
         const collateralUsd = cWMON.getUserCollateral(true);
         const reductionUsd = preview.collateralAssetReductionUsd;
 
@@ -64,6 +65,57 @@ describe('SDK-002: previewLeverageDown computes correct reduction', () => {
         assert(reductionUsd.lt(collateralUsd), `Reduction $${reductionUsd} should be less than total collateral $${collateralUsd}`);
         // The reduction must be positive
         assert(reductionUsd.gt(0), `Reduction should be positive, got ${reductionUsd}`);
+
+        // --- Verify new debt/collateral fields ---
+        const debt = cWMON.market.userDebt;
+        const equity = collateralUsd.sub(debt);
+
+        console.log(`Current debt (USD): ${debt}`);
+        console.log(`Equity (USD): ${equity}`);
+        console.log(`newDebt (USD): ${preview.newDebt}`);
+        console.log(`newDebtInAssets: ${preview.newDebtInAssets}`);
+        console.log(`newCollateral (USD): ${preview.newCollateral}`);
+        console.log(`newCollateralInAssets: ${preview.newCollateralInAssets}`);
+
+        // newCollateral = equity * newLeverage
+        const expectedCollateral = equity.mul(Decimal(1.5));
+        const collateralDiff = preview.newCollateral.sub(expectedCollateral).abs();
+        assert(collateralDiff.lt(Decimal(0.01)),
+            `newCollateral ${preview.newCollateral} should ≈ equity*1.5 = ${expectedCollateral}`);
+
+        // newDebt = newCollateral - equity = equity * (newLeverage - 1)
+        const expectedDebt = equity.mul(Decimal(0.5));
+        const debtDiff = preview.newDebt.sub(expectedDebt).abs();
+        assert(debtDiff.lt(Decimal(0.01)),
+            `newDebt ${preview.newDebt} should ≈ equity*0.5 = ${expectedDebt}`);
+
+        // Invariant: newCollateral - newDebt = equity
+        const impliedEquity = preview.newCollateral.sub(preview.newDebt);
+        const equityDiff = impliedEquity.sub(equity).abs();
+        assert(equityDiff.lt(Decimal(0.01)),
+            `newCollateral - newDebt = ${impliedEquity} should ≈ equity = ${equity}`);
+
+        // newDebtInAssets must be defined since we passed borrow
+        assert(preview.newDebtInAssets !== undefined,
+            'newDebtInAssets should be defined when borrow param is provided');
+        assert(preview.newDebtInAssets!.gt(0),
+            `newDebtInAssets should be positive, got ${preview.newDebtInAssets}`);
+
+        // newCollateralInAssets must be defined and positive
+        assert(preview.newCollateralInAssets.gt(0),
+            `newCollateralInAssets should be positive, got ${preview.newCollateralInAssets}`);
+
+        // newDebt should be less than current debt (we're deleveraging)
+        assert(preview.newDebt.lt(debt),
+            `newDebt ${preview.newDebt} should be less than current debt ${debt}`);
+
+        // Without borrow param, newDebtInAssets should be undefined
+        const previewNoBorrow = cWMON.previewLeverageDown(Decimal(1.5), leverageAfterUp!);
+        assert(previewNoBorrow.newDebtInAssets === undefined,
+            'newDebtInAssets should be undefined when borrow param is omitted');
+        // Other fields should still be present
+        assert(previewNoBorrow.newCollateral.gt(0), 'newCollateral should still work without borrow');
+        assert(previewNoBorrow.newCollateralInAssets.gt(0), 'newCollateralInAssets should still work without borrow');
 
         // Skip the minimum hold period cooldown enforced by MarketManager
         await framework.skipMarketCooldown(market.address);

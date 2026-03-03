@@ -883,7 +883,7 @@ export class CToken extends Calldata<ICToken> {
         };
     }
 
-    previewLeverageDown(newLeverage: Decimal, currentLeverage: Decimal) {
+    previewLeverageDown(newLeverage: Decimal, currentLeverage: Decimal, borrow?: BorrowableCToken) {
         if(newLeverage.gte(currentLeverage)) {
             throw new Error("New leverage must be less than current leverage");
         }
@@ -891,22 +891,27 @@ export class CToken extends Calldata<ICToken> {
         if(newLeverage.lt(Decimal(1))) {
             throw new Error("New leverage must be at least 1");
         }
-            
-        
+
+
         const collateralAvail = this.cache.userCollateral;
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
         const currentDebt = this.market.userDebt;
         const equity = collateralInUsd.sub(currentDebt);
         const targetCollateralUsd = equity.mul(newLeverage);
+        const newDebtUsd = targetCollateralUsd.sub(equity);
 
         const collateralAssetReductionUsd = collateralInUsd.sub(targetCollateralUsd);
         const collateralAssetReduction = FormatConverter.decimalToBigInt(collateralAssetReductionUsd.div(this.getPrice(true)), this.asset.decimals);
         const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
 
-        return { 
+        return {
             collateralAssetReduction,
             collateralAssetReductionUsd,
-            leverageDiff 
+            leverageDiff,
+            newDebt: newDebtUsd,
+            newDebtInAssets: borrow ? borrow.convertUsdToTokens(newDebtUsd, true) : undefined,
+            newCollateral: targetCollateralUsd,
+            newCollateralInAssets: this.convertUsdToTokens(targetCollateralUsd, true)
         };
     }
 
