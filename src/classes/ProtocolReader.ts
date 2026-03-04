@@ -117,42 +117,10 @@ export interface UserData {
     markets: UserMarket[];
 }
 
-export interface OptimizerCTokenData {
-    address: address;
-    allocatedAssets: bigint;
-    liquidity: bigint;
-}
-
-export interface OptimizerMarketData {
-    address: address;
-    asset: address;
-    totalAssets: bigint;
-    markets: OptimizerCTokenData[];
-    totalLiquidity: bigint;
-    sharePrice: bigint;
-    performanceFee: bigint;
-}
-
-export interface OptimizerUserData {
-    address: address;
-    shareBalance: bigint;
-    redeemable: bigint;
-}
-
-export interface ReallocationAction {
-    cToken: address;
-    assets: bigint;
-}
-
 export interface IProtocolReader {
     getUserData(account: address): Promise<UserData>;
     getDynamicMarketData(): Promise<DynamicMarketData[]>;
     getStaticMarketData(): Promise<StaticMarketData[]>;
-    getOptimizerMarketData(optimizers: address[]): Promise<any[]>;
-    getOptimizerUserData(optimizers: address[], account: address): Promise<any[]>;
-    optimalDeposit(optimizer: address, assets: bigint): Promise<address>;
-    optimalWithdrawal(optimizer: address, assets: bigint): Promise<address>;
-    optimalRebalance(optimizer: address): Promise<any[]>;
     marketMultiCooldown(markets: address[], account: address): Promise<bigint[]>;
     previewAssetImpact(user: address, collateral_ctoken: address, debt_ctoken: address, new_collateral: bigint, new_debt: bigint): Promise<[bigint, bigint]>;
     hypotheticalLeverageOf(account: address, depositCToken: address, borrowCToken: address, assets: bigint, bufferTime: bigint): Promise<[ bigint, bigint, bigint, bigint ]>;
@@ -326,48 +294,6 @@ export class ProtocolReader {
 
     async debtBalanceAtTimestamp(account: address, borrowableCtoken: address, timestamp: bigint) {
         return await this.contract.debtBalanceAtTimestamp(account, borrowableCtoken, timestamp);
-    }
-
-    async getOptimizerMarketData(optimizers: address[]): Promise<OptimizerMarketData[]> {
-        const data = await this.contract.getOptimizerMarketData(optimizers);
-        return data.map((opt: any) => ({
-            address: opt._address,
-            asset: opt.asset,
-            totalAssets: BigInt(opt.totalAssets),
-            markets: opt.markets.map((m: any) => ({
-                address: m._address,
-                allocatedAssets: BigInt(m.allocatedAssets),
-                liquidity: BigInt(m.liquidity)
-            })),
-            totalLiquidity: BigInt(opt.totalLiquidity),
-            sharePrice: BigInt(opt.sharePrice),
-            performanceFee: BigInt(opt.performanceFee)
-        }));
-    }
-
-    async getOptimizerUserData(optimizers: address[], account: address): Promise<OptimizerUserData[]> {
-        const data = await this.contract.getOptimizerUserData(optimizers, account);
-        return data.map((opt: any) => ({
-            address: opt._address,
-            shareBalance: BigInt(opt.shareBalance),
-            redeemable: BigInt(opt.redeemable)
-        }));
-    }
-
-    async optimalDeposit(optimizer: address, assets: bigint): Promise<address> {
-        return await this.contract.optimalDeposit(optimizer, assets);
-    }
-
-    async optimalWithdrawal(optimizer: address, assets: bigint): Promise<address> {
-        return await this.contract.optimalWithdrawal(optimizer, assets);
-    }
-
-    async optimalRebalance(optimizer: address): Promise<ReallocationAction[]> {
-        const data = await this.contract.optimalRebalance(optimizer);
-        return data.map((action: any) => ({
-            cToken: action.cToken,
-            assets: BigInt(action.assets)
-        }));
     }
 
     async getStaticMarketData(use_api = true) {
