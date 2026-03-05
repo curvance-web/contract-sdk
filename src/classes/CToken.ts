@@ -113,26 +113,26 @@ export class CToken extends Calldata<ICToken> {
         this.isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
         this.isWrappedNative = chain_config.wrapped_native == this.asset.address;
 
-        // if([
-        //     'csAUSD',
-        //     'cwsrUSD',
-        //     'cezETH',
-        //     'csyzUSD',
-        //     'cearnAUSD',
-        //     'cYZM'
-        // ].includes(this.symbol)) {
-        //     return;
-        // }
+        if([
+            'csAUSD',
+            'cwsrUSD',
+            'cezETH',
+            'csyzUSD',
+            'cearnAUSD',
+            'cYZM'
+        ].includes(this.symbol)) {
+            return;
+        }
 
-        // if(this.isNativeVault) this.zapTypes.push('native-vault');
-        // if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
-        // if(this.isWrappedNative) this.zapTypes.push('native-simple');
+        if(this.isNativeVault) this.zapTypes.push('native-vault');
+        if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
+        if(this.isWrappedNative) this.zapTypes.push('native-simple');
 
-        // if(this.isVault) this.zapTypes.push('vault');
-        // if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
+        if(this.isVault) this.zapTypes.push('vault');
+        if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
 
-        // if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
-        // this.zapTypes.push('simple');
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -454,6 +454,10 @@ export class CToken extends Calldata<ICToken> {
             return true;
         }
 
+        if(instructions.inputToken.toLowerCase() === NATIVE_ADDRESS.toLowerCase()) {
+            return true;
+        }
+
         const signer = validateProviderAsSigner(this.provider);
         const asset =  new ERC20(signer, instructions.inputToken);
         const plugin = this.getPluginAddress(instructions.type, 'zapper');
@@ -473,6 +477,11 @@ export class CToken extends Calldata<ICToken> {
         if(instructions == 'none' || typeof instructions != 'object') {
             throw new Error("Plugin does not have an associated contract");
         }
+
+        if(instructions.inputToken.toLowerCase() === NATIVE_ADDRESS.toLowerCase()) {
+            return;
+        }
+
         const signer = validateProviderAsSigner(this.provider);
         const asset =  new ERC20(signer, instructions.inputToken);
         const plugin = this.getPluginAddress(instructions.type, 'zapper');
@@ -833,6 +842,14 @@ export class CToken extends Calldata<ICToken> {
             tokens = tokens.concat(dexAggSearch.filter(token => !tokens_exclude.includes(token.interface.address.toLocaleLowerCase())));
         }
 
+        if(search) {
+            const lowerSearch = search.toLowerCase();
+            tokens = tokens.filter(token =>
+                (token.interface.name ?? '').toLowerCase().includes(lowerSearch) ||
+                (token.interface.symbol ?? '').toLowerCase().includes(lowerSearch)
+            );
+        }
+
         return tokens;
     }
 
@@ -875,7 +892,7 @@ export class CToken extends Calldata<ICToken> {
         };
     }
 
-    previewLeverageDown(newLeverage: Decimal, currentLeverage: Decimal) {
+    previewLeverageDown(newLeverage: Decimal, currentLeverage: Decimal, borrow?: BorrowableCToken) {
         if(newLeverage.gte(currentLeverage)) {
             throw new Error("New leverage must be less than current leverage");
         }
@@ -883,22 +900,27 @@ export class CToken extends Calldata<ICToken> {
         if(newLeverage.lt(Decimal(1))) {
             throw new Error("New leverage must be at least 1");
         }
-            
-        
+
+
         const collateralAvail = this.cache.userCollateral;
         const collateralInUsd = this.convertTokensToUsd(collateralAvail, false);
         const currentDebt = this.market.userDebt;
-        const notional = collateralInUsd.sub(currentDebt);
-        const debtClosed = notional.mul(newLeverage);
+        const equity = collateralInUsd.sub(currentDebt);
+        const targetCollateralUsd = equity.mul(newLeverage);
+        const newDebtUsd = targetCollateralUsd.sub(equity);
 
-        const collateralAssetReductionUsd = debtClosed.div(this.getPrice(true));
-        const collateralAssetReduction = FormatConverter.decimalToBigInt(collateralAssetReductionUsd, this.asset.decimals);
+        const collateralAssetReductionUsd = collateralInUsd.sub(targetCollateralUsd);
+        const collateralAssetReduction = FormatConverter.decimalToBigInt(collateralAssetReductionUsd.div(this.getPrice(true)), this.asset.decimals);
         const leverageDiff = Decimal(1).sub(newLeverage.div(currentLeverage));
 
-        return { 
+        return {
             collateralAssetReduction,
             collateralAssetReductionUsd,
-            leverageDiff 
+            leverageDiff,
+            newDebt: newDebtUsd,
+            newDebtInAssets: borrow ? borrow.convertUsdToTokens(newDebtUsd, true) : undefined,
+            newCollateral: targetCollateralUsd,
+            newCollateralInAssets: this.convertUsdToTokens(targetCollateralUsd, true)
         };
     }
 
@@ -930,7 +952,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets    : FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                         cToken          : this.address,
-                        expectedShares  : BigInt(quote.min_out),
+                        expectedShares  : this.virtualConvertToShares(BigInt(quote.min_out)),
                         swapAction      : action,
                         auxData         : "0x",
                     },
@@ -1062,7 +1084,7 @@ export class CToken extends Calldata<ICToken> {
                         borrowableCToken: borrow.address,
                         borrowAssets: FormatConverter.decimalToBigInt(borrowAmount, borrow.asset.decimals),
                         cToken: this.address,
-                        expectedShares: await PositionManager.getExpectedShares(this, BigInt(quote.min_out)),
+                        expectedShares: this.virtualConvertToShares(BigInt(quote.min_out)),
                         swapAction: action,
                         auxData: "0x",
                     },
@@ -1160,7 +1182,8 @@ export class CToken extends Calldata<ICToken> {
         receiver ??= signer.address as address;
         const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
         const zapType = typeof zap == 'object' ? zap.type : zap;
-        const isNative = zapType == 'native-simple' || zapType == 'native-vault' || zapType == 'none';
+        const isNative = zapType == 'native-simple' || zapType == 'native-vault' || zapType == 'none'
+            || (typeof zap == 'object' && zap.inputToken.toLowerCase() === NATIVE_ADDRESS.toLowerCase());
 
         const default_calldata = this.getCallData("deposit", [assets, receiver]);
         const { calldata, calldata_overrides } = await this.zap(assets, zap, false, default_calldata);

@@ -59,6 +59,10 @@ export class Zapper extends Calldata<IZapper> {
     }
 
     async getSimpleZapCalldata(ctoken: CToken, inputToken: address, outputToken: address, amount: bigint, collateralize: boolean, slippage: bigint) {
+        if(inputToken.toLowerCase() === NATIVE_ADDRESS.toLowerCase()) {
+            return this.getNativeZapCalldata(ctoken, amount, collateralize, true);
+        }
+
         const config = getChainConfig();
         const quote = await config.dexAgg.quote(this.address, inputToken, outputToken, amount, slippage);
 
@@ -117,7 +121,10 @@ export class Zapper extends Calldata<IZapper> {
     }
 
     async getNativeZapCalldata(ctoken: CToken, amount: bigint, collateralize: boolean, wrapped: boolean = false) {
-        const expected_shares = await ctoken.convertToShares(amount);
+        const vaultAssets = (ctoken.isVault || ctoken.isNativeVault)
+            ? await ctoken.getUnderlyingVault().previewDeposit(amount)
+            : amount;
+        const expected_shares = await ctoken.convertToShares(vaultAssets);
         const config = getChainConfig();
 
         const swap: Swap = {

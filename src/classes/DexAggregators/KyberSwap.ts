@@ -135,6 +135,8 @@ export class KyberSwap implements IDexAgg {
                         return {
                             minOut_raw: results.min_out,
                             output_raw: results.out,
+                            minOut: FormatConverter.bigIntToDecimal(results.min_out, outDecimals),
+                            output: FormatConverter.bigIntToDecimal(results.out, outDecimals),
                             minOut: FormatConverter.bigIntToDecimal(results.min_out, decimalsOut),
                             output: FormatConverter.bigIntToDecimal(results.out, decimalsOut),
                             extra: results.raw
