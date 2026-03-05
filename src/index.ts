@@ -17,3 +17,4 @@ export * from './helpers';
 export * from './setup';
 export * from './types';
 export * from './retry-provider';
+export * from './snapshot';

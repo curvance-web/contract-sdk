@@ -33,7 +33,9 @@ export interface StatusOf {
 
 export interface DeployData {
     name: string,
-    plugins: { [key: string]: address }
+    plugins: { [key: string]: address },
+    category?: string,
+    protocol?: string,
 }
 
 export interface HypotheticalLiquidityOf {
@@ -708,10 +710,13 @@ export class Market {
                 }
 
                 if(market_address == data.address) {
-                    deploy_data = {
+                    const dd: DeployData = {
                         name: obj_key,
-                        plugins: 'plugins' in data ? data.plugins as { [key: string]: address } : {}
+                        plugins: 'plugins' in data ? data.plugins as { [key: string]: address } : {},
                     };
+                    if('category' in data) dd.category = data.category as string;
+                    if('protocol' in data) dd.protocol = data.protocol as string;
+                    deploy_data = dd;
                     break;
                 }
             }

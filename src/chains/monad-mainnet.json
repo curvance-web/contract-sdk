@@ -20,6 +20,8 @@
   "markets": {
     "MUBOND | AUSD": {
       "address": "0x830D40CDFdc494BC1A2729a7381bfCe44326c944",
+      "category": "yield-stablecoin",
+      "protocol": "Mu Digital",
       "muBOND-DynamicIRM": "0x5b1d3a91457f7AD854a559dAACc0be18cD402D12",
       "tokens": {
         "muBOND": "0x92EE4b4d33Dc61bd93a88601F29131B08aCedBF1",
@@ -32,6 +34,8 @@
     },
     "loAZND | AUSD": {
       "address": "0x7C822B093A116654F824Ec2A35CD23a3749E4f90",
+      "category": "yield-stablecoin",
+      "protocol": "Mu Digital",
       "loAZND-DynamicIRM": "0x5d2b40E3e3FdCDEd15314290d4384D4D12044233",
       "tokens": {
         "loAZND": "0xf7a6AB4aF86966C141D3C5633DF658E5CDb0a735",
@@ -44,6 +48,8 @@
     },
     "ezETH | WETH": {
       "address": "0x83840d837E7A3E00bBb0B8501E60E989A8987c37",
+      "category": "restaking",
+      "protocol": "Renzo",
       "ezETH-DynamicIRM": "0x28444Eb9FA9dDA1E6F3D240B2e06a453505e16E6",
       "tokens": {
         "ezETH": "0x20f1A13BfbF85a22Aa59D189861790981372220b",
@@ -56,6 +62,8 @@
     },
     "shMON | WMON": {
       "address": "0xE1C24B2E93230FBe33d32Ba38ECA3218284143e2",
+      "category": "staking",
+      "protocol": "Fastlane",
       "shMON-DynamicIRM": "0x2C802F49fb5ce37D37E947D9b88B2A2Cea7A3C31",
       "tokens": {
         "shMON": "0x926C101Cf0a3dE8725Eb24a93E980f9FE34d6230",
@@ -69,6 +77,8 @@
     },
     "aprMON | WMON": {
       "address": "0x5EA0a1Cf3501C954b64902c5e92100b8A2CaB1Ac",
+      "category": "staking",
+      "protocol": "Apriori",
       "aprMON-DynamicIRM": "0x0d44480D72B23D19673EEde88aEa03a119bc13f4",
       "tokens": {
         "aprMON": "0xD9E2025b907E95EcC963A5018f56B87575B4aB26",
@@ -82,6 +92,8 @@
     },
     "sMON | WMON": {
       "address": "0xe5970cDB1916B2cCF6185C86C174EEE2d330D05B",
+      "category": "staking",
+      "protocol": "Kintsu",
       "sMON-DynamicIRM": "0x0db363a2eDB3Ac8F4CDdC174ff44B6dfd09A2FeF",
       "tokens": {
         "sMON": "0x494876051B0E85dCe5ecd5822B1aD39b9660c928",
@@ -94,6 +106,8 @@
     },
     "sAUSD | AUSD": {
       "address": "0xBBE7A3c45aDBb16F6490767b663428c34aA341Eb",
+      "category": "yield-stablecoin",
+      "protocol": "Upshift",
       "sAUSD-DynamicIRM": "0xcf31332aB92953101B8E1af7Ca841f6426936da8",
       "tokens": {
         "sAUSD": "0x84C5aF20b58818631164Bb7d798E457fcFACD9Ac",
@@ -107,6 +121,8 @@
     },
     "earnAUSD | AUSD": {
       "address": "0xd6365555f6a697C7C295bA741100AA644cE28545",
+      "category": "yield-stablecoin",
+      "protocol": "Upshift",
       "earnAUSD-DynamicIRM": "0x346339e3Fbd21ed48ADDDE1523896c0d97cF1851",
       "tokens": {
         "earnAUSD": "0x852FF1EC21D63b405eC431e04AE3AC760e29263D",
@@ -119,6 +135,8 @@
     },
     "WMON | AUSD": {
       "address": "0x05e70717fA8BD0F21a9F826d093d99f6Da4f1554",
+      "category": "native",
+      "protocol": "Native",
       "WMON-DynamicIRM": "0xc17A271F79ac4449FaABeAf64E805BEE37B78DBd",
       "tokens": {
         "WMON": "0xE01d426B589c7834a5F6B20D7e992A705d3c22ED",
@@ -131,6 +149,8 @@
     },
     "WMON | USDC": {
       "address": "0xa6A2A92F126b79Ee0804845ee6B52899b4491093",
+      "category": "native",
+      "protocol": "Native",
       "WMON-DynamicIRM": "0x50264B615175f8DBFFF417CF6D0003D2e77D87B4",
       "tokens": {
         "WMON": "0x1e240E30E51491546deC3aF16B0b4EAC8Dd110D4",
@@ -143,6 +163,8 @@
     },
     "WBTC | USDC": {
       "address": "0x01C4a0d396EFE982B1B103BE9910321d34e1aEA9",
+      "category": "blue-chip",
+      "protocol": "Native",
       "WBTC-DynamicIRM": "0x8a78Bd450258B7B1D42431fB904453cA43161AdE",
       "tokens": {
         "WBTC": "0x3D2Ff9F862D89Ba526a0fC166bD56ABe04EF28d5",
@@ -155,6 +177,8 @@
     },
     "WETH | USDC": {
       "address": "0xb3E9E0134354cc91b7FB9F9d6C3ab0dE7854BB49",
+      "category": "blue-chip",
+      "protocol": "Native",
       "WETH-DynamicIRM": "0x8c82ccF6Ee43346425E04325Df03219cf46a7739",
       "tokens": {
         "WETH": "0x8Af00fbbb2601A8F7636EabbF6243B30BEA47D50",
@@ -167,6 +191,8 @@
     },
     "gMON | WMON": {
       "address": "0xb00aFF53a4Df2b4E2f97a3d9ffaDb55564C8E42F",
+      "category": "native",
+      "protocol": "Native",
       "gMON-DynamicIRM": "0x95DFba58340Ba7Cde59FB4D16EA85caDb4F83894",
       "tokens": {
         "gMON": "0x5ca6966543c0786f547446234492D2F11C82f11f",
@@ -179,6 +205,8 @@
     },
     "syzUSD | AUSD": {
       "address": "0x90fc1A4abC4ee5f8a9560dE069067D9606d2909C",
+      "category": "yield-stablecoin",
+      "protocol": "Yuzu",
       "syzUSD-DynamicIRM": "0x0A8c317C25A000000296673Bd75cA3f5c1E8C57c",
       "tokens": {
         "syzUSD": "0x7EdA3cb060Ff7B650eB227971dbfEBD3513b11D5",
@@ -189,6 +217,8 @@
     },
     "wsrUSD | AUSD": {
       "address": "0x627a15859d09C1550e2934991AA95aFc6896e3Ef",
+      "category": "yield-stablecoin",
+      "protocol": "Reservoir",
       "tokens": {
         "wsrUSD": "0x251B67Ae7e90fDc6a7B080Ee601913A8B2746A28",
         "AUSD": "0x88e0994E8130EF72bf614CBBcF722839B167c8d1"
@@ -201,6 +231,8 @@
     },
     "YZM | AUSD": {
       "address": "0x4409e2161B6f9A25ACbC471a37390654Ed272249",
+      "category": "yield-stablecoin",
+      "protocol": "Yuzu",
       "plugins": {
         "simplePositionManager": "0xb85dEf309F7eEEb8f581909c7afB623dDf59AdD9"
       },
