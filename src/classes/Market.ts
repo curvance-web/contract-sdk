@@ -688,7 +688,8 @@ export class Market {
         const user = "address" in provider ? provider.address : EMPTY_ADDRESS;
         const all_data = await reader.getAllMarketData(user as address);
         const deploy_keys: string[] = Object.keys(setup_config.contracts.markets) as (keyof typeof setup_config.contracts.markets)[];
-        const yields = await Market.fetchNativeYields();
+        // Filter out USDC — DeFiLlama incorrectly returns YZM vault yield labeled as USDC
+        const yields = (await Market.fetchNativeYields()).filter(y => y.symbol.toUpperCase() !== 'USDC');
 
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
@@ -745,6 +746,11 @@ export class Market {
             }
 
             for(const token of market.tokens) {
+                // Hardcode YZM native yield — DeFiLlama incorrectly labels this pool as USDC
+                if(token.asset.symbol.toUpperCase() === 'YZM') {
+                    token.nativeYield = 0.083;
+                    continue;
+                }
                 const api_yield = yields.find(y => y.symbol.toUpperCase() == token.asset.symbol.toUpperCase());
                 if(api_yield != undefined) {
                     token.nativeYield = api_yield.apy / 100;
