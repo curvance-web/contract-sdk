@@ -761,6 +761,26 @@
                 "name": "adapters",
                 "type": "uint256[2]",
                 "internalType": "uint256[2]"
+              },
+              {
+                "name": "irmBaseRate",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "irmVertexRate",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "irmVertexStart",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "interestFee",
+                "type": "uint256",
+                "internalType": "uint256"
               }
             ]
           }

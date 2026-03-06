@@ -1,4 +1,5 @@
 export * from './classes/ProtocolReader';
+export * from './classes/OptimizerReader';
 export * from './classes/OracleManager';
 export * from './classes/Market';
 export * from './classes/CToken';
@@ -16,3 +17,4 @@ export * from './helpers';
 export * from './setup';
 export * from './types';
 export * from './retry-provider';
+export * from './snapshot';
