@@ -1,4 +1,5 @@
 const MERKL_API_BASE_URL = 'https://api.merkl.xyz/v4';
+const PROTOCOL_ID = 'curvance';
 
 export type MerklChainInfo = {
     id: number;
@@ -130,20 +131,19 @@ export async function fetchMerklCampaignsBySymbol({
 }
 
 type FetchOpportunitiesParams = FetchOptions & {
-    mainProtocolId: string;
     action?: 'LEND' | 'BORROW';
 };
 
 export async function fetchMerklOpportunities({
-    mainProtocolId,
     signal,
     action,
 }: FetchOpportunitiesParams): Promise<MerklOpportunity[]> {
     const url = new URL(`${MERKL_API_BASE_URL}/opportunities?items=100&tokenTypes=TOKEN`);
-    url.searchParams.set('mainProtocolId', mainProtocolId);
+    url.searchParams.set('mainProtocolId', PROTOCOL_ID);
     if (action) {
         url.searchParams.set('action', action);
     }
+
     const response = await fetch(url.toString(), { signal: signal ?? null, cache: 'no-store' });
 
     if (!response.ok) {
