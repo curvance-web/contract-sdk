@@ -1,9 +1,9 @@
 ---
 name: curvance-sdk
-description: "Use when reading, calling, extending, or debugging the Curvance contract-sdk (curvance-web/contract-sdk v3.5.3). Triggers: writing SDK functions, calling SDK methods from v1 app, understanding data flow from chain to UI, working with Market/CToken/BorrowableCToken classes, formatting on-chain values, building new query hooks, debugging SDK errors. Compose with Skill_CurvanceV1.md for v1 app integration. Do NOT use for Solidity/protocol contract work or Aerarium v2 clean-slate frontend."
+description: "Use when reading, calling, extending, or debugging the Curvance contract-sdk (curvance-web/contract-sdk v3.5.7). Triggers: writing SDK functions, calling SDK methods from v1 app, understanding data flow from chain to UI, working with Market/CToken/BorrowableCToken classes, formatting on-chain values, building new query hooks, debugging SDK errors. Compose with Skill_CurvanceApp.md for app integration. Do NOT use for Solidity/protocol contract work or Aerarium v2 clean-slate frontend."
 ---
 
-# Curvance SDK (contract-sdk v3.5.3)
+# Curvance SDK (contract-sdk v3.5.7)
 
 Rules for working with the SDK. Read before calling any SDK method, writing query hooks, or extending SDK classes.
 
@@ -208,8 +208,12 @@ mutation flow:
 store: useDepositStore — holds depositToken, borrowToken, zapToken, zapperType, slippage, isCollateralized
 mutation flow (useDepositV2Mutation):
   1. If zapping (zap !== 'none') → check plugin approval → token.approvePlugin(zap, 'zapper')
-  2. Check asset allowance on underlying → asset.approve(token.address) if needed
-  3. Build ZapperInstructions: { type, inputToken: asset.address, slippage }
+  2. Build ZapperInstructions: { type, inputToken, slippage }
+     ⚠️ inputToken: if zapping → zapToken.interface.address, else → asset.address
+     (see WIGGW: ensureUnderlyingAmount input token, Approval types)
+  3. Approval:
+     - If zapping → token.isZapAssetApproved(instructions, amount) / token.approveZapAsset(...)
+     - Else → asset.allowance(account, token.address) / asset.approve(token.address, ...)
   4. If isCollateralized → token.depositAsCollateral(Decimal(amount), instructions, account)
      Else → token.deposit(Decimal(amount), instructions, account)
 ```
@@ -328,7 +332,7 @@ For any write operation in v1:
 
 ## References
 
-**File:** `Reference_CurvanceSDK.md` (2591 lines)
+**File:** `Reference_CurvanceSDK.md` (2595 lines)
 
 | Section | Lines | Description |
 |---|---|---|
@@ -344,26 +348,26 @@ For any write operation in v1:
 | Data Shapes | 85-112 | Field semantics, WAD scaling, enums — full types in `src/types/protocolReader.ts` |
 | Helpers | 562-602 | Constants + utility functions |
 | V1 Consumption Layer | 613-645 | useSetupChainQuery + derived hooks |
-| Deposit Mutation | 1290-1336 | useDepositV2Mutation: zap + plugin approval + deposit/depositAsCollateral flow |
-| Standalone Leverage Mutations | 1337-1564 | Leverage up/down flows, action struct shapes, contract callbacks, **all known bugs** (SDK: expectedShares, previewLeverageDown; V2: display mismatches, dormant borrowToken). Load when debugging any leverage or display issue (227 lines, all behavioral — high ROI) |
-| Dashboard Queries | 1565-1626 | Overview, deposit list, loan list, balance, position health, rewards aggregation |
-| Cooldown System | 1627-1648 | cooldown getter, cooldownLength, expiresAt(), multiHoldExpiresAt() |
-| Position Preview Methods | 1649-1695 | previewPositionHealth family, previewLeverageUp return shape |
-| Token Task Group Map | 1696-1712 | Gamification task matching pattern |
-| FormatConverter Complete API | 1713-1794 | All 11 static methods, precision behavior, rounding, BPS/WAD utilities |
-| Type System & Constants | 1795-1845 | Semantic types (TokenInput, USD, USD_WAD, Percentage), all constants, helper function aliases |
-| Decimal System | 1846-1872 | token.decimals == asset.decimals always (by contract design), SDK convention for semantic clarity |
-| Shares ↔ Assets Conversion | 1873-1929 | Three layers (virtual/on-chain/user-input), which methods take assets vs shares, cToken ERC4626 insight |
-| Transaction Execution Architecture | 1930-2021 | Full pipeline: input → calldata → zap → approvals → oracleRoute → gas buffer → send |
-| Approval Architecture | 2022-2153 | Three approval types, approval_protection flag, v2 patterns, approval sequence per operation, convertToShares on-chain vs virtual vs raw |
-| maxRedemption Deep-Dive | 2154-2202 | 7 overloads, buffer/breakdown, dust sweep in redeem(), v2 withdraw pattern |
-| Repay Mechanics | 2203-2252 | fetchDebtBalanceAtTimestamp, full-repay detection (99.9%), 1% allowance buffer, amount=0 semantics |
-| Slippage Handling | 2253-2374 | Four-layer contract protection (dex minimum + SwapperLib `_swapSafe` oracle check + `checkSlippage` portfolio modifier + per-op checks), WAD format, protocol fee, expectedShares inconsistency, leverage-down specials |
-| ERC4626 Vault Layer | 2375-2444 | cTokens ARE ERC4626, vault-backed two-layer chain, expected shares calc, vault access methods |
-| Redstone Oracle Integration | 2445-2489 | Automatic price update prepend, 3/4 signer payload, multicall wrapping |
-| Zapper Architecture | 2490-2529 | Type mapping, calldata by type, deposit token discovery |
-| ERC20 API Patterns | 2530-2564 | balanceOf overloads, approve (null=unlimited), sync vs async price, data model |
-| ensureUnderlyingAmount | 2565-2591 | Silent balance cap on deposit — getZapBalance resolves input token by zap type, not always underlying |
+| Deposit Mutation | 1290-1338 | useDepositV2Mutation: zap + plugin approval + deposit/depositAsCollateral flow ⚠️ ZAP-001 annotation pending fix |
+| Standalone Leverage Mutations | 1339-1566 | Leverage up/down flows, action struct shapes, contract callbacks, **all known bugs** (SDK: expectedShares, previewLeverageDown; V2: display mismatches, dormant borrowToken). Load when debugging any leverage or display issue (227 lines, all behavioral — high ROI) |
+| Dashboard Queries | 1567-1628 | Overview, deposit list, loan list, balance, position health, rewards aggregation |
+| Cooldown System | 1629-1650 | cooldown getter, cooldownLength, expiresAt(), multiHoldExpiresAt() |
+| Position Preview Methods | 1651-1697 | previewPositionHealth family, previewLeverageUp return shape |
+| Token Task Group Map | 1698-1714 | Gamification task matching pattern |
+| FormatConverter Complete API | 1715-1796 | All 11 static methods, precision behavior, rounding, BPS/WAD utilities |
+| Type System & Constants | 1797-1847 | Semantic types (TokenInput, USD, USD_WAD, Percentage), all constants, helper function aliases |
+| Decimal System | 1848-1876 | token.decimals == asset.decimals always (by contract design), on-chain proof from ProtocolReader.sol, SDK convention for semantic clarity |
+| Shares ↔ Assets Conversion | 1877-1933 | Three layers (virtual/on-chain/user-input), which methods take assets vs shares, cToken ERC4626 insight |
+| Transaction Execution Architecture | 1934-2025 | Full pipeline: input → calldata → zap → approvals → oracleRoute → gas buffer → send |
+| Approval Architecture | 2026-2157 | Three approval types, approval_protection flag, v2 patterns, approval sequence per operation, convertToShares on-chain vs virtual vs raw |
+| maxRedemption Deep-Dive | 2158-2206 | 7 overloads, buffer/breakdown, dust sweep in redeem(), v2 withdraw pattern |
+| Repay Mechanics | 2207-2256 | fetchDebtBalanceAtTimestamp, full-repay detection (99.9%), 1% allowance buffer, amount=0 semantics |
+| Slippage Handling | 2257-2378 | Four-layer contract protection (dex minimum + SwapperLib `_swapSafe` oracle check + `checkSlippage` portfolio modifier + per-op checks), WAD format, protocol fee, expectedShares inconsistency, leverage-down specials |
+| ERC4626 Vault Layer | 2379-2448 | cTokens ARE ERC4626, vault-backed two-layer chain, expected shares calc, vault access methods |
+| Redstone Oracle Integration | 2449-2493 | Automatic price update prepend, 3/4 signer payload, multicall wrapping |
+| Zapper Architecture | 2494-2533 | Type mapping, calldata by type, deposit token discovery |
+| ERC20 API Patterns | 2534-2568 | balanceOf overloads, approve (null=unlimited), sync vs async price, data model |
+| ensureUnderlyingAmount | 2569-2595 | Silent balance cap on deposit — getZapBalance resolves input token by zap type, not always underlying |
 | Leverage Flow | 967-1006 | Leverage/deleverage mutation sequence |
 | Store Architecture | 798-833 | Zustand stores (deposit, borrow, manage-collateral) |
 | Validation Hooks | 834-867 | Borrow, repay, deposit, collateral |
