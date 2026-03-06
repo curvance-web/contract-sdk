@@ -409,6 +409,11 @@ export class Market {
         newLeverage: Decimal,
         currentLeverage: Decimal
     ) {
+        // Full deleverage always closes to zero debt → infinite position health aka null.
+        if (newLeverage.equals(1)) {
+            return null;
+        }
+
         const { collateralAssetReduction } = deposit_ctoken.previewLeverageDown(newLeverage, currentLeverage);
         const repayUsd = deposit_ctoken.convertTokensToUsd(collateralAssetReduction, true);
         const repayTokens = borrow_ctoken.convertUsdToTokens(repayUsd, false);
@@ -485,6 +490,12 @@ export class Market {
     }
 
     formatPositionHealth(positionHealth: bigint): Percentage | null {
+        // Defensive edge case handling where we explicitly update UINT256_MAX to
+        // null return which gets processed as infinity position health on the frontend.
+        if (positionHealth === UINT256_MAX) {
+            return null;
+        }
+
         return Decimal(positionHealth).div(WAD_DECIMAL).sub(1);
     }
 
