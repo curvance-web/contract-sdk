@@ -126,15 +126,17 @@ export class KyberSwap implements IDexAgg {
                     quote: async (tokenIn: string, tokenOut: string, amount: TokenInput, slippage: Percentage) => {
                         const signer = validateProviderAsSigner(provider);
                         const erc20in = new ERC20(provider, tokenIn as address);
-                        const decimals = erc20in.decimals ?? await erc20in.contract.decimals();
-                        const amount_bigint = toBigInt(amount, decimals);
+                        const decimalsIn = erc20in.decimals ?? await erc20in.contract.decimals();
+                        const amount_bigint = toBigInt(amount, decimalsIn);
+                        const erc20Out = new ERC20(provider, tokenOut as address);
+                        const decimalsOut = erc20Out.decimals ?? await erc20Out.contract.decimals();
 
                         const results = await this.quote(signer.address, tokenIn, tokenOut, amount_bigint, FormatConverter.percentageToBps(slippage));
                         return {
                             minOut_raw: results.min_out,
                             output_raw: results.out,
-                            minOut: FormatConverter.bigIntToDecimal(results.min_out, decimals),
-                            output: FormatConverter.bigIntToDecimal(results.out, decimals),
+                            minOut: FormatConverter.bigIntToDecimal(results.min_out, decimalsOut),
+                            output: FormatConverter.bigIntToDecimal(results.out, decimalsOut),
                             extra: results.raw
                         }
                     }

@@ -869,7 +869,7 @@ export class CToken extends Calldata<ICToken> {
         return { 
             borrowAmount,
             newDebt: newDebtInUsd,
-            newDebtInAssets: this.convertUsdToTokens(newDebtInUsd, true),
+            newDebtInAssets: borrow.convertUsdToTokens(newDebtInUsd, true),
             newCollateral: newCollateralInUsd,
             newCollateralInAssets: this.convertUsdToTokens(newCollateralInUsd, true)
         };

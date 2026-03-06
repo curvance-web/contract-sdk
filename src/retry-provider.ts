@@ -108,7 +108,12 @@ class RetryableProvider {
             'invalid_argument',
             'missing_argument',
             'unexpected_argument',
-            'numeric_fault'
+            'numeric_fault',
+            'user rejected',
+            'user denied',
+            'user cancelled',
+            'action_rejected',
+            '4001'
         ];
         
         // If it's a contract execution error, don't retry
@@ -335,7 +340,16 @@ export function classifyError(error: any): {
     if (contractPatterns.some(pattern => errorMessage.includes(pattern) || errorCode.includes(pattern))) {
         return { type: 'contract', isRetryable: false, message: error.message };
     }
-    
+
+    // User rejection
+    const userRejectionPatterns = [
+        'user rejected', 'user denied', 'user cancelled', 'action_rejected', '4001'
+    ];
+
+    if (userRejectionPatterns.some(pattern => errorMessage.includes(pattern) || errorCode.includes(pattern))) {
+        return { type: 'contract', isRetryable: false, message: error.message };
+    }
+
     // Rate limiting
     if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests') || errorStatus === '429') {
         return { type: 'rate_limit', isRetryable: true, message: error.message };
