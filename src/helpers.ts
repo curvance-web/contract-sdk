@@ -242,6 +242,35 @@ export function getMerklBorrowIncentives(
     return new Decimal(bestApr / 100);
 }
 
+/**
+ * Returns the total deposit APY for a token (native + interest + merkl).
+ * When `nativeYield` is nonzero it already includes interest, so we use it directly.
+ */
+export function getDepositApy(
+    token: { nativeYield: number; getApy(): Decimal; asset: { symbol: string }; address: string },
+    opportunities: MerklOpportunityLike[] | undefined,
+    apyOverrides?: ApyOverrides,
+): Decimal {
+    const base = token.nativeYield !== 0
+        ? new Decimal(token.nativeYield)
+        : token.getApy().add(new Decimal(apyOverrides?.[token.asset.symbol.toLowerCase()]?.value ?? 0));
+    const merkl = getMerklDepositIncentives(token.address, opportunities);
+    return base.add(merkl);
+}
+
+/**
+ * Returns the net borrow cost for a token (borrow rate − merkl incentives).
+ * Can be negative when Merkl rewards exceed the borrow rate.
+ */
+export function getBorrowCost(
+    token: { getBorrowRate(inPercentage: true): Decimal; address: string },
+    opportunities: MerklOpportunityLike[] | undefined,
+): Decimal {
+    const borrowRate = token.getBorrowRate(true);
+    const merkl = getMerklBorrowIncentives(token.address, opportunities);
+    return new Decimal(borrowRate).sub(merkl);
+}
+
 // ---------------------------------------------------------------------------
 // Gas helpers
 // ---------------------------------------------------------------------------
