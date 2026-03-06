@@ -154,6 +154,98 @@ async function tryAddGasBuffer(method: any, args: any[], bufferPercent: number):
  * @param bufferPercent The percentage buffer to add (default 10%)
  * @returns The same contract but with automatic gas buffering
  */
+// ---------------------------------------------------------------------------
+// Yield calculation helpers
+// ---------------------------------------------------------------------------
+
+export type MerklOpportunityLike = {
+    apr: number;
+    identifier: string;
+    tokens: { address: string }[];
+};
+
+export type ApyOverrides = Record<string, { value: number }>;
+
+/**
+ * Returns the native yield for a token — the rate provided by the asset issuer.
+ * When `nativeYield` is nonzero it already includes the interest component,
+ * so we return it directly.  Otherwise we fall back to any static APY override.
+ */
+export function getNativeYield(
+    token: { nativeYield: number; asset: { symbol: string } },
+    apyOverrides?: ApyOverrides,
+): Decimal {
+    if (token.nativeYield !== 0) return new Decimal(token.nativeYield);
+    const symbol = token.asset.symbol.toLowerCase();
+    return new Decimal(apyOverrides?.[symbol]?.value ?? 0);
+}
+
+/**
+ * Returns the interest yield — the lending APY earned on Curvance.
+ */
+export function getInterestYield(
+    token: { getApy(): Decimal },
+): Decimal {
+    return token.getApy();
+}
+
+/**
+ * Returns the Merkl incentive APY for a *deposit* token.
+ * Matches opportunities whose `tokens` array contains the given address.
+ */
+export function getMerklDepositIncentives(
+    tokenAddress: string,
+    opportunities: MerklOpportunityLike[] | undefined,
+): Decimal {
+    if (!opportunities?.length) return new Decimal(0);
+
+    const address = tokenAddress.toLowerCase();
+
+    const relevant = opportunities.filter((opp) =>
+        opp.tokens.some((t) => t.address.toLowerCase() === address),
+    );
+
+    if (!relevant.length) return new Decimal(0);
+
+    let bestApr = 0;
+    for (const opp of relevant) {
+        for (const t of opp.tokens) {
+            if (t.address.toLowerCase() === address) {
+                bestApr = Math.max(bestApr, opp.apr ?? 0);
+            }
+        }
+    }
+
+    return new Decimal(bestApr / 100);
+}
+
+/**
+ * Returns the Merkl incentive APY for a *borrow* token.
+ * Matches opportunities whose `identifier` equals the given address.
+ */
+export function getMerklBorrowIncentives(
+    tokenAddress: string,
+    opportunities: MerklOpportunityLike[] | undefined,
+): Decimal {
+    if (!opportunities?.length) return new Decimal(0);
+
+    const address = tokenAddress.toLowerCase();
+
+    const relevant = opportunities.filter(
+        (opp) => opp.identifier.toLowerCase() === address,
+    );
+
+    if (!relevant.length) return new Decimal(0);
+
+    const bestApr = relevant.reduce((max, opp) => Math.max(max, opp.apr ?? 0), 0);
+
+    return new Decimal(bestApr / 100);
+}
+
+// ---------------------------------------------------------------------------
+// Gas helpers
+// ---------------------------------------------------------------------------
+
 export function contractWithGasBuffer<T extends object>(contract: T, bufferPercent = 10): T {
     return new Proxy(contract, {
         get(target, methodName, receiver) {

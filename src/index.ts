@@ -14,6 +14,7 @@ export * from './classes/CVE';
 export * from './classes/DexAggregators';
 export * from './classes/FormatConverter';
 export * from './helpers';
+export * from './merkl';
 export * from './setup';
 export * from './types';
 export * from './retry-provider';
