@@ -1,11 +1,11 @@
 ---
 name: aerarium-ui
-description: "Read before any Aerarium frontend/UI work. Covers design direction, component conventions, and collaboration workflow. For detailed tokens, patterns, and component API specs, consult Reference_AerariumUI.md."
+description: "Use when building, reviewing, or styling any Curvance/Aerarium frontend UI — React artifacts, components, market pages, dashboards, stat cards, charts. Triggers: 'market detail page', 'build a component', 'design the sidebar', 'chart styling', 'stat card', 'color tokens', any visual work on app.curvance.com. Compose with Skill_CurvanceApp.md for v1 codebase conventions and Skill_UIPatterns.md for anti-pattern detection. Do NOT use for Solidity/protocol work, backend, or Aerarium v2 clean-slate frontend."
 ---
 
 # Aerarium UI Development
 
-Concise rules and conventions for frontend work on Aerarium. Read in full before starting any UI task.
+Rules and conventions for frontend work on Aerarium. Read in full before starting any UI task.
 
 ## Design Direction
 
@@ -17,13 +17,21 @@ Concise rules and conventions for frontend work on Aerarium. Read in full before
 - Typography hierarchy carries the UI — get font sizes right, everything else follows
 - Dark theme, but institutional dark (muted, confident) not "hacker dark" (neon, aggressive)
 - Brief contextual descriptions on earn/vault pages only; core market pages are numbers-only
-- Info tooltips (ⓘ) for concept explanations — don't clutter the main view
+- Tooltips via dotted-underline affordance on labels — don't clutter the main view. ⓘ icons phased out; use `borderBottom: '1px dotted rgba(255,255,255,0.18)'` on labels. Mobile: tap to show.
+
+## Brand Identity (cross-reference)
+
+Curvance operates two visual identity tiers: Institutional (Tier 1) for protocol, lander, partner materials, and Engagement (Tier 2) for games, social, community. Full brand rules in `Skill_CurvanceBrand.md`. Key rule: never cross-pollinate tiers without explicit discussion.
+
+## Mobile-First Light Mode
+
+Figma mobile designs use **light mode as the primary surface**, contradicting the dark-first assumption in v1 desktop builds. All new mobile components must design light mode first, dark mode as variant. Desktop remains dark-first. Components shared between desktop and mobile need both themes tested. Notification panel, task accordion, and onboarding tour have explicit light and dark variants in Figma.
 
 ## Component Architecture
 
 ### Splitting Convention
 
-Every component splits into three concerns. This was established with the PositionHealth system and applies to all new components:
+Every component splits into three concerns (established with PositionHealth, applies to all):
 
 ```
 feature/
@@ -34,261 +42,208 @@ feature/
 ```
 
 **Rules:**
-- Components and hooks are siblings, never coupled — you can use one without the other
+- Components and hooks are siblings, never coupled — use one without the other
 - Constants have zero React dependency — safe in server components, tests, utils
 - `"use client"` directive on all components and hooks (Next.js requirement)
 - Visual components receive data as props. They never fetch, compute, or subscribe.
-- When a primitive appears in multiple scale contexts (e.g., stat cards vs chart headers), add a `size` prop with named tiers — don't compromise with a middle value that's wrong everywhere.
-- When two primitives must pixel-align as siblings (e.g., DeltaBadge next to LiquidityBadge), both must be proper file-level primitives exported through the same barrel — inline components render with subtly different box models even with identical classes.
-- Logic hooks emit structured payloads (not UI). Wire to your existing toast/notification system.
-- Secondary CTAs need solid fills (`bgElevated` + `borderElement`), not ghost styling (`transparent` bg + `borderSubtle` border). Ghost buttons lose visual grounding when paired with filled/tinted cards — they float in the void instead of reading as interactive.
+- Multi-scale primitives get a `size` prop with named tiers — don't compromise with a middle value
+- Sibling primitives that must pixel-align (e.g., DeltaBadge next to LiquidityBadge) must both be file-level primitives exported through the same barrel — inline components differ subtly in box model
+- Logic hooks emit structured payloads (not UI). Wire to your toast/notification system.
+- Secondary CTAs need solid fills (`bgElevated` + `borderElement`), not ghost styling. Ghost buttons lose visual grounding when paired with filled/tinted cards.
 
 ### File Naming
 
-- Components: PascalCase `.tsx` — `HealthBar.tsx`, `InterestRateCurve.tsx`
-- Hooks: camelCase with `use` prefix `.ts` — `useHealthNotifications.ts`
-- Constants: camelCase `.ts` — `health.ts`, `chartTokens.ts`
+Components: PascalCase `.tsx`. Hooks: camelCase `use` prefix `.ts`. Constants: camelCase `.ts`.
 
 ## Charting Rules
 
-### Chart Type Selection
-
 | Data shape | Chart type | Example |
 |---|---|---|
-| Time series (deposits, borrows, TVL) | Area chart with gradient fill | Total Deposits over 30d |
-| Rate over time (APY, APR) | Line chart, thin stroke, avg annotation | Supply APR 1w/1m/6m/1y |
+| Time series (deposits, borrows, TVL) | Area chart, `type="linear"`, gradient fill | Total Deposits over 30d |
+| Rate over time (APY, APR) | Area chart, `type="linear"`, avg reference line with pill label | Supply APR 1w/1m/6m/1y |
 | Utilization→rate relationship | Line with kink, interactive tooltip | Interest Rate Model |
 | Projected earnings | Dual line (solid + dashed), shaded delta | With/Without Leverage |
 
-**Never use:** Bar charts for time series (creates "picket fence" visual noise).
-**Minimum data density:** Compound interest curves (leverage projections, earnings) need monthly-granularity data points even for multi-year views. Fewer than ~30 points makes exponential curves look angular.
+**Never use** bar charts for time series. **Minimum data density:** ≥30 data points for exponential curves.
 
-### Unified Toggle Pattern
+**Controls:** Time Range Pills (single-select, underline accent, left-aligned above chart). Series Legend Toggles (multi-select, `Set<string>`, min-1-active, colored line + label + value). Token Selector (single-select, opacity-based: active `0.9`, inactive `0.3`).
 
-One chart, multiple views via toggle pills (not separate charts):
-- `Borrow | Supply | Liquidity` for volume metrics
-- `Token | USD` for denomination switching
-- `1w | 1m | 3m | 1y` for time range (or dropdown for space efficiency)
+**Axis standards:** Y-axis left-aligned, compact notation (`$1.2B`, `$340M`), max 4-5 gridlines. X-axis at readable intervals, never overlapping. Current value: large number above chart with delta badge.
 
-Inspired by Morpho's toggle system. Reduces page length, adds interactivity.
+**Consolidation:** Don't give single-series charts their own tab. Merge related series into composites with shared controls. Tabs for different chart types, not different series of the same type.
 
-### Axis & Label Standards
+**Cross-chart consistency:** All charts share `chart-utils.ts` tokens: `CHART_AXIS_STYLE`, `CHART_GRID_STROKE`, `CHART_CURSOR`. Header layout: Row 1 = time range Pills. Row 2 = token selector left + legend toggles right. Use `syncId` for stacked charts sharing X-axis; lift time range state to parent; use `evenTicks()` for consistent spacing.
 
-- Y-axis labels: right-aligned, properly formatted (`$155M` not `155700000` or `103043.804531870999M`)
-- Use compact notation: `$1.2B`, `$340M`, `$45.2K`
-- No more than 4-5 Y-axis gridlines
-- X-axis: date labels at readable intervals, never overlapping
-- Current value: large number above chart with delta badge (e.g., `$155.7M ▲ +3.2%`)
-
-### Cross-Chart Consistency
-
-All chart components (unified-chart, apy-chart, irm-chart) must share the same base styling: axis font sizes, grid stroke opacity, line strokeWidth, gradient fill opacity. When modifying any chart styling prop, propagate to all chart components and tab-switch to visually verify — divergence is invisible until you compare tabs side by side.
-
-**Header structure contract:** Every chart tab header uses the same layout: 24px bold primary value + inline badge (DeltaBadge or status badge, `md` size) on the first row, token pills + context label on the second row. When adding a new chart tab, match this structure exactly — don't invent a different header layout even if the tab shows different data.
-
-### Recharts Focus Outline
-
-Recharts SVG elements grab focus on click, showing a browser outline. `outline: none` on the container div is insufficient — inner `<rect>`, `<g>`, `<svg>` elements have their own focus ring. Fix with a global CSS wildcard rule: `.recharts-wrapper, .recharts-wrapper * { outline: none !important; }` (in `styles/defaults.css`).
-
-### Interest Rate Model (IRM)
-
-- Show the utilization→rate curve with gradient fill under the line
-- Mark "Current" and "Optimal" utilization as labeled vertical lines on the curve
-- **Interactive tooltip on hover:** "Deposit $X more to reach Y% utilization (Z% borrow APR)" or "Borrow $X more to reach Y% utilization (Z% borrow APR)"
-- Display Base Rate, Optimal Utilization, Max Rate below the chart
-- Kink point should be visually prominent (where the curve steepens)
-
-### Tooltip Standards
-
-- Light background, dark text on dark theme charts (for contrast)
-- Show all relevant values at hover point (utilization %, rate %, and the actionable amount)
-- Smooth crosshair/vertical line following cursor
-- No tooltip flicker — debounce hover position at ~16ms
+IRM spec, Recharts focus outline fix, and chart tooltip standards in Reference → Charting Patterns.
 
 ## Stat Card Pattern
 
-Replace decorative icons with micro-visualizations matched to each metric's nature:
+### Earnings Display Format
+
+Wherever earnings are displayed: **APY promoted as primary → earnings inline as secondary → boost % inline after earnings.** Example: `20.00% +$2.0K/year (+74%)`. This order applies everywhere — don't invert even if the dollar amount feels more impactful.
+
+### Micro-Visualization Selection
 
 | Metric nature | Micro-viz type | Example |
 |---|---|---|
 | Trend (changes over time) | Delta badge (▲ 2.8%) | Total Deposits, TVL |
-| Capacity (proportion of a total) | LiquidityBadge (fill bar, health-coded) | Liquidity (% available) |
+| Capacity (proportion of total) | LiquidityBadge (fill bar, health-coded) | Liquidity (% available) |
 | Rate (current value + direction) | Delta badge (▲ 1.2%) | Supply APY, Borrow APR |
-| Ratio (proportion of a maximum) | Mini ring gauge | Max LTV, Collateral Factor (in market info panels only) |
+| Ratio (proportion of maximum) | Donut gauge (% inside) | Collateral cap, Borrow cap (market info panels only) |
 | Static config value | No viz — plain number | Oracle Price |
 
-**Stat card badge rule:** All stat card micro-visuals use pill badge language (DeltaBadge or LiquidityBadge) with identical box models (`text-xs px-1.5 py-[3px] gap-0.5`). Ring gauges are reserved for market info panel capacity rows, not stat cards — circular shapes read as loading spinners at stat card scale.
-
-**Rule:** If the micro-viz would render as a flat line or meaningless shape (e.g., sparkline for a config param that never changes), don't use one. Plain number is better than a misleading visual.
+**Badge rule:** All stat card micro-visuals use pill badge language with identical box models (`text-xs px-1.5 py-[3px] gap-0.5`). Ring gauges reserved for market info capacity rows — circular shapes read as loading spinners at stat card scale. If the micro-viz would render flat or meaningless, use plain number.
 
 ## Page Layout Principles
+
+### Information Grouping: Decision Context, Not Protocol Concept
+
+Organize data by what the user is deciding, not protocol categories:
+
+| Tier | Decision context | Contains |
+|---|---|---|
+| Rates | "What do I earn / pay?" | Deposit APY, Borrow APR |
+| Activity | "Is this market worth entering?" | Total deposits, available liquidity |
+| Capacity | "Will my position stress the pool?" | Collateral filled, borrow filled with fill % |
 
 ### Market Detail Page (top → bottom)
 
 1. **Asset header** — pair icons, name, market identifier
-2. **Stat cards row** — 3 cards with micro-viz (Total Deposits w/ sparkline, Available Liquidity w/ ring gauge, Deposit APY w/ delta badge)
-3. **Unified chart** — area chart with Borrow/Supply/Liquidity toggle + time range
+2. **Stat cards row** — 3 cards with micro-viz
+3. **Unified chart** — area chart with series toggle + time range
 4. **Market Information** — per-asset Supply/Borrow stats in card grid
 5. **Interest Rate Model** — interactive curve with tooltips
-6. **Leverage Simulator** — behind tab or expandable section (power-user feature)
+6. **Leverage Simulator** — behind tab or expandable (power-user feature)
 
 ### Right Sidebar (protected layout)
 
-The deposit/borrow action panel structure is established and protected:
-- Asset selector with token icon
-- Amount input with USD conversion + MAX button
-- Denomination switching (which token to pay in)
-- Leverage slider (1x → max)
-- Position summary (market, vAPY, projected earnings, borrowing eligibility, health)
-- Action button (Deposit / Borrow)
-
-Do not restructure this layout without explicit discussion.
-
-### Slider Implementation
-
-**Never use controlled `<input type="range">`** in React. Browser native positioning fights React reconciliation after click-to-position, causing deadlocks. Use custom `mouseDown`/`mouseMove`/`mouseUp` on a track div instead. Store numeric input values (leverage, amounts) as strings with `parseFloat` derivation — allows intermediate typing states ("5." → "5.5"). Clamp on blur.
+Asset selector → amount input with USD conversion + MAX → denomination switching → leverage slider (1x → max) → position summary → action button. Do not restructure without explicit discussion. **Never use `<input type="range">`** — use `DragSlider` from `@/components/v2-primitives`.
 
 ### Button Hierarchy
 
-- **Primary CTA:** Solid `#644AEE`, hover `#6B59E5`, no gradient, no shadow (institutional flat)
-- **Secondary CTA:** Solid `bgElevated` (#282828) fill + `borderElement` border. Never `transparent` — ghost buttons lack visual grounding when paired with a filled/tinted card.
+- **Primary CTA:** Solid `#644AEE`, hover `#6B59E5`, no gradient, no shadow
+- **Secondary CTA:** Solid `bgElevated` (#282828) fill + `borderElement` border. Never `transparent` ghost styling
 
 ## Position Health
 
-### Visual
-
-- Segmented capsule bar (red→orange→yellow→green gradient, 20 segments)
-- Three layout variants: sidebar row (compact), circular gauge (cards), expanded bar (detail page)
-- Animated transitions between states with staggered segment delays
-- Glow effect on leading edge when health ≤ 50%
-
-### Notifications
-
-- Threshold crossings at 75% (caution), 50% (warning), 25% (critical) fire toast notifications
-- Recovery notifications when climbing back above a threshold
-- Logic lives in `useHealthNotifications` hook — wire `onNotification` to your toast provider
-- Debounce at 2000ms to prevent spam on oscillating values
-- Thresholds configurable per-instance (different markets may have different risk profiles)
-- **Note:** 75/50/25 are component defaults. V1 audit (Reference → V1 Site Audit → Health Severity Mismatch) proposes recalibration to protocol-specific values. Confirm mapping to actual liquidation curve before production.
+- Segmented capsule bar (red→orange→yellow→green, 20 segments), three layout variants (sidebar row, circular gauge, expanded bar), animated transitions with staggered delays, glow on leading edge when ≤ 50%
+- Threshold notifications at 75% (caution), 50% (warning), 25% (critical) via `useHealthNotifications` hook. Recovery notifications when climbing back. Debounce 2000ms. Thresholds configurable per-instance.
+- **Note:** 75/50/25 are defaults. V1 audit proposes recalibration — confirm mapping to liquidation curve before production.
 
 ## Color Palette
 
-Aerarium supports **light and dark themes** — both are first-class. Brand accent is purple/black. All color tokens must be defined for both themes using CSS custom properties or Tailwind `dark:` variants.
+Both light and dark themes are first-class. **Never hard-code a single theme's values.** Reference token names. Dark institutional theme is primary design surface. Light mode requires its own design pass.
 
-**Never hard-code a single theme's values.** Always reference token names.
+**Tier awareness:** Colors below apply to Tier 1 (institutional) only. Tier 2 uses its own saturated palette.
 
-Dark institutional theme is the primary design surface. Light mode is not an inversion — it requires its own design pass (card shadows, bolder weights for stat numbers, tinted surfaces for table row separation).
+**Semantic color rules (both themes):**
+- Green (`#4ade80`) — supply-side: deposits, collateral, deposit APY, healthy states
+- Burnt sienna (`#CC6B5A`) — borrow-side: borrows, borrow APR, debt. Distinct from error red
+- Blue (`#60a5fa`) — derived/neutral: liquidity, informational links. Third lane for derived metrics
+- Red/pink (`#f87171`) — UI error and critical health ONLY. Never for borrow data
+- Purple/indigo (`#644AEE`) — structural/navigational ONLY: tabs, CTAs, active states. Never on data elements
+- Amber (`#fbbf24`) — warning states, caution tier
+- White — all non-rate data values. Color on values reserved for rates only
 
-Specific hex values for both themes in Reference_AerariumUI.md → Color Tokens.
+**Color principle:** Color encodes *role*, not sentiment. Every colored element answers "why this color?" with a structural reason.
 
-**Semantic color usage (same in both themes):**
-- Green (`#4ade80` family) — supply-side values, healthy states, Deposits section headers
-- Red/pink (`#f87171` family) — negative values, danger states, critical health
-- Purple/indigo (`#644AEE` Majorelle Blue) — structural/navigational: stat card labels, section accent borders, active toggles, chart lines, tab underlines. Purple is the primary structural color (like Bloomberg's amber), not just an accent.
-- Steel blue (`#7B9EC8`) — borrow-side values, Borrow section headers, borrow charts
-- Amber (`#fbbf24` family) — warning states, caution tier
-- Muted gray — configuration data (Collateral section headers, metric labels)
-- White — all data values. Stat cards, metric rows, and position summaries use white for numbers regardless of sentiment. Color on values is reserved for rate comparisons inside market info sections.
-- Text at varying opacity — hierarchy via opacity (see Reference for per-theme values)
+Hex values for both themes in Reference → Color Tokens.
 
-**Color system principle:** Color encodes *role*, not just sentiment. Every colored element should answer "why this color?" with a structural reason (navigational anchor, supply-side, borrow-side, configuration), not just "it's positive/negative."
+## Surface Hierarchy
 
-## v1 Codebase Constraints
+**Flat surface principle:** Cards float on page bg (`#0e1015`). No outer containers wrapping card groups.
 
-All v1-specific rules (static export, yarn-only, module split, Tailwind dual color systems, non-standard breakpoints, Windows path restrictions, Node 18+, Vercel deploy) are maintained in `Skill_CurvanceV1.md` → Hard Constraints, Module Architecture, Tailwind Token System. Load that skill for any v1 codebase work.
+**Opacity tokens over named tokens:** Card surfaces use `bg-white/[0.03]` + `border-white/[0.06]`, not `bg-new-elements`. Named tokens reserved for sidebar (intentionally elevated surface).
 
-## Where I Go Wrong (v1 Codebase)
+### Border Vocabulary
 
-V1 codebase gotchas (dynamic routes, yarn-only, hook ordering, Vercel deploy, barrel exports, DevTools selectors, sed restructuring) are maintained in `Skill_CurvanceV1.md` → Where I Go Wrong. Load that skill for any v1 codebase work.
+| Purpose | Value |
+|---|---|
+| Section dividers | `border-white/[0.04]` |
+| Card borders (resting) | `border-white/[0.06]` |
+| Card borders (hover/active) | `border-white/[0.08]` to `border-white/[0.1]` |
+| Card header internal divider | `border-white/[0.08]` |
+| Tab accent underline | `border-b-new-accent` (structural purple) |
+| Tooltip internal dividers | `rgba(255,255,255,0.1)` (NOT theme tokens) |
 
-## Tooltip System
+Check this table before adding new surfaces or dividers. Don't invent new opacity values.
 
-Three distinct tooltip patterns, carried forward from v1 with visual polish:
+## Token Icons
 
-**APY Breakdown:** Hover on APY values shows full yield source decomposition (native rate + per-token rewards + points = Net APY). Required on all APY/vAPY displays.
+**Sourcing priority:** (1) Morpho CDN (`cdn.morpho.org/assets/logos/{token}.svg`) — native vector, best quality. (2) TrustWallet assets — PNG, needs SVG wrapping + circular clip. (3) Existing codebase — only for Curvance-specific tokens.
 
-**Capacity:** Hover on deposit/liquidity amounts shows current value and remaining cap/room. Directly actionable — user sees how much more they can deposit/borrow.
+**Rules:** Consistent `width="100%" height="100%"` viewBox. Circular clipping on PNGs. Globally unique internal SVG IDs (`clip-usdc`, `grad-eth`). Files in `assets/markets/primitive-assets/`. New tokens need barrel registration in `snippets-tsx/icon-selector/type/index.ts`.
 
-**Educational (ⓘ):** Hover on column header icons shows concise explanation of the metric. Keep text short, link to docs for full context. Required on all column headers and any non-obvious metric labels.
-
-### Tooltip Implementation Rules
-
-- **Positioning:** `position: relative` goes on the outer row div, never on inner left/right child divs. All tooltips render as direct children of the row and anchor `left: 0`.
-- **Sizing:** Intrinsic width with `minWidth: 180`. Never stretch with `left: 0; right: 0` — causes inconsistent sizes between simple and complex tooltips.
-- **Dividers inside tooltips:** Use `rgba(255,255,255,0.1)`, NOT theme border tokens (`borderSubtle`/`borderElement`). Theme tokens are invisible on glassmorphism `rgba(32,32,32,0.85)` backdrops.
-- **Title hierarchy:** 11px semibold uppercase tracked (`letterSpacing: 0.04em`, `color: T.textSecondary`). Must be visually heavier than 12px content rows below.
-- **Color context:** Reward/net values use contextual color — green (`T.positive`) for deposit, steel blue (`T.accentSecondary`) for borrow. Never hardcode green.
-- **Terminology:** "Filled" not "Used" for cap consumption ("The USDC cap is filled").
+Full pipeline in Reference → Token Icon Pipeline.
 
 ## Collaboration Workflow
 
-### Mode 1: Standalone Component Development (new components)
+### Standalone Component Development
 
-1. Reference existing designs (Figma site, Aave, Morpho) for context
-2. Build components as React artifacts in conversation — iterate visually
-3. **When a visual doesn't land:** Build a single artifact with 5-8 alternatives side by side (wide exploration), then a second artifact narrowing the top 2-3 (focused refinement). Faster than iterating one-at-a-time and prevents anchoring on the first attempt.
+1. Reference existing designs (Figma, Aave, Morpho) for context
+2. Build components as React artifacts — iterate visually
+3. **When a visual doesn't land:** 5-8 alternatives side by side (wide exploration) → narrow top 2-3 (focused refinement)
 4. Split into integration-ready modules (constants/components/hooks)
-5. Package with INTEGRATION.md for handoff to frontend codebase
-6. Zip or batch deliver at session end
+5. Package with INTEGRATION.md for handoff
 
-### Mode 2: v1 Codebase Modification (explore page, market detail page)
+**What NOT to do:** Don't copy Aave/Morpho wholesale. No purposeless animations. No decorative icons. Build isolated components, not full pages.
 
-1. Load `Skill_CurvanceV1.md` — contains module map, hard constraints, WIGGW. Reference lookup via its pointer table.
-2. Open GitHub repo (curvance-web/app, branch: dev) in browser for source verification
-3. Identify exact files and import paths before proposing changes
-4. Build artifacts that match existing patterns (Tailwind `new-*` tokens, Radix primitives, zustand stores)
-5. **MCP limitation:** Claude in Chrome cannot inspect localhost. Use Vercel deployment URL for Claude visual inspection, Chris iterates on localhost directly.
-
-### Mode 3: Artifact → Deployment Pipeline (multi-file integration)
-
-When deploying a full artifact (many components) into v1 codebase:
-1. Build artifact in conversation first (Mode 1)
-2. Generate file-creation script (PowerShell for Windows) embedding all files
-3. Chris runs script locally → `yarn install` → `yarn build` to verify
-4. Fix compile errors iteratively (import paths, prop names)
-5. **Replace artifact patterns with codebase patterns.** Artifact prototypes use inline SVG components (`WethIcon`, `UsdcIcon`), hardcoded data, and standalone color tokens. Production code uses the `Icon` component from the codebase registry, SDK data, and `new-*` Tailwind tokens. Don't carry artifact shortcuts into production.
-6. Push to GitHub → gas-limit triggers Vercel deploy
-7. Claude inspects via Vercel URL, Chris iterates on localhost
-
-### What NOT to do
-
-- Don't copy Aave or Morpho wholesale — use as reference, build unique
-- Don't add animations without purpose — every motion should communicate state change
-- Don't use decorative icons — if it doesn't encode data, it doesn't belong
-- Don't build full pages — build isolated components that compose into pages
+V1 codebase modification workflow and artifact→deployment pipeline in Reference → Deployment Pipeline. v1 codebase constraints and conventions in `Skill_CurvanceApp.md`.
 
 ### Session Handoff Rules
 
-Handoff docs are **cumulative** — each new handoff must merge forward, not replace. At session end:
+Handoff docs are **cumulative** — merge forward, not replace. Read previous handoff first, forward-propagate unresolved items, mark resolved only when completed or explicitly abandoned. A dropped TODO is a silent regression.
 
-1. Read the previous handoff doc first
-2. Identify unresolved items (known issues, pending decisions, open questions) that are still unresolved
-3. Forward-propagate them into the new handoff — don't silently drop context
-4. Mark items resolved only when actually completed or explicitly abandoned by Chris
-5. New handoff supersedes old — user should only need to upload the latest one
+## Where I Go Wrong
 
-This prevents context loss across session boundaries. A dropped TODO is a silent regression.
+| Trigger | Wrong | Right |
+|---|---|---|
+| Building mobile components | Assume dark mode primary (matching desktop) | Mobile is light-mode-first per Figma. Build light first, dark as variant |
+| Designing a celebration/achievement UI | Use minimal institutional style | Celebration modals use radial burst backgrounds, large icons — engagement-tier energy is acceptable outside `/bytes` |
+| Notification panel on mobile | Render as dropdown overlay (desktop pattern) | Mobile uses full-width bottom sheet with footer actions |
+| Adding clickable links inside tooltips | `pointer-events-none` (blocks clicks) or wrapper div (breaks positioning) | Pass `onMouseEnter`/`onMouseLeave` to Tooltip. `pointer-events: auto` conditionally when handlers provided. No wrapper divs |
+| Tooltip content inherits parent text-transform | Uppercase label makes tooltip ALL CAPS | `<span style={{ textTransform: 'none', letterSpacing: 'normal' }}>` to reset |
+| Adding a new token icon SVG | Drop file and assume it works | Also need `import` + map entry in `snippets-tsx/icon-selector/type/index.ts` barrel |
+| Fetching icon images in container | `wget`/`curl` — container network disabled | Browser MCP: canvas extraction + `toDataURL()`. Staggered `<a download>` as fallback |
+| Adding a card to market detail page | Named tokens or outer card wrapper | Opacity tokens (`bg-white/[0.03]`, `border-white/[0.06]`). No outer containers. Named tokens = sidebar only |
+| Adding dividers inside tooltips | Theme border tokens (`borderSubtle`, `borderElement`) | `rgba(255,255,255,0.1)` — theme tokens invisible on glassmorphism backdrop |
+| Styling a Recharts chart | `outline: none` on container | Global CSS: `.recharts-wrapper, .recharts-wrapper * { outline: none !important; }` |
+| Tailwind opacity modifiers (`bg-new-success/15`) | Expect them to work | Fail silently — colors defined as raw hex. Workaround: inline `style={{ background: 'rgba(...)' }}` |
+
+Brand tier confusion (mascot on institutional pages, logo misuse, wrong purple) → `Skill_CurvanceBrand.md` → Where I Go Wrong.
 
 ## Reference Lookup
 
-**File:** `Reference_AerariumUI.md` (442 lines)
+**File:** `Reference_AerariumUI.md` (~805 lines)
 
 | Section | Lines | Description |
 |---|---|---|
-| V1 Site Audit | 304-408 | Preserve/improve/drop decisions from app.curvance.com review (104 lines, all design rationale) |
-| Color Tokens | 7-68 | Hex values for both themes — background layers, text hierarchy, semantic colors, brand |
-| Component APIs | 140-188 | Established component specs and prop interfaces |
-| Micro-Visualizations | 97-139 | Sparkline, ring gauge, bar, delta badge implementation |
-| Platform Comparisons | 262-303 | Competitive analysis (Aave, Morpho, Compound) |
-| Charting Patterns | 189-229 | Recharts library patterns and conventions |
-| Established Components | 409-437 | Built component inventory + file paths |
-| Typography | 69-96 | Type scale for both themes |
-| Style Migration | 243-261 | Inline → Tailwind class mappings |
-| Terminology Conventions | 230-242 | "Filled" not "used," "supply" vs "deposit" |
-| WIGGW | 438-442 | Un-promoted gotchas staging area (currently empty) |
+| Color Tokens | 7-73 | Hex values for both themes — background layers, text hierarchy, semantic colors, chart gradients |
+| Typography | 74-101 | Type scale for both themes (input font responsive via v2-formatters) |
+| Micro-Visualizations | 102-164 | DonutGauge, ContextTooltip + TipRow/TipDivider, TooltipShell, LiquidityBadge, DeltaBadge |
+| Component APIs | 165-213 | HealthBar, CircularGauge, useHealthNotifications prop interfaces |
+| Charting Patterns | 214-283 | Chart-utils tokens, area chart template, avg pill label, toggle implementation, IRM spec, Recharts focus fix (69 lines, all behavioral — high ROI) |
+| Terminology Conventions | 284-300 | APY/APR, rate labels, "Remaining" for caps, "Available" for liquidity |
+| Style Migration (Inline → Tailwind) | 301-319 | Inline → Tailwind class mappings |
+| Platform Comparisons | 320-361 | Competitive analysis (Aave, Morpho, Compound) |
+| V1 Site Audit (app.curvance.com) | 362-470 | Preserve/improve/drop decisions (108 lines, all design rationale) |
+| Established Components | 471-510 | Built component inventory + file paths |
+| Brand Assets | 511-516 | Brand asset references |
+| Partner Badge System | 517-522 | Badge visual specs |
+| Notification Panel Patterns | 523-581 | Three-tab architecture, task accordion states, desktop/mobile, light/dark |
+| Onboarding Tour Patterns | 582-627 | Guided tour step inventory, acceptance criteria |
+| Token Icon Pipeline | 628-708 | TrustWallet URLs, SVG wrapper template, canvas extraction, icon inventory |
+| Rejected Explorations | 709-728 | Dead ends — prevents re-exploring stacked area charts, fonts, pills, borrow colors |
+| Market Info Typography | 729-747 | Font sizes/weights for market info card elements |
+| WIGGW (What I Got Wrong / Weird) | 748-755 | Accumulated gotchas not yet promoted to Skill files |
+| Tooltip System | 756-780 | Combined tooltip pattern, APY/capacity/stat card specs, implementation rules |
+| Deployment Pipeline | 781-805 | Artifact→v1 codebase integration: script generation, compile fixes, pattern replacement |
 
 **Cross-references:**
 
 | Topic | File |
 |---|---|
-| v1 codebase architecture, module map, queries | Skill_CurvanceV1.md + Reference_CurvanceV1.md |
+| v1 codebase architecture, module map, queries | Skill_CurvanceApp.md + Reference_CurvanceApp.md |
+| Brand identity, logo, colors, mascot, Tier 1/Tier 2 | Skill_CurvanceBrand.md + Reference_CurvanceBrand.md |
+| Bytes, games, referrals, achievements, partner tasks | Skill_CurvanceBytes.md + Reference_CurvanceBytes.md |
+| QA checklists (Bytes, Partner Tasks) | Reference_CurvanceQA.md → QA Page Checklist |

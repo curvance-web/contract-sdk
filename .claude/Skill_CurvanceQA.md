@@ -49,11 +49,10 @@ Five recurring patterns — check for these first, they cover ~80% of display bu
 
 ## PR Review Against Bug Tracker
 
-1. Load the bug tracker (`BugFixes_Curvance_2.md`). Note unfixed bugs and their file locations.
+1. Check known display bug patterns (below) and any previously tracked bugs. Note unfixed bugs and their file locations.
 2. For each changed file in the PR diff, match to tracked bugs. Every hunk should map to a known bug or be flagged as untracked.
-3. **Untracked changes need investigation** — they're undocumented fixes (add to tracker) or new code introducing risk (check for new bugs).
+3. **Untracked changes need investigation** — they're undocumented fixes or new code introducing risk (check for new bugs).
 4. **Check SDK version dependencies.** If a PR references SDK fields/methods (e.g., `newCollateral`, `newCollateralInAssets`), verify they exist in the deployed SDK version. Missing fields return `undefined`.
-5. After review, update the bug tracker with status changes and any new bugs discovered.
 
 ## Browser QA Rules
 
@@ -65,7 +64,7 @@ Five recurring patterns — check for these first, they cover ~80% of display bu
 
 ## Converging Bugs
 
-Before investigating a new symptom, check if known unfixed bugs explain it. If multiple tracked bugs contribute to the same symptom, defer investigation and retest after fixes merge. Document the convergence in the tracker so the next session doesn't re-investigate.
+Before investigating a new symptom, check if known unfixed bugs explain it. If multiple tracked bugs contribute to the same symptom, defer investigation and retest after fixes merge. Document the convergence so the next session doesn't re-investigate.
 
 Signals of convergence: the symptom only appears in flows that touch multiple known-buggy code paths; the wrong value's ratio to the expected value matches a known bug's error factor.
 
@@ -81,18 +80,21 @@ Signals of convergence: the symptom only appears in flows that touch multiple kn
 | Starting to trace a display bug | Jump into the component's render logic | Trace backward: component → hook → SDK method → cache. Find the divergent layer first |
 | QA on a Vercel preview URL | Assume it matches production | Use `app.curvance.com` — preview branches may have different code or be broken entirely |
 | External API call fails (KyberSwap 4000, etc.) | Assume the SDK handles errors | Check for null guards between API response and first property access. Missing guards → crash |
+| Seeing a price conversion in a display selector | Assume the conversion cross-contaminates prices — propose removing it | Check the consumer's label first. If it displays `{token.asset.symbol}` (underlying), then USD ÷ underlyingPrice is the correct conversion |
+| Outputting fixed files during multi-branch QA | Edit one branch's files and output as patches for another (carries unrelated diffs) | Always patch against the target branch's uploaded files. Different branches = different base |
+| Verifying a display value is correct | Eyeball it — "looks right" / "matches what I'd expect" | Trace the actual path: what component renders it → what hook provides it → what SDK method returns it → what cache field stores it. Verify each hop against source, not expectation |
 
 ## References
 
-**File:** `Reference_CurvanceQA.md` (165 lines)
+**File:** `Reference_CurvanceQA.md` (252 lines)
 
 | Section | Lines | Description |
 |---|---|---|
-| Correct Pattern Registry | 7-39 | Verified correct vs wrong implementations — grep targets for debt fallback, collateral conversion, health preview, zap approval |
-| Display Bug Pattern Catalog | 40-91 | Five recurring patterns with detection greps, root causes, and known instances (51 lines, all behavioral) |
-| QA Page Checklist | 92-134 | Per-page items: Dashboard tabs, Market detail sidebar, leverage flow, mobile viewport |
-| PR Review Workflow | 135-149 | Step-by-step: load tracker → match hunks → flag untracked → check SDK deps → update tracker |
-| Known Sentinel Values | 150-165 | Default values during loading — which are safe vs which alarm users |
+| Correct Pattern Registry | 7-45 | Verified correct vs wrong implementations — grep targets for debt fallback, collateral conversion, health preview, zap approval, success modal amount |
+| Display Bug Pattern Catalog | 46-99 | Five recurring patterns with detection greps, root causes, and known instances (54 lines, all behavioral) |
+| QA Page Checklist | 100-220 | Per-page items: Dashboard tabs, Market detail sidebar, leverage flow, mobile viewport, Bytes game, Partner tasks |
+| PR Review Workflow | 221-235 | Step-by-step: load tracker → match hunks → flag untracked → check SDK deps → update tracker |
+| Known Sentinel Values | 236-252 | Default values during loading — which are safe vs which alarm users |
 
 **Cross-references:**
 
@@ -101,4 +103,3 @@ Signals of convergence: the symptom only appears in flows that touch multiple kn
 | Codebase navigation, module structure | Skill_CurvanceApp.md |
 | SDK method signatures, WIGGW for SDK calls | Skill_CurvanceSDK.md |
 | SDK data flow, query hooks, action patterns | Reference_CurvanceSDK.md |
-| Bug tracker (current state) | BugFixes_Curvance_2.md |
