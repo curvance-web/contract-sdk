@@ -4,12 +4,13 @@ import { DynamicMarketData, ProtocolReader, StaticMarketData, UserMarket } from 
 import { AccountSnapshot, CToken } from "./CToken";
 import abi from '../abis/MarketManagerIsolated.json';
 import { Decimal } from "decimal.js";
-import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
+import { address, curvance_provider, Percentage, TokenInput, USD } from "../types";
 import { OracleManager } from "./OracleManager";
-import { IncentiveResponse, Incentives, MilestoneResponse, Milestones, setup_config } from "../setup";
+import { setup_config } from "../setup";
 import { fetchMerklOpportunities, MerklOpportunity } from "../integrations/merkl";
 import { BorrowableCToken } from "./BorrowableCToken";
 import FormatConverter from "./FormatConverter";
+import { Api, IncentiveResponse, Incentives, MilestoneResponse, Milestones } from "./Api";
 
 export type MarketToken = CToken | BorrowableCToken;
 export type PluginTypes = 'zapper' | 'positionManager';
@@ -652,43 +653,6 @@ export class Market {
         return cooldowns;
     }
 
-    static async fetchNativeYields(): Promise<{ symbol: string, apy: number }[]> {
-        if(setup_config.api_url == null) {
-            console.error("You must have an API URL setup to fetch native yields.");
-            return [];
-        }
-
-        let chain: string = setup_config.chain;
-        if(chain == 'monad-mainnet') {
-            chain = 'monad';
-        }
-
-        if(['monad'].includes(chain)) {
-            try {
-                const res = await fetch(`${setup_config.api_url}/v1/${chain}/native_apy`);
-                const yields = await res.json() as {
-                    "native_apy": {
-                        symbol: string,
-                        apy: number
-                    }[]
-                };
-    
-                // Add validation
-                if (!yields || !yields.native_apy || !Array.isArray(yields.native_apy)) {
-                    console.error("Invalid API response structure for native yields");
-                    return [];
-                }
-    
-                return yields.native_apy;
-            } catch (error) {
-                console.error("Error fetching native yields:", error);
-                return [];
-            }
-        } else {
-            return [];
-        }
-
-    }
     /**
      * Grab all the markets available and set them up using the protocol reader efficient RPC calls / API cached calls
      * @param reader  - instace of the ProtocolReader class
@@ -702,7 +666,7 @@ export class Market {
         const deploy_keys: string[] = Object.keys(setup_config.contracts.markets) as (keyof typeof setup_config.contracts.markets)[];
         // Filter out USDC — DeFiLlama incorrectly returns YZM vault yield labeled as USDC
         const [yields, merklLendOpps, merklBorrowOpps] = await Promise.all([
-            Market.fetchNativeYields().then(y => y.filter(y => y.symbol.toUpperCase() !== 'USDC')),
+            Api.fetchNativeYields().then(y => y.filter(y => y.symbol.toUpperCase() !== 'USDC')),
             fetchMerklOpportunities({ action: 'LEND' }).catch(() => [] as MerklOpportunity[]),
             fetchMerklOpportunities({ action: 'BORROW' }).catch(() => [] as MerklOpportunity[]),
         ]);
