@@ -130,6 +130,8 @@ When writing prompts for AI UI generation (for yourself or others), avoid these 
 |---------|-------|-------|
 | Need an SVG icon | Generate path data from scratch — parametric paths render garbled 90% of the time | Copy exact paths from Lucide, Heroicons, or Phosphor. For brand icons, extract from Figma export or source repo. Never synthesize SVG path data. |
 | DOM extraction fails 2-3× | Keep trying with different selectors, position-based filters, path-length heuristics — spirals into 20+ min rabbit hole | Abandon after 3 attempts. Icons in React apps may be image-based, in portals, or icon fonts. Use a library icon or ask the user for the source file. |
+| Multiple SVGs on same page share internal IDs | Use `id="circle"` or `id="gradient"` in every SVG — first one wins in DOM, rest reference wrong element. clipPaths, gradients, masks silently break. | Every SVG internal ID must be globally unique: `clip-usdc`, `clip-weth`, `grad-eth`. Especially critical for inline SVGs rendered by component frameworks (React SVGR, Next.js SVG imports). |
+| Resizing SVG art with `scale()` transform | Assume art is centered at viewBox midpoint — `scale(2)` on a 64×64 SVG doubles correctly only if content is centered at (32,32) | Check where the actual art is centered. If off-center (e.g., 34.6,34.6), scale shifts content off-frame. Use native viewBox instead of transform scaling, or add a compensating translate. |
 
 ## References
 

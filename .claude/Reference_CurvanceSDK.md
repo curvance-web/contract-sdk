@@ -1,6 +1,6 @@
 ---
 name: curvance-sdk-reference
-description: "Detailed API reference for curvance-web/contract-sdk v3.5.3. Contains every class, method signature, data shape, and integration pattern. Consult when you need exact method names, parameter types, return types, or implementation details. Pair with Skill_CurvanceSDK.md for rules and conventions."
+description: "Detailed API reference for curvance-web/contract-sdk. Contains every class, method signature, data shape, and integration pattern. Consult when you need exact method names, parameter types, return types, or implementation details. Pair with Skill_CurvanceSDK.md for rules and conventions."
 ---
 
 # Curvance SDK Reference (v3.5.3)
@@ -84,12 +84,12 @@ markets: {
 
 ## Data Shapes (ProtocolReader types)
 
-Full type definitions: `src/types/protocolReader.ts`. Key semantic notes for fields that aren't self-explanatory:
+Full type definitions: `src/classes/ProtocolReader.ts`. Key semantic notes for fields that aren't self-explanatory:
 
 | Field | In type | Semantics |
 |---|---|---|
 | `cooldownLength` | StaticMarketData | Seconds before withdraw after deposit |
-| `collRatio` | StaticMarketToken | LTV ratio (raw BPS bigint) |
+| `collRatio` | StaticMarketToken | LTV ratio (raw TypeBPS bigint) |
 | `irmBaseRate` | StaticMarketToken | Annualized (`baseRate × SECONDS_PER_YEAR`) |
 | `irmVertexStart` | StaticMarketToken | Utilization where vertex kicks in (raw BPS) |
 | `sharePrice`, `assetPrice` | DynamicMarketToken | WAD-scaled (1e18) |
@@ -98,10 +98,15 @@ Full type definitions: `src/types/protocolReader.ts`. Key semantic notes for fie
 | `liquidity` | DynamicMarketToken | Available to borrow (BorrowableCToken only) |
 | `positionHealth` | UserMarket | WAD-scaled, UINT256_MAX = infinite (no debt) |
 | `cooldown` | UserMarket | Timestamp, not duration |
+| `priceStale` | UserMarket | True if oracle price is stale — check before operations |
 | `liquidationPrice` | UserMarketToken | UINT256_MAX = no liquidation price |
 
+**UserData (top-level from `getUserData`):**
+- `markets: UserMarket[]` — per-market position data
+- `locks: UserLock[]` — vesting/lock entries (`{ lockIndex: bigint, amount: bigint, unlockTime: bigint }`)
+
 **Key enums:**
-- `AdaptorTypes`: CHAINLINK=0, REDSTONE_CLASSIC=1, REDSTONE_CORE=2
+- `AdaptorTypes` (in `ProtocolReader.ts`): `CHAINLINK` = keccak hash (large bigint), `REDSTONE_CLASSIC` = large bigint, `REDSTONE_CORE = 2n`, `MOCK = 1337n`. Compare with `===`, not numeric equality.
 - `ZapperInstructions`: `'none' | 'native-vault' | 'vault' | 'native-simple' | { type, inputToken, slippage }`
 
 **On-chain structs (Solidity):**
@@ -177,7 +182,7 @@ Full type definitions: `src/types/protocolReader.ts`. Key semantic notes for fie
 | `Market.getAll(reader, oracle, provider?, milestones?, incentives?)` | `Market[]` | Main factory — called by `setupChain()` |
 | `Market.fetchNativeYields()` | `{ symbol, apy }[]` | API call for native vault APYs |
 
-**`ChangeRate` type:** `'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year'`
+**`ChangeRate` type:** `'year' | 'month' | 'week' | 'day'`
 
 ---
 
@@ -187,8 +192,9 @@ Full type definitions: `src/types/protocolReader.ts`. Key semantic notes for fie
 
 **Key properties:**
 - `cache` — merged `StaticMarketToken & DynamicMarketToken & UserMarketToken` (bulk-loaded at setup, synchronous access, refreshed selectively on mutations)
-- `zapTypes`, `leverageTypes` — currently empty arrays (commented out in constructor)
-- `isVault`, `isNativeVault`, `isWrappedNative` — derived from underlying asset type
+- `zapTypes: ZapperTypes[]` — populated in constructor based on vault type and chain config (`'native-vault'`, `'native-simple'`, `'vault'`, `'simple'`)
+- `leverageTypes: string[]` — populated based on market plugins (position managers) and vault type
+- `isVault`, `isNativeVault`, `isWrappedNative` — boolean instance properties, set in constructor from chain config
 
 **Overload pattern (used throughout CToken and BorrowableCToken):**
 Many getters take a boolean: `(true)` → USD formatted, `(false)` → raw bigint or TokenInput. Examples:
@@ -222,7 +228,7 @@ Risk parameter getters (`getCollRatio`, `getCollReqSoft/Hard`, `getLiqInc*`, `ge
 | Method | Return shape |
 |---|---|
 | `previewLeverageUp(newLev, borrow, depositAmt?)` | `{ borrowAmount, newDebt, newDebtInAssets, newCollateral, newCollateralInAssets }` |
-| `previewLeverageDown(newLev, currentLev)` | `{ collateralAssetReduction, collateralAssetReductionUsd, leverageDiff }` |
+| `previewLeverageDown(newLev, currentLev, borrow?)` | `{ collateralAssetReduction, collateralAssetReductionUsd, leverageDiff, newDebt, newDebtInAssets?, newCollateral, newCollateralInAssets }` |
 | `leverageUp(borrow, newLev, type, slippage?)` | TransactionResponse |
 | `depositAndLeverage(depositAmt, borrow, multiplier, type, slippage?)` | TransactionResponse |
 
@@ -232,6 +238,7 @@ Risk parameter getters (`getCollRatio`, `getCollReqSoft/Hard`, `getLiqInc*`, `ge
 | `maxRedemption(in_shares?, bufferTime?, breakdown?)` | `breakdown=true` → `{ max_collateral, max_uncollateralized }` |
 | `getDepositTokens(search?)` | Returns `ZapToken[]` for zap UI |
 | `ensureUnderlyingAmount(amount, zap)` | Caps to balance — silent truncation |
+| `fetchUserCollateral(formatted?)` | On-chain `collateralPosted()`. Updates cache. `(true)` → Decimal, `(false/default)` → bigint |
 
 **Write pattern internals:**
 | Method | Notes |
@@ -316,9 +323,9 @@ interface IDynamicIRM {
 **SDK methods:**
 | Method | Params | Return |
 |---|---|---|
-| `getAllMarketData(user)` | `address` | `{ staticMarket, dynamicMarket, userData }` — 3 parallel calls |
-| `getStaticMarketData()` | — | `StaticMarketData[]` |
-| `getDynamicMarketData()` | — | `DynamicMarketData[]` |
+| `getAllMarketData(user, use_api?)` | `address, boolean=true` | `{ staticMarket, dynamicMarket, userData }` — 3 parallel calls |
+| `getStaticMarketData(use_api?)` | `boolean=true` | `StaticMarketData[]` |
+| `getDynamicMarketData(use_api?)` | `boolean=true` | `DynamicMarketData[]` |
 | `getUserData(account)` | `address` | `UserData` |
 | `maxRedemptionOf(account, ctoken, bufferTime)` | `address, CToken, bigint` | `{ maxCollateralizedShares, maxUncollateralizedShares, errorCodeHit }` |
 | `hypotheticalRedemptionOf(account, ctoken, shares)` | `address, CToken, bigint` | `(collateralSurplus, liquidityDeficit, isPossible, oracleError)` |
@@ -1044,7 +1051,7 @@ Fetched from `{api_url}/v1/rewards/active/{chain}` during `setupChain()`. Attach
 
 ### Native Yields
 
-Fetched from `{api_url}/v1/{chain}/native_apy`. Matched by symbol. Stored in `token.nativeYield` (0-1 scale). Currently only available for `monad`/`monad-mainnet`.
+Fetched from `{api_url}/v1/{chain}/native_apy`. Matched by symbol. Stored in `token.nativeApy` (0-1 scale). Currently only available for `monad`/`monad-mainnet`.
 
 ## Market Computed Properties
 
@@ -1166,9 +1173,12 @@ getLeverage(): Decimal | null
 ```ts
 getApy(): Percentage                     // supply rate as APY (Decimal, 0-1 scale)
 getApy(asPercentage: false): bigint      // raw rate
+
+getTotalSupplyRate(): Percentage         // getSupplyRate(true) + incentiveSupplyApy + nativeApy
+getTotalBorrowRate(): Percentage         // getBorrowRate(true) - incentiveBorrowApy
 ```
 
-Internal: `rate / WAD * SECONDS_PER_YEAR` + `nativeYield`
+Internal `getApy`: `rate / WAD * SECONDS_PER_YEAR`. `getTotalSupplyRate` is the all-in rate the app should display.
 
 ### Token Conversion (synchronous)
 
@@ -1189,8 +1199,13 @@ convertTokenToToken(from: CToken, to: CToken, amount: TokenInput, formatted: fal
 
 ```ts
 liquidationPrice: USD | null             // cache.liquidationPrice, null if 0
-nativeYield: number                      // 0-1 scale, set during setupChain
+nativeApy: Decimal                       // 0-1 scale, set during setupChain from native yields API
+incentiveSupplyApy: Decimal              // Merkl LEND APR (0-1 scale), set during setupChain
+incentiveBorrowApy: Decimal              // Merkl BORROW APR (0-1 scale), set during setupChain
 isBorrowable: boolean                    // from .cache (bulk-loaded)
+isVault: boolean                         // true if asset is in chain_config.vaults
+isNativeVault: boolean                   // true if asset is in chain_config.native_vaults
+isWrappedNative: boolean                 // true if asset == chain_config.wrapped_native
 exchangeRate: bigint                     // cToken → asset exchange rate
 totalAssets: bigint                      // total underlying assets
 totalSupply: bigint                      // total cToken shares
@@ -1444,26 +1459,11 @@ Gotcha: using `swapAction` (singular) in deleverage calldata or `swapActions` (a
 - Remaining tokens: any leftover debt asset, collateral asset, or swap dust is returned to user — no tokens stay in the position manager
 - `depositAsCollateral` vs `depositAsCollateralFor`: the position manager calls `depositAsCollateral(assets, msg.sender)` — the cToken recognizes position managers at the market manager level
 
-### Known SDK bugs (verified against contract)
+### SDK Bug Fixes (v3.6.3)
 
-**BUG: `leverageUp` simple — expectedShares uses asset amount instead of shares**
-
-```ts
-// CURRENT (broken):
-expectedShares: BigInt(quote.min_out),  // quote.min_out is in ASSET terms from dex
-
-// Contract onBorrow check:
-// shares = cToken.depositAsCollateral(amount, owner);  ← returns SHARES
-// if (shares < action.expectedShares) revert;          ← compares shares to assets
-//
-// As exchange rate grows (interest accrues), depositing X assets yields < X shares.
-// Exchange rate 1.05 → 1000 assets → ~952 shares → 952 < 1000 → REVERTS
-
-// FIX (matches depositAndLeverage pattern):
-expectedShares: await PositionManager.getExpectedShares(this, BigInt(quote.min_out)),
-```
-
-Severity: transaction reverts increase as market matures and exchange rate diverges from 1:1. Fresh markets work, established markets fail.
+The following bugs documented in earlier versions have been fixed:
+- `leverageUp` simple type now uses `virtualConvertToShares(BigInt(quote.min_out))` — matches `depositAndLeverage` pattern
+- `previewLeverageDown` now correctly computes `collateralInUsd.sub(targetCollateralUsd)` as the reduction amount
 
 **NOTE: `leverageDown` partial — hardcoded 5% minRepay is intentional defense-in-depth**
 
@@ -1473,27 +1473,6 @@ const minRepay = ... quote.out - (BigInt(Decimal(quote.out).mul(.05).toFixed(0))
 ```
 
 This is NOT a bug. The 5% floor on `repayAssets` is a sanity check against oracle/dex price divergence, separate from user slippage. User slippage is already enforced by: (1) dex quote minimum, (2) `_swapSafe` oracle-price comparison in SwapperLib, (3) `checkSlippage` portfolio modifier. The `minRepay` floor sits below all three as defense-in-depth — it catches edge cases where oracle checks pass but absolute token output is insufficient for repay.
-
-**BUG: `previewLeverageDown` — computes target collateral, passes as withdrawal amount**
-
-```ts
-// CURRENT (broken):
-const debtClosed = notional.mul(newLeverage);  // This is TARGET COLLATERAL, not debt to close
-const collateralAssetReductionUsd = debtClosed.div(this.getPrice(true));
-// Passes entire target collateral level as the withdrawal amount
-
-// Example: collateral=$2330, debt=$1330, notional=$1000, target=1.5x
-// debtClosed = 1000 × 1.5 = $1500 (this is TARGET collateral, not reduction)
-// Contract withdraws $1500 of collateral → swaps → repays min($1500, $1330) → returns $170
-// Result: collateral=$830, debt=$0, leverage=1.0x — wanted 1.5x
-
-// FIX:
-const targetCollateral = notional.mul(newLeverage);
-const collateralReductionUsd = collateralInUsd.sub(targetCollateral);
-// $2330 - $1500 = $830 reduction → swap → repay $830 → new leverage = $1500/$1000 = 1.5x ✓
-```
-
-Severity: partial deleverage over-withdraws collateral. Contract's `checkSlippage` modifier catches the massive value loss and reverts, so users see failed transactions rather than wrong final state. Full deleverage (newLeverage=1) bypasses this code path entirely and works correctly.
 
 ### Known V2 app bugs
 
@@ -1806,6 +1785,8 @@ type Percentage  = Decimal;   // Fractional: 0.7 = 70%. NOT basis points
 type TypeBPS     = bigint;    // Basis points: 10000 = 100%
 type address     = `0x${string}`;
 type bytes       = `0x${string}`;
+type curvance_provider = JsonRpcSigner | Wallet | JsonRpcProvider;  // Any ethers v6 provider
+type curvance_signer   = JsonRpcSigner | Wallet;  // Provider that can sign transactions
 ```
 
 ### Constants
@@ -1827,8 +1808,10 @@ SECONDS_PER_DAY   = 86_400n
 
 DEFAULT_SLIPPAGE_BPS = 100n       // 1%
 UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935n
+UINT256_MAX_DECIMAL = Decimal(UINT256_MAX)
 EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000"
 NATIVE_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+EMPTY_BYTES = "0x"
 ```
 
 ### Helper Functions
@@ -1853,6 +1836,8 @@ token.asset.decimals // underlying asset decimals (from cache.asset.decimals)
 ```
 
 **ICToken.sol confirms:** `decimals()` "pull[s] directly from underlying... matching the underlying token." The cToken's `decimals()` function returns the underlying's decimals. These values are identical — the SDK separates them for semantic clarity, not because they differ.
+
+**On-chain proof (ProtocolReader.sol):** The Solidity ProtocolReader relies on this invariant in multiple functions. `_adjustForLimitations` (L1715-1717) scales `debtAssets` (underlying-denominated) using `_decimals(debtCToken)` (cToken decimals) — only correct if they're equal. `hypotheticalLeverageOf` (L801-805) converts WAD to "assets denomination" using `_decimals(borrowableCToken)` — same invariant. Meanwhile, functions that genuinely deal with different denominations use separate decimal lookups: `_debtValue` uses `_decimals(underlyingAsset)` for asset amounts, `_collateralValue` uses `_decimals(cToken)` for share amounts. This confirms the protocol enforces `cToken.decimals == asset.decimals` as a design invariant, not an accidental assumption.
 
 **SDK usage convention** (semantic, not functional — both produce the same result):
 
@@ -2589,3 +2574,296 @@ async ensureUnderlyingAmount(amount: TokenInput, zap: ZapperInstructions): Promi
 
 **This is a silent safety net.** If the user tries to deposit more than they have of the *input* token (not necessarily the underlying), the SDK caps the amount to their balance and logs a warning. No throw, no error — the deposit proceeds with the capped amount. v1 should validate input amounts against the correct token balance before calling SDK methods to provide explicit UI feedback.
 
+---
+
+## Format Module (v3.6.3)
+
+Source: `src/format/`. Pure functions for app-side computation — SDK is the source of truth. App should import from SDK, not duplicate logic.
+
+### format/leverage.ts
+
+```ts
+MIN_DEPOSIT_USD = 10
+MIN_BORROW_USD = 10.1
+HIGH_LEVERAGE_THRESHOLD = 60
+MAX_LTV_RATIO = 0.85
+
+calculateBorrowAmount(depositUsd: Decimal, leverage: number): Decimal
+// Returns depositUsd × (leverage - 1). Returns 0 if leverage ≤ 1.
+
+calculateLeverageRatio(totalValue: Decimal, debtAmount: Decimal): Decimal
+// totalValue / (totalValue - debtAmount). Returns 1 if no debt, 0 if underwater.
+
+calculateDeleverageAmount(currentLeverage: number, targetLeverage: number, totalValue: Decimal): Decimal
+// Returns reduction in debt needed. 0 if target ≥ current.
+
+calculatePositionSize(tokenAmount: Decimal, leverage: number): Decimal
+// tokenAmount × leverage
+
+validateLeverageInput(input: LeverageValidationInput): ValidationResult
+// Checks: balance, min deposit ($10), min borrow ($10.1), liquidity, max leverage.
+// Returns { isValid, error?, warning?, canProceed }
+
+checkLeverageAmountBelowMinimum(input): boolean
+// For edit leverage: checks if terminal debt < MIN_BORROW_USD (and not zero).
+// For new: checks if borrowAmount > 0 and < MIN_BORROW_USD.
+
+checkBorrowExceedsLiquidity(borrowAmount, availableLiquidity): boolean
+```
+
+### format/borrow.ts
+
+```ts
+MIN_LOAN_USD = 10
+
+calculateMaxBorrow(userRemainingCredit, remainingDebt, availableLiquidity): Decimal
+// min(credit, debt, liquidity) — all clamped to 0.
+
+calculateMaxRepay(userBalance, userDebt): Decimal
+// min(balance, debt)
+
+validateRepayRemainder(currentDebtUsd, repayAmountUsd, minLoanUsd?): RepayValidation
+// If remainder > 0.001 and < minLoanUsd → invalid (would leave dust loan).
+
+calculateDebtPreview(currentDebt, amount, isRepaying): Decimal
+// current ± amount
+
+convertAmountByCurrencyView(amount, price, currencyView): { usdAmount, tokenAmount }
+// Converts between dollar and token views using price.
+```
+
+### format/collateral.ts
+
+```ts
+calculateExchangeRate(assetBalance, shareBalance): Decimal
+// assetBalance / shareBalance. Returns 1 if shareBalance is 0.
+
+calculateCollateralBreakdown(assetBalance, collateralShares, exchangeRate): CollateralBreakdown
+// Returns { exchangeRate, collateralAssets: min(assetBalance, shares×rate), uncollateralizedAssets }
+
+calculateNewCollateral(currentCollateral, amount, action: 'add'|'remove'): Decimal
+```
+
+### format/health.ts
+
+```ts
+LOW_HEALTH_THRESHOLD = 10
+CAUTION_HEALTH_UPPER = 20
+
+getHealthStatus(percentageValue: number | null): HealthStatus
+// <5 → 'Danger', 5-20 → 'Caution', >20 → 'Healthy', null → 'Healthy'
+
+healthFactorToPercentage(rawHealthFactor: number | null): number
+// (raw - 1) × 100, min 0. Null defaults to 5.
+
+formatHealthFactorPercentage(value: number): string
+// Intl.NumberFormat as percent, 0 fraction digits
+
+formatHealthFactor(value?: number | null): string
+// null → '∞', ≥999 → '>999%', else formatHealthFactorPercentage
+
+getLiquidityStatus(ratio): 'green' | 'yellow' | 'red'
+// <0.75 green, 0.76-0.9 yellow, >0.91 red
+```
+
+### format/amounts.ts
+
+```ts
+USD_DUST_THRESHOLD = Decimal('0.01')
+
+clampUsdDustAmount(value): Decimal
+// If abs(value) < 0.01 → 0, else value
+
+normalizeAmountString(value, maxFractionDigits, roundingMode?): string
+// Rounds to maxFractionDigits, trims trailing zeros. ROUND_DOWN default.
+
+normalizeCurrencyAmounts({ amount, currencyView, tokenDecimals, price, ... }): { amount, usdAmount, tokenAmount }
+// Master normalizer: converts between dollar/token views, preserves trailing zeros during input,
+// clamps dust amounts, normalizes display. Handles 'dollar' and 'token' currencyView.
+```
+
+---
+
+## Api Class (v3.6.3)
+
+Source: `src/classes/Api.ts`. Static methods for backend API communication.
+
+```ts
+class Api {
+    static async fetchNativeYields(): Promise<{ symbol: string, apy: number }[]>
+    // Fetches from {api_url}/v1/{chain}/native_apy. Currently only supports 'monad' chain.
+    // Returns empty array for unsupported chains or errors.
+
+    static async getRewards(): Promise<{ milestones: Milestones, incentives: Incentives }>
+    // Fetches from {api_url}/v1/rewards/active/{chain}.
+    // Returns keyed by market address. Gracefully returns empty on failure.
+}
+
+// Types:
+type MilestoneResponse = { market: address, tvl: number, multiplier: number, fail_multiplier: number, chain_network: string, start_date: string, end_date: string, duration_in_days: number }
+type IncentiveResponse = { market: address, type: string, rate: number, description: string, image: string }
+type Milestones = { [key: string]: MilestoneResponse }
+type Incentives = { [key: address]: Array<IncentiveResponse> }
+```
+
+---
+
+## OptimizerReader (v3.6.3)
+
+Source: `src/classes/OptimizerReader.ts`. Reads optimizer (vault aggregation) data from on-chain reader contract.
+
+```ts
+class OptimizerReader {
+    constructor(address, provider?)
+
+    async getOptimizerMarketData(optimizers: address[]): Promise<OptimizerMarketData[]>
+    // Returns per-optimizer: address, asset, totalAssets, markets (cTokens with allocatedAssets + liquidity),
+    // totalLiquidity, sharePrice, performanceFee
+
+    async getOptimizerUserData(optimizers: address[], account: address): Promise<OptimizerUserData[]>
+    // Returns per-optimizer: address, shareBalance, redeemable
+
+    async optimalDeposit(optimizer: address, assets: bigint): Promise<address>
+    // Returns the cToken address for optimal deposit routing
+
+    async optimalWithdrawal(optimizer: address, assets: bigint): Promise<address>
+    // Returns the cToken address for optimal withdrawal routing
+
+    async optimalRebalance(optimizer: address): Promise<ReallocationAction[]>
+    // Returns { cToken, assets }[] rebalance actions
+}
+```
+
+---
+
+## Snapshot Integration (v3.6.3)
+
+Source: `src/integrations/snapshot.ts`. Produces JSON-serializable portfolio state for indexers and cron jobs.
+
+```ts
+function snapshotMarket(market: Market): MarketSnapshot
+// Snapshots a single market: positions (deposit/collateral/debt per token, prices, APY), health, daily earnings/cost.
+
+async function takePortfolioSnapshot(account: address, options?: { refresh?: boolean }): Promise<PortfolioSnapshot>
+// Full portfolio across all_markets. When refresh=true, reloads dynamic + user data (2 RPC calls, not 2×N)
+// via shared reader before reading cache.
+// Returns: account, chain, timestamp, totalDepositsUSD, totalDebtUSD, netUSD, dailyEarnings, dailyCost, markets[]
+```
+
+---
+
+## Yield Calculation Helpers (v3.6.3)
+
+Source: `src/helpers.ts`. Centralized APY computation — app should use these instead of computing inline.
+
+```ts
+getNativeYield(token, apyOverrides?): Decimal
+// Helper param uses `token.nativeYield`; CToken property is `nativeApy`. Returns value if nonzero, else falls back to apyOverrides by symbol.
+
+getInterestYield(token): Decimal
+// Returns token.getApy() — the lending APY.
+
+getMerklDepositIncentives(tokenAddress, opportunities): Decimal
+// Matches Merkl opportunities by token address in tokens array. Returns best APR / 100.
+
+getMerklBorrowIncentives(tokenAddress, opportunities): Decimal
+// Matches Merkl opportunities by identifier. Returns best APR / 100.
+
+getDepositApy(token, opportunities, apyOverrides?): Decimal
+// Total deposit APY: native (or interest + overrides) + Merkl.
+// When nativeApy > 0 it already includes interest, so used directly.
+
+getBorrowCost(token, opportunities): Decimal
+// Net borrow cost: borrowRate - merklIncentives. Can be negative when rewards exceed rate.
+```
+
+---
+
+## Market Metadata Types (v3.6.3)
+
+Source: `src/types.ts`. New type unions for market categorization:
+
+```ts
+type MarketCategory = "stablecoin" | "staking" | "restaking" | "yield-stablecoin" | "blue-chip" | "native"
+type CollateralSource = "Renzo" | "Upshift" | "Yuzu" | "Native" | "Circle" | "Fastlane" | "Apriori" | "Mu Digital" | "Kintsu" | "Reservoir"
+
+// Each has a CATEGORY_META / PROTOCOL_META record with { label, color } pairs.
+// Colors in these maps are SDK defaults — app may override with brand-compliant colors.
+```
+
+Additional type additions: `TypeBPS` (bigint), `curvance_provider` (JsonRpcSigner | Wallet | JsonRpcProvider), `curvance_signer` (JsonRpcSigner | Wallet).
+
+---
+
+## Additional Constants (v3.6.3)
+
+Source: `src/helpers.ts`. New constants beyond the core BPS/WAD/SECONDS_PER_YEAR:
+
+| Constant | Value | Use |
+|---|---|---|
+| `BPS_SQUARED` | `1e8n` | BPS × BPS calculations |
+| `WAD_BPS` | `1e22n` | WAD × BPS combined scale |
+| `RAY` | `1e27n` | 27-decimal precision (Aave-compatible) |
+| `WAD_SQUARED` | `1e36n` | WAD × WAD calculations |
+| `WAD_CUBED_BPS_OFFSET` | `1e50n` | High-precision intermediate calculations |
+| `WAD_DECIMAL` | `Decimal(WAD)` | Decimal version of WAD for mixed math |
+| `SECONDS_PER_MONTH` | `2_592_000n` | 30 days |
+| `SECONDS_PER_WEEK` | `604_800n` | 7 days |
+| `SECONDS_PER_DAY` | `86_400n` | 1 day |
+| `DEFAULT_SLIPPAGE_BPS` | `100n` | 1% default slippage |
+| `UINT256_MAX_DECIMAL` | `Decimal(UINT256_MAX)` | Decimal version for comparisons |
+| `NATIVE_ADDRESS` | `0xEeee...eEEeE` | Sentinel for native token operations |
+
+New `ChangeRate` type supports all four periods: `"year" | "month" | "week" | "day"`.
+
+---
+
+## New Market Properties (v3.6.3)
+
+Source: `src/classes/Market.ts`. New getters and methods on Market class:
+
+```ts
+get totalCollateral(): Decimal     // Sum of all token.getTotalCollateral(true)
+get ltv(): string                  // "85%" or "80% - 85%" (range across tokens)
+get plugins(): Plugins             // { simplePositionManager?, vaultPositionManager?, nativeVaultPositionManager? }
+get adapters(): bigint[]           // Oracle identifier list (maps to AdaptorTypes enum)
+
+hasBorrowing(): boolean            // True if any token is borrowable
+getBorrowableCTokens(): { eligible: BorrowableCToken[], ineligible: BorrowableCToken[] }
+// Eligible: borrowable + debtCap > 0 + user doesn't have collateral posted in that token
+// Ineligible: user has collateral posted (can't borrow from same token)
+
+async reloadMarketData()           // Refreshes dynamic data only (prices, rates, liquidity) — separate from reloadUserData
+async previewAssetImpact(user, collateral_ctoken, debt_ctoken, deposit_amount, borrow_amount, rate_change): { supply, borrow, earn }
+// Each has { percent: Decimal (APY), change: Decimal (USD per period) }
+
+async previewPositionHealthLeverageDeposit(deposit_ctoken, borrow_ctoken, deposit_amount, borrow_amount, leverage): Percentage | null
+```
+
+New CToken properties set during `Market.getAll`:
+```ts
+incentiveSupplyApy: Decimal  // Merkl lend APR for this token (set from LEND opportunities)
+incentiveBorrowApy: Decimal  // Merkl borrow APR for this token (set from BORROW opportunities)
+nativeApy: Decimal           // Native yield from issuer (set from native_apy API)
+```
+
+**`Market.getAll` data-loading sequence (v3.6.3):**
+1. `reader.getAllMarketData(user)` — 3 parallel RPC calls (static, dynamic, user)
+2. In parallel: `Api.fetchNativeYields()` (filtered: excludes USDC), `fetchMerklOpportunities({ action: 'LEND' })`, `fetchMerklOpportunities({ action: 'BORROW' })`
+3. Construct Market/CToken instances from RPC data
+4. Per-token enrichment: match Merkl LEND by `identifier === token.address` → `incentiveSupplyApy`; match Merkl BORROW same way → `incentiveBorrowApy`
+5. Per-token: match native yields by symbol → `nativeApy`. YZM hardcoded to 0.083 (DeFiLlama misattribution workaround)
+
+---
+
+## New Market Constructor (v3.6.3)
+
+Market constructor now accepts `deploy_data: DeployData`:
+```ts
+interface DeployData {
+    name: string,           // Market deploy key (e.g., "gMON | WMON")
+    plugins: { [key: string]: address }  // Plugin contract addresses
+}
+```
+
+`Market.getAll` looks up deploy data from `setup_config.contracts.markets` by matching market address. Markets without deploy data are skipped with a console warning.
