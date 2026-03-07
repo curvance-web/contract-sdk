@@ -1,9 +1,10 @@
 import { Contract, parseUnits } from "ethers";
 import { Decimal } from "decimal.js";
 import { address, bytes, curvance_provider, curvance_signer, Percentage } from "./types";
-import { chains } from "./chains";
-import { chain_config, setup_config } from "./setup";
+import { chains } from "./contracts";
+import { setup_config } from "./setup";
 import FormatConverter from "./classes/FormatConverter";
+import { chain_config } from "./chains";
 
 // Set Decimal.js precision to handle large numbers
 Decimal.set({ precision: 50 });

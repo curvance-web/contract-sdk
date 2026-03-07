@@ -7,7 +7,7 @@ import { Decimal } from "decimal.js";
 import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { OracleManager } from "./OracleManager";
 import { IncentiveResponse, Incentives, MilestoneResponse, Milestones, setup_config } from "../setup";
-import { fetchMerklOpportunities, MerklOpportunity } from "../merkl";
+import { fetchMerklOpportunities, MerklOpportunity } from "../integrations/merkl";
 import { BorrowableCToken } from "./BorrowableCToken";
 import FormatConverter from "./FormatConverter";
 

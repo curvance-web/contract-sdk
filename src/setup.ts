@@ -1,12 +1,10 @@
-import { JsonRpcProvider, JsonRpcSigner, Wallet } from "ethers";
 import { ChainRpcPrefix, getContractAddresses } from "./helpers";
 import { Market } from "./classes/Market";
 import { address, curvance_provider } from './types';
 import { ProtocolReader } from "./classes/ProtocolReader";
 import { OracleManager } from "./classes/OracleManager";
 import { wrapProviderWithRetries } from "./retry-provider";
-import { Kuru } from "./classes/DexAggregators/Kuru";
-import { KyberSwap } from "./classes/DexAggregators";
+import { chain_config } from "./chains";
 
 export type IncentiveResponse = {
     market: address,
@@ -38,54 +36,6 @@ export let setup_config: {
 };
 
 export let all_markets: Market[] = [];
-
-const monad_mainnet_config = {
-    dexAgg: new KyberSwap(),
-    provider: new JsonRpcProvider("https://rpc-mainnet.monadinfra.com/rpc/yXdhejk7tio3mpBmpTyzQCdIQjDXsuAk"),
-    native_symbol: 'MON',
-    native_name: 'Monad',
-    wrapped_native: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A" as address,
-    native_vaults: [
-        { name: "aprMON", contract: "0x0c65A0BC65a5D819235B71F554D210D3F80E0852" as address },
-        { name: "shMON", contract: "0x1B68626dCa36c7fE922fD2d55E4f631d962dE19c" as address },
-    ],
-    vaults: [
-        { name: "sAUSD", contract: "0xD793c04B87386A6bb84ee61D98e0065FdE7fdA5E" as address, underlying: "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as address }
-    ]
-};
-
-export const chain_config = {
-    'monad-testnet': {
-        dexAgg: new Kuru(
-            "0x0Acb7eF4D8733C719d60e0992B489b629bc55C02",
-            1,
-            "0x96eaC98928437496DdD0Cd2080E54Fe78BaC99b6",
-            "https://ws.staging.kuru.io/api"
-        ),
-        provider: new JsonRpcProvider("https://rpc.ankr.com/monad_testnet"),
-        native_symbol: 'MON',
-        native_name: 'Monad',
-        wrapped_native: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" as address,
-        native_vaults: [
-            { name: "aprMON", contract: "0xb2f82D0f38dc453D596Ad40A37799446Cc89274A" as address },
-            { name: "shMON", contract: "0x3a98250F98Dd388C211206983453837C8365BDc1" as address },
-            // { name: "magma", contract: "0xaEef2f6B429Cb59C9B2D7bB2141ADa993E8571c3" as address }, //Has no deposit function for some reason
-            // { name: "kintsu", contract: "0xe1d2439b75fb9746E7Bc6cB777Ae10AA7f7ef9c5" as address } //Has a deposit function but uses uint96 instead of uint256
-        ],
-        vaults: []
-    },
-    'monad-mainnet': monad_mainnet_config,
-    'arb-sepolia': {
-        dexAgg: new KyberSwap(),
-        provider: new JsonRpcProvider("https://arbitrum-sepolia-testnet.api.pocket.network"),
-        native_symbol: 'ETH',
-        native_name: 'Ether',
-        wrapped_native: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' as address,
-        native_vaults: [],
-        vaults: []
-    },
-    'local-monad-mainnet': {...monad_mainnet_config, provider: new JsonRpcProvider("http://localhost:8545")} //overwrite with mainnet
-};
 
 export async function setupChain(chain: ChainRpcPrefix, provider: curvance_provider | null = null, approval_protection: boolean = false, api_url: string = "https://api.floppy-backup.com") {
     if(!(chain in chain_config)) {

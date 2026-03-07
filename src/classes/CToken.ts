@@ -9,13 +9,13 @@ import base_ctoken_abi from '../abis/BaseCToken.json';
 import { address, bytes, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { Redstone } from "./Redstone";
 import { Zapper, ZapperTypes, zapperTypeToName } from "./Zapper";
-import { chain_config, setup_config } from "../setup";
+import { setup_config } from "../setup";
 import { PositionManager, PositionManagerTypes } from "./PositionManager";
 import { BorrowableCToken } from "./BorrowableCToken";
 import { NativeToken } from "./NativeToken";
 import { ERC4626 } from "./ERC4626";
-import { Quote } from "./DexAggregators/IDexAgg";
 import FormatConverter from "./FormatConverter";
+import { chain_config } from "../chains";
 
 export interface AccountSnapshot {
     asset: address;

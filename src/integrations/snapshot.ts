@@ -1,7 +1,7 @@
-import { Market } from "./classes/Market";
-import { BorrowableCToken } from "./classes/BorrowableCToken";
-import { all_markets, setup_config } from "./setup";
-import { address } from "./types";
+import { Market } from "../classes/Market";
+import { BorrowableCToken } from "../classes/BorrowableCToken";
+import { all_markets, setup_config } from "../setup";
+import { address } from "../types";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

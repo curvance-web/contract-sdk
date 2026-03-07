@@ -42,7 +42,7 @@ const deployed_path = `${process.env.DEPLOYMENT_REPO_PATH}/output`;
 fs.readdirSync(deployed_path).forEach(file => {
     if(file.endsWith(".json")) {
         const address_file = JSON.parse(fs.readFileSync(`${deployed_path}/${file}`, "utf-8"));
-        fs.writeFileSync(`./src/chains/${file}`, JSON.stringify(address_file, null, 2));
+        fs.writeFileSync(`./src/contracts/${file}`, JSON.stringify(address_file, null, 2));
     }
 });
 console.log('Deployed contract addresses have been refreshed.');

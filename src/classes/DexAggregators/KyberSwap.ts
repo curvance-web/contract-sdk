@@ -2,7 +2,9 @@ import { address, bytes, curvance_provider, Percentage, TokenInput } from "../..
 import { ZapToken } from "../CToken";
 import IDexAgg from "./IDexAgg";
 import { Swap } from "../Zapper";
-import { all_markets, ERC20, toBigInt, validateProviderAsSigner } from "../..";
+import { all_markets } from "../../setup";
+import { toBigInt, validateProviderAsSigner } from "../../helpers";
+import { ERC20 } from "../ERC20";
 import FormatConverter from "../FormatConverter";
 
 export interface KyperSwapErrorResponse {
