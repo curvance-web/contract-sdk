@@ -785,8 +785,9 @@ export class CToken extends Calldata<ICToken> {
         return this.contract.convertToAssets(shares);
     }
 
-    async convertToShares(assets: bigint) {
-        return this.contract.convertToShares(assets);
+    async convertToShares(assets: bigint, bufferBps: bigint = 2n) {
+        const shares = await this.contract.convertToShares(assets);
+        return bufferBps > 0n ? shares * (10000n - bufferBps) / 10000n : shares;
     }
 
     async maxRedemption(): Promise<TokenInput>;
@@ -1033,7 +1034,7 @@ export class CToken extends Calldata<ICToken> {
 
         const { collateralAssetReduction } = this.previewLeverageDown(newLeverage, currentLeverage);
         const repay_balance = newLeverage.equals(1) ? await borrowToken.fetchDebtBalanceAtTimestamp(100n, false) : null;
-        const repay_balance_with_slippage = repay_balance ? repay_balance + (repay_balance * 5n / BPS) : null;
+        const repay_balance_with_slippage = repay_balance ? repay_balance * (BPS + 5n) / BPS : null;
 
         switch(type) {
             case 'simple': {
