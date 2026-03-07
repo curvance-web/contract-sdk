@@ -93,7 +93,9 @@ export class CToken extends Calldata<ICToken> {
     isVault: boolean = false;
     isNativeVault: boolean = false;
     isWrappedNative: boolean = false;
-    nativeYield = 0;
+    nativeApy = Decimal(0);
+    incentiveSupplyApy = Decimal(0);
+    incentiveBorrowApy = Decimal(0);
 
     constructor(
         provider: curvance_provider,
@@ -113,26 +115,26 @@ export class CToken extends Calldata<ICToken> {
         this.isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
         this.isWrappedNative = chain_config.wrapped_native == this.asset.address;
 
-        // if([
-        //     'csAUSD',
-        //     'cwsrUSD',
-        //     'cezETH',
-        //     'csyzUSD',
-        //     'cearnAUSD',
-        //     'cYZM'
-        // ].includes(this.symbol)) {
-        //     return;
-        // }
+        if([
+            'csAUSD',
+            'cwsrUSD',
+            'cezETH',
+            'csyzUSD',
+            'cearnAUSD',
+            'cYZM'
+        ].includes(this.symbol)) {
+            return;
+        }
 
-        // if(this.isNativeVault) this.zapTypes.push('native-vault');
-        // if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
-        // if(this.isWrappedNative) this.zapTypes.push('native-simple');
+        if(this.isNativeVault) this.zapTypes.push('native-vault');
+        if("nativeVaultPositionManager" in this.market.plugins && this.isNativeVault) this.leverageTypes.push('native-vault');
+        if(this.isWrappedNative) this.zapTypes.push('native-simple');
 
-        // if(this.isVault) this.zapTypes.push('vault');
-        // if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
+        if(this.isVault) this.zapTypes.push('vault');
+        if("vaultPositionManager" in this.market.plugins && this.isVault) this.leverageTypes.push('vault');
 
-        // if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
-        // this.zapTypes.push('simple');
+        if("simplePositionManager" in this.market.plugins) this.leverageTypes.push('simple');
+        this.zapTypes.push('simple');
     }
 
     get adapters() { return this.cache.adapters; }
@@ -393,6 +395,29 @@ export class CToken extends Calldata<ICToken> {
     getApy(asPercentage: false): bigint;
     getApy(asPercentage: true): Percentage
     getApy(asPercentage = true): Percentage | bigint {
+        // TODO: add underlying yield rate
+        return asPercentage ? Decimal(this.cache.supplyRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.supplyRate;
+    }
+
+    getTotalBorrowRate() {
+        return this.getBorrowRate(true).sub(this.incentiveBorrowApy);
+    }
+
+    getTotalSupplyRate() {
+        return this.getSupplyRate(true).add(this.incentiveSupplyApy).add(this.nativeApy);
+    }
+
+    getBorrowRate(): Percentage;
+    getBorrowRate(inPercentage: true): Percentage;
+    getBorrowRate(inPercentage: false): bigint;
+    getBorrowRate(inPercentage = true) {
+        return inPercentage ? Decimal(this.cache.borrowRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.borrowRate;
+    }
+
+    getSupplyRate(): Percentage;
+    getSupplyRate(asPercentage: false): bigint;
+    getSupplyRate(asPercentage: true): Percentage
+    getSupplyRate(asPercentage = true): Percentage | bigint {
         // TODO: add underlying yield rate
         return asPercentage ? Decimal(this.cache.supplyRate).div(WAD).mul(SECONDS_PER_YEAR) : this.cache.supplyRate;
     }

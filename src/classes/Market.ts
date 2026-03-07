@@ -7,6 +7,7 @@ import { Decimal } from "decimal.js";
 import { address, curvance_provider, Percentage, TokenInput, USD, USD_WAD } from "../types";
 import { OracleManager } from "./OracleManager";
 import { IncentiveResponse, Incentives, MilestoneResponse, Milestones, setup_config } from "../setup";
+import { fetchMerklOpportunities, MerklOpportunity } from "../merkl";
 import { BorrowableCToken } from "./BorrowableCToken";
 import FormatConverter from "./FormatConverter";
 
@@ -700,7 +701,11 @@ export class Market {
         const all_data = await reader.getAllMarketData(user as address);
         const deploy_keys: string[] = Object.keys(setup_config.contracts.markets) as (keyof typeof setup_config.contracts.markets)[];
         // Filter out USDC — DeFiLlama incorrectly returns YZM vault yield labeled as USDC
-        const yields = (await Market.fetchNativeYields()).filter(y => y.symbol.toUpperCase() !== 'USDC');
+        const [yields, merklLendOpps, merklBorrowOpps] = await Promise.all([
+            Market.fetchNativeYields().then(y => y.filter(y => y.symbol.toUpperCase() !== 'USDC')),
+            fetchMerklOpportunities({ action: 'LEND' }).catch(() => [] as MerklOpportunity[]),
+            fetchMerklOpportunities({ action: 'BORROW' }).catch(() => [] as MerklOpportunity[]),
+        ]);
 
         let markets: Market[] = [];
         for(let i = 0; i < all_data.staticMarket.length; i++) {
@@ -757,14 +762,25 @@ export class Market {
             }
 
             for(const token of market.tokens) {
+                const lendOpp = merklLendOpps.find(o => o.identifier.toLowerCase() === token.address.toLowerCase());
+                if(lendOpp != undefined) {
+                    token.incentiveSupplyApy = new Decimal(lendOpp.apr / 100);
+                }
+
+                const borrowOpp = merklBorrowOpps.find(o => o.identifier.toLowerCase() === token.address.toLowerCase());
+                if(borrowOpp != undefined) {
+                    token.incentiveBorrowApy = new Decimal(borrowOpp.apr / 100);
+                }
+
                 // Hardcode YZM native yield — DeFiLlama incorrectly labels this pool as USDC
                 if(token.asset.symbol.toUpperCase() === 'YZM') {
-                    token.nativeYield = 0.083;
+                    token.nativeApy = new Decimal(0.083);
                     continue;
                 }
+
                 const api_yield = yields.find(y => y.symbol.toUpperCase() == token.asset.symbol.toUpperCase());
                 if(api_yield != undefined) {
-                    token.nativeYield = api_yield.apy / 100;
+                    token.nativeApy = new Decimal(api_yield.apy / 100);
                 }
             }
 
