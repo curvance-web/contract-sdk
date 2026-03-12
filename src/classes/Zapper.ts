@@ -70,7 +70,7 @@ export class Zapper extends Calldata<IZapper> {
             inputToken: inputToken,
             inputAmount: amount,
             outputToken: outputToken,
-            target: config.dexAgg.router,
+            target: quote.to,
             slippage: slippage,
             call: quote.calldata
         };

@@ -1191,7 +1191,11 @@ export class CToken extends Calldata<ICToken> {
             if(!isApproved) {
                 throw new Error(`Zap asset is not approved for the plugin. Call approveZapAsset() first.`);
             }
-            await this._checkZapperApproval(this.getZapper(zapType)!);
+            const zapper = this.getZapper(zapType);
+            if(!zapper) {
+                throw new Error(`No zapper contract found for type '${zapType}' on ${this.symbol}`);
+            }
+            await this._checkZapperApproval(zapper);
         }
 
         return this.oracleRoute(calldata, calldata_overrides);
