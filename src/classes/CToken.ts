@@ -463,14 +463,7 @@ export class CToken extends Calldata<ICToken> {
         const plugin = this.getPluginAddress(instructions.type, 'zapper');
 
         const allowance = await asset.allowance(signer.address as address, plugin!);
-        const isApproved = allowance >= amount;
-
-        if(!isApproved) {
-            const symbol = await asset.fetchSymbol();
-            throw new Error(`Plugin(${plugin}) needs to be approved for the asset: ${symbol}`);
-        }
-
-        return isApproved;
+        return allowance >= amount;
     }
 
     async approveZapAsset(instructions: ZapperInstructions, amount: TokenInput | null) {
@@ -663,7 +656,7 @@ export class CToken extends Calldata<ICToken> {
         const max_shares = available_shares < shares ? available_shares : shares;
 
         const calldata = this.getCallData("postCollateral", [max_shares]);
-        const tx = this.oracleRoute(calldata);
+        const tx = await this.oracleRoute(calldata);
 
         // Reload collateral state after execution
         await this.fetchUserCollateral();
@@ -721,7 +714,7 @@ export class CToken extends Calldata<ICToken> {
         const max_shares = current_shares < shares ? current_shares : shares;
 
         const calldata = this.getCallData("removeCollateral", [max_shares]);
-        const tx = this.oracleRoute(calldata);
+        const tx = await this.oracleRoute(calldata);
 
         // Reload collateral state after execution
         await this.fetchUserCollateral();
@@ -929,7 +922,7 @@ export class CToken extends Calldata<ICToken> {
         borrow: BorrowableCToken,
         newLeverage: Decimal,
         type: PositionManagerTypes,
-        slippage_: TokenInput = Decimal(0.05)
+        slippage_: Percentage = Decimal(0.05)
     ) {
         validateProviderAsSigner(this.provider);
         const slippage = FormatConverter.percentageToBps(slippage_);
@@ -1009,7 +1002,9 @@ export class CToken extends Calldata<ICToken> {
 
         const { collateralAssetReduction } = this.previewLeverageDown(newLeverage, currentLeverage);
         const repay_balance = newLeverage.equals(1) ? await borrowToken.fetchDebtBalanceAtTimestamp(100n, false) : null;
-        const repay_balance_with_slippage = repay_balance ? repay_balance * (BPS + 5n) / BPS : null;
+        // For full deleverage, use collateral reduction (in collateral token units) with buffer.
+        // repay_balance is in borrow token units — only valid for repayAssets, NOT for swap amountIn.
+        const collateralWithBuffer = collateralAssetReduction + (collateralAssetReduction * 5n / BPS);
 
         switch(type) {
             case 'simple': {
@@ -1017,7 +1012,7 @@ export class CToken extends Calldata<ICToken> {
                     manager.address,
                     this.asset.address,
                     borrowToken.asset.address,
-                    newLeverage.equals(1) ? repay_balance_with_slippage as bigint : collateralAssetReduction,
+                    newLeverage.equals(1) ? collateralWithBuffer : collateralAssetReduction,
                     slippage
                 );
 
@@ -1025,7 +1020,7 @@ export class CToken extends Calldata<ICToken> {
 
                 calldata = manager.getDeleverageCalldata({
                     cToken: this.address,
-                    collateralAssets: newLeverage.equals(1) ? repay_balance_with_slippage as bigint : collateralAssetReduction,
+                    collateralAssets: newLeverage.equals(1) ? collateralWithBuffer : collateralAssetReduction,
                     borrowableCToken: borrowToken.address,
                     repayAssets: BigInt(minRepay),
                     swapActions: [ action ],
@@ -1192,7 +1187,10 @@ export class CToken extends Calldata<ICToken> {
         if(isNative) {
             await this._checkAssetApproval(assets);
         } else {
-            await this.isZapAssetApproved(zap, assets);
+            const isApproved = await this.isZapAssetApproved(zap, assets);
+            if(!isApproved) {
+                throw new Error(`Zap asset is not approved for the plugin. Call approveZapAsset() first.`);
+            }
             await this._checkZapperApproval(this.getZapper(zapType)!);
         }
 
