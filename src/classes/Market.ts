@@ -736,12 +736,6 @@ export class Market {
                     token.incentiveBorrowApy = new Decimal(borrowOpp.apr / 100);
                 }
 
-                // Hardcode YZM native yield — DeFiLlama incorrectly labels this pool as USDC
-                if(token.asset.symbol.toUpperCase() === 'YZM') {
-                    token.nativeApy = new Decimal(0.083);
-                    continue;
-                }
-
                 const api_yield = yields.find(y => y.symbol.toUpperCase() == token.asset.symbol.toUpperCase());
                 if(api_yield != undefined) {
                     token.nativeApy = new Decimal(api_yield.apy / 100);
