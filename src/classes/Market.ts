@@ -436,11 +436,17 @@ export class Market {
         newLeverage: Decimal
     ) {
         const { borrowAmount } = deposit_ctoken.previewLeverageUp(newLeverage, borrow_ctoken);
+        // Leverage up: borrowed tokens are swapped into collateral asset and deposited.
+        // Both collateral and debt increase. Compute the collateral increase from
+        // the borrow amount via USD conversion so the on-chain reader sees both sides.
+        const borrowUsd = borrowAmount.mul(borrow_ctoken.getPrice(true));
+        const collateralIncrease = borrowUsd.div(deposit_ctoken.getPrice(true));
+
         return this.previewPositionHealth(
             deposit_ctoken,
             borrow_ctoken,
-            false,
-            Decimal(0),
+            true,
+            collateralIncrease,
             false,
             borrowAmount
         );

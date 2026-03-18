@@ -111,9 +111,10 @@ export class CToken extends Calldata<ICToken> {
         this.market = market;
 
         const chain_config = getChainConfig();
-        this.isNativeVault = chain_config.native_vaults.some(vault => vault.contract == this.asset.address);
-        this.isVault = chain_config.vaults.some(vault => vault.contract == this.asset.address);
-        this.isWrappedNative = chain_config.wrapped_native == this.asset.address;
+        const assetAddr = this.asset.address.toLowerCase();
+        this.isNativeVault = chain_config.native_vaults.some(vault => vault.contract.toLowerCase() == assetAddr);
+        this.isVault = chain_config.vaults.some(vault => vault.contract.toLowerCase() == assetAddr);
+        this.isWrappedNative = chain_config.wrapped_native.toLowerCase() == assetAddr;
 
         if([
             'csAUSD',
@@ -733,10 +734,21 @@ export class CToken extends Calldata<ICToken> {
         return amount;
     }
 
-    async removeCollateral(amount: TokenInput) {
-        const shares = this.convertTokenInputToShares(amount);
+    async removeCollateral(amount: TokenInput, removeAll: boolean = false) {
         const current_shares = await this.fetchUserCollateral();
-        const max_shares = current_shares < shares ? current_shares : shares;
+        let max_shares: bigint;
+
+        if (removeAll) {
+            max_shares = current_shares;
+        } else {
+            const shares = this.convertTokenInputToShares(amount);
+            max_shares = current_shares < shares ? current_shares : shares;
+            // If within 0.1% of full collateral, remove everything to avoid dust
+            const threshold = current_shares / 1000n || 10n;
+            if (current_shares - max_shares <= threshold) {
+                max_shares = current_shares;
+            }
+        }
 
         const calldata = this.getCallData("removeCollateral", [max_shares]);
         const tx = await this.oracleRoute(calldata);
@@ -1029,7 +1041,7 @@ export class CToken extends Calldata<ICToken> {
         const repay_balance = newLeverage.equals(1) ? await borrowToken.fetchDebtBalanceAtTimestamp(100n, false) : null;
         // For full deleverage, use collateral reduction (in collateral token units) with buffer.
         // repay_balance is in borrow token units — only valid for repayAssets, NOT for swap amountIn.
-        const collateralWithBuffer = collateralAssetReduction + (collateralAssetReduction * 5n / BPS);
+        const collateralWithBuffer = collateralAssetReduction + (collateralAssetReduction * 10n / BPS);
 
         switch(type) {
             case 'simple': {
@@ -1201,18 +1213,27 @@ export class CToken extends Calldata<ICToken> {
         amount = await this.ensureUnderlyingAmount(amount, zap);
         const signer = validateProviderAsSigner(this.provider);
         receiver ??= signer.address as address;
-        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
+        // When zapping, the swap amount uses input token decimals, but the
+        // default deposit calldata uses the deposit token decimals.
+        const isZapping = typeof zap === 'object' && zap.type !== 'none';
+        const depositAssets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
+        let zapAssets = depositAssets;
+        if (isZapping && zap.inputToken) {
+            const inputErc20 = new ERC20(this.provider, zap.inputToken as address);
+            const zapDecimals = inputErc20.decimals ?? await inputErc20.contract.decimals();
+            zapAssets = FormatConverter.decimalToBigInt(amount, zapDecimals);
+        }
         const zapType = typeof zap == 'object' ? zap.type : zap;
         const isNative = zapType == 'native-simple' || zapType == 'native-vault' || zapType == 'none'
             || (typeof zap == 'object' && zap.inputToken.toLowerCase() === NATIVE_ADDRESS.toLowerCase());
 
-        const default_calldata = this.getCallData("deposit", [assets, receiver]);
-        const { calldata, calldata_overrides } = await this.zap(assets, zap, false, default_calldata);
+        const default_calldata = this.getCallData("deposit", [depositAssets, receiver]);
+        const { calldata, calldata_overrides } = await this.zap(zapAssets, zap, false, default_calldata);
 
         if(isNative) {
-            await this._checkAssetApproval(assets);
+            await this._checkAssetApproval(depositAssets);
         } else {
-            const isApproved = await this.isZapAssetApproved(zap, assets);
+            const isApproved = await this.isZapAssetApproved(zap, zapAssets);
             if(!isApproved) {
                 throw new Error(`Zap asset is not approved for the plugin. Call approveZapAsset() first.`);
             }
@@ -1230,22 +1251,33 @@ export class CToken extends Calldata<ICToken> {
         amount = await this.ensureUnderlyingAmount(amount, zap);
         const signer = validateProviderAsSigner(this.provider);
         receiver ??= signer.address as address;
-        const assets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
+        // When zapping, the swap amount uses input token decimals, but collateral
+        // cap checks and the default deposit calldata use the deposit token decimals.
+        const isZapping = typeof zap === 'object' && zap.type !== 'none';
+        const depositAssets = FormatConverter.decimalToBigInt(amount, this.asset.decimals);
+        let zapAssets = depositAssets;
+        if (isZapping && zap.inputToken) {
+            const inputErc20 = new ERC20(this.provider, zap.inputToken as address);
+            const zapDecimals = inputErc20.decimals ?? await inputErc20.contract.decimals();
+            zapAssets = FormatConverter.decimalToBigInt(amount, zapDecimals);
+        }
 
-        const collateralCapError = "There is not enough collateral left in this tokens collateral cap for this deposit.";
-        const remainingCollateral = this.getRemainingCollateral(false);
-        if(remainingCollateral == 0n) throw new Error(collateralCapError);
-        if(remainingCollateral > 0n) {
-            const shares = this.virtualConvertToShares(assets);
-            if(shares > remainingCollateral) {
-                throw new Error(collateralCapError);
+        if (!isZapping) {
+            const collateralCapError = "There is not enough collateral left in this tokens collateral cap for this deposit.";
+            const remainingCollateral = this.getRemainingCollateral(false);
+            if(remainingCollateral == 0n) throw new Error(collateralCapError);
+            if(remainingCollateral > 0n) {
+                const shares = this.virtualConvertToShares(depositAssets);
+                if(shares > remainingCollateral) {
+                    throw new Error(collateralCapError);
+                }
             }
         }
 
-        const default_calldata = this.getCallData("depositAsCollateral", [assets, receiver]);
-        const { calldata, calldata_overrides, zapper } = await this.zap(assets, zap, true, default_calldata);
+        const default_calldata = this.getCallData("depositAsCollateral", [depositAssets, receiver]);
+        const { calldata, calldata_overrides, zapper } = await this.zap(zapAssets, zap, true, default_calldata);
 
-        await this._checkDepositApprovals(zapper, assets);
+        await this._checkDepositApprovals(zapper, zapAssets);
         return this.oracleRoute(calldata, calldata_overrides);
     }
 
