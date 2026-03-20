@@ -763,17 +763,17 @@
                 "internalType": "uint256[2]"
               },
               {
-                "name": "irmBaseRate",
+                "name": "irmTargetRate",
                 "type": "uint256",
                 "internalType": "uint256"
               },
               {
-                "name": "irmVertexRate",
+                "name": "irmMaxRate",
                 "type": "uint256",
                 "internalType": "uint256"
               },
               {
-                "name": "irmVertexStart",
+                "name": "irmTargetUtilization",
                 "type": "uint256",
                 "internalType": "uint256"
               },

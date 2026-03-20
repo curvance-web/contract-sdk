@@ -175,7 +175,7 @@ export class BorrowableCToken extends CToken {
         const irm = await this.dynamicIRM();
         const assetsHeld = this.totalAssets
         const debt = await this.contract.marketOutstandingDebt();
-        const fee = await this.contract.interestFee();
+        const fee = await this.fetchInterestFee();
         const supplyRate = (await irm.supplyRate(assetsHeld, debt, fee));
         this.cache.supplyRate = supplyRate;
         return supplyRate;
@@ -195,7 +195,7 @@ export class BorrowableCToken extends CToken {
         return this.oracleRoute(calldata);
     }
 
-    async interestFee() {
+    async fetchInterestFee() {
         return this.contract.interestFee();
     }
 

@@ -53,6 +53,10 @@ export interface StaticMarketToken {
     closeFactorCurve: TypeBPS;
     closeFactorMin: TypeBPS;
     closeFactorMax: TypeBPS;
+    irmTargetRate: bigint;
+    irmMaxRate: bigint;
+    irmTargetUtilization: bigint;
+    interestFee: TypeBPS;
 }
 
 export interface StaticMarketData {
@@ -335,7 +339,11 @@ export class ProtocolReader {
                 closeFactorBase: BigInt(token.closeFactorBase),
                 closeFactorCurve: BigInt(token.closeFactorCurve),
                 closeFactorMin: BigInt(token.closeFactorMin),
-                closeFactorMax: BigInt(token.closeFactorMax)
+                closeFactorMax: BigInt(token.closeFactorMax),
+                irmTargetRate: BigInt(token.irmTargetRate),
+                irmMaxRate: BigInt(token.irmMaxRate),
+                irmTargetUtilization: BigInt(token.irmTargetUtilization),
+                interestFee: BigInt(token.interestFee)
             }))
         }));
         return typedData;

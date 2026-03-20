@@ -158,6 +158,10 @@ export class CToken extends Calldata<ICToken> {
         if (this.cache.liquidationPrice == UINT256_MAX) return null;
         return toDecimal(this.cache.liquidationPrice, 18n);
     }
+    get irmTargetRate() { return Decimal(this.cache.irmTargetRate).div(WAD); }
+    get irmMaxRate() { return Decimal(this.cache.irmMaxRate).div(WAD); }
+    get irmTargetUtilization() { return Decimal(this.cache.irmTargetUtilization).div(WAD); }
+    get interestFee() { return Decimal(this.cache.interestFee).div(BPS); }
 
     virtualConvertToAssets(shares: bigint): bigint {
         return (shares * this.totalAssets) / this.totalSupply;
