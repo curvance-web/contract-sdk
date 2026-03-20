@@ -17,7 +17,7 @@ export interface IBorrowableCToken extends ICToken {
     debtBalance(account: address): Promise<bigint>;
     IRM(): Promise<address>;
     // More functions available
-}
+} 
 
 export interface IDynamicIRM {
     ADJUSTMENT_RATE(): Promise<bigint>;
